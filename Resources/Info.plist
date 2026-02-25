@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>OpenType</string>
+    <key>CFBundleDisplayName</key>
+    <string>OpenType</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.opentype.voiceinput</string>
+    <key>CFBundleExecutable</key>
+    <string>OpenType</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>LSMinimumSystemVersion</key>
+    <string>26.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>OpenType needs microphone access to capture voice for transcription.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>OpenType uses speech recognition to convert voice to text.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>OpenType needs automation access to type text into other applications.</string>
+</dict>
+</plist>

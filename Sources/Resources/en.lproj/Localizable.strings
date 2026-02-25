@@ -1,0 +1,173 @@
+/* ── Common ── */
+"common.ok" = "OK";
+"common.done" = "Done";
+"common.cancel" = "Cancel";
+"common.add" = "Add";
+"common.delete" = "Delete";
+"common.copy" = "Copy";
+"common.clear" = "Clear";
+"common.download" = "Download";
+"common.settings" = "Settings";
+"common.quit" = "Quit";
+"common.back" = "Back";
+"common.continue" = "Continue";
+"common.refresh" = "Refresh";
+"common.copy_clipboard" = "Copy to Clipboard";
+"common.cannot_undo" = "This action cannot be undone.";
+"common.recommended" = "Recommended";
+"common.custom" = "Custom";
+
+/* ── Status ── */
+"status.ready" = "Ready";
+"status.done" = "Done";
+
+/* ── Tabs ── */
+"tab.general" = "General";
+"tab.models" = "Models";
+"tab.style" = "Style";
+"tab.history" = "History";
+"tab.about" = "About";
+
+/* ── Pipeline / Status Messages ── */
+"pipeline.busy" = "Previous task still processing…";
+"pipeline.loading_llm" = "Loading LLM…";
+"pipeline.model_not_ready" = "Speech model not ready — check your network";
+"pipeline.model_load_failed" = "Model load failed";
+"pipeline.model_load_failed_network" = "Model load failed — check network";
+"pipeline.recording" = "Recording…";
+"pipeline.transcribing" = "Transcribing…";
+"pipeline.formatting" = "Formatting…";
+"pipeline.inserting" = "Inserting…";
+"pipeline.error_prefix" = "Error: ";
+"pipeline.whisper_unloaded" = "Whisper unloaded";
+"pipeline.llm_unloaded" = "LLM unloaded";
+"pipeline.preparing_model" = "Preparing speech model…";
+"pipeline.downloading" = "Downloading";
+"pipeline.compiling" = "Compiling model (2-5 min on first run)…";
+"pipeline.loading_model" = "Loading model…";
+"pipeline.insert_failed_title" = "Text could not be inserted automatically";
+"pipeline.insert_failed_body" = "The text has been copied to your clipboard. Press ⌘V to paste it manually.\n\nReason: ";
+"pipeline.mic_failed_permissions" = "Microphone failed — check permissions";
+"pipeline.mic_unavailable" = "Microphone unavailable";
+"pipeline.download_failed" = "Model download failed — check your network";
+"pipeline.compile_failed" = "Model compile failed — try again or switch model";
+"pipeline.load_failed" = "Model load failed — try again";
+"pipeline.model_load_failed_prefix" = "Model load failed: ";
+
+/* ── Menu Bar ── */
+"menubar.listening" = "Listening…";
+"menubar.hold" = "Hold";
+"menubar.toggle" = "Toggle";
+
+/* ── Settings ── */
+"settings.activation" = "Activation";
+"settings.hotkey" = "Hotkey";
+"settings.mode" = "Mode";
+"settings.tap_interval" = "Double-tap interval";
+"settings.output" = "Output";
+"settings.output_mode" = "Output mode";
+"settings.screen_context" = "Screen context assist";
+"settings.screen_context_help" = "Capture on-screen text to help the LLM correct homophones (requires Screen Recording permission, only active in Smart Format mode)";
+"settings.voice_language" = "Voice & Language";
+"settings.ui_language" = "Interface language";
+"settings.recognition_language" = "Recognition language";
+"settings.sound_cues" = "Sound cues";
+"settings.microphone" = "Microphone";
+"settings.system_default" = "System Default";
+"settings.permissions" = "Permissions";
+
+/* ── Model Management ── */
+"model.speech_recognition" = "Speech Recognition";
+"model.text_formatting" = "Text Formatting (LLM)";
+"model.custom_id_placeholder" = "Custom model ID (e.g. mlx-community/…)";
+"model.active" = "Active";
+"model.use" = "Use";
+"model.compiling" = "Compiling…";
+"model.loading" = "Loading…";
+"model.smallest" = "Smallest, fastest ~335 MB";
+"model.balanced" = "Balanced ~1 GB";
+"model.best_quality" = "Best quality ~2.3 GB";
+
+/* ── Enum Labels ── */
+"mode.verbatim" = "Verbatim";
+"mode.smart_format" = "Smart Format";
+"mode.hold_record" = "Hold to Record";
+"mode.double_tap" = "Double-tap Toggle";
+"mode.tap_toggle" = "Tap Toggle";
+"style.concise" = "Concise";
+"style.formal" = "Formal";
+"style.casual" = "Casual";
+"engine.apple_speech" = "Apple Speech";
+
+/* ── Style & Dictionary ── */
+"style.title" = "Language Style";
+"style.prompt" = "Prompt";
+"style.prompt_help" = "Edit the prompt to customize style. Selecting a preset above will overwrite it.";
+"dict.title" = "Personal Dictionary";
+"dict.subtitle" = "Correct recurring speech recognition errors";
+"dict.original" = "Original";
+"dict.replacement" = "Replacement";
+"dict.empty" = "No entries yet";
+"rules.title" = "Editing Rules";
+"rules.subtitle" = "Additional instructions for the LLM when formatting text";
+"rules.placeholder" = "e.g. Use Arabic numerals for all numbers";
+"rules.empty" = "No rules yet";
+
+/* ── History & Stats ── */
+"history.total" = "Total";
+"history.today" = "Today";
+"history.chars" = "Chars";
+"history.saved" = "Saved";
+"history.search" = "Search history…";
+"history.clear_all" = "Clear All";
+"history.clear_confirm" = "Clear all history?";
+"history.empty" = "No input history yet";
+"history.no_match" = "No matching records";
+"history.date_today" = "Today";
+"history.date_yesterday" = "Yesterday";
+"history.chars_saved_fmt" = "−%d chars";
+"history.chars_added_fmt" = "+%d chars";
+
+/* ── Onboarding ── */
+"onboarding.welcome" = "Welcome to OpenType";
+"onboarding.welcome_body" = "An intelligent voice input method that runs entirely on your Mac.\nPowered by WhisperKit for speech recognition and MLX for text formatting.";
+"onboarding.voice_input" = "Voice Input";
+"onboarding.smart_format" = "Smart Format";
+"onboarding.local" = "100% Local";
+"onboarding.language" = "Language";
+"onboarding.grant_permissions" = "Grant Permissions";
+"onboarding.permissions_body" = "OpenType needs the following permissions. You can also configure these later in Settings.";
+"onboarding.all_set" = "All Set!";
+"onboarding.ready_body" = "OpenType is ready. Use the hotkey to start voice input.\nYou can adjust all settings from the menu bar icon.";
+"onboarding.hold_hint" = "Hold to speak, release to insert";
+"onboarding.get_started" = "Get Started";
+
+/* ── Permissions ── */
+"perm.intro" = "OpenType requires the following permissions to function properly.";
+"perm.accessibility" = "Accessibility";
+"perm.accessibility_hint" = "Required — simulate keyboard paste";
+"perm.accessibility_desc" = "Simulate keyboard input to paste text into other applications";
+"perm.microphone" = "Microphone";
+"perm.microphone_hint" = "Required — capture voice audio";
+"perm.microphone_desc" = "Capture audio for speech recognition";
+"perm.speech" = "Speech Recognition";
+"perm.speech_hint" = "Optional — for Apple speech engine";
+"perm.speech_desc" = "Apple Speech framework (optional, for Apple engine)";
+"perm.screen" = "Screen Recording";
+"perm.screen_hint" = "Optional — screen OCR for context";
+"perm.screen_desc" = "Screen OCR for contextual correction (optional)";
+"perm.grant" = "Grant…";
+"perm.granted" = "Granted";
+"perm.help_text" = "Grant permissions in System Settings, then refresh.";
+
+/* ── About ── */
+"about.subtitle" = "Intelligent Voice Input";
+"about.body" = "On-device voice input powered by WhisperKit and MLX.\nSpeech recognition, smart formatting, and personal dictionary — all local.";
+"about.feedback" = "Feedback";
+
+/* ── Errors ── */
+"error.whisper_not_loaded" = "Whisper model not loaded: %@";
+"error.no_audio" = "No audio recording";
+"error.download_failed" = "Model download failed: %@";
+"error.compile_failed" = "Model compilation failed: %@";
+"error.load_failed" = "Model loading failed: %@";

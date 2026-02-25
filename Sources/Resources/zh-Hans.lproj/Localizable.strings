@@ -1,0 +1,173 @@
+/* ── Common ── */
+"common.ok" = "好";
+"common.done" = "完成";
+"common.cancel" = "取消";
+"common.add" = "添加";
+"common.delete" = "删除";
+"common.copy" = "复制";
+"common.clear" = "清除";
+"common.download" = "下载";
+"common.settings" = "设置";
+"common.quit" = "退出";
+"common.back" = "上一步";
+"common.continue" = "继续";
+"common.refresh" = "刷新状态";
+"common.copy_clipboard" = "复制到剪贴板";
+"common.cannot_undo" = "此操作不可撤销。";
+"common.recommended" = "推荐";
+"common.custom" = "自定义";
+
+/* ── Status ── */
+"status.ready" = "就绪";
+"status.done" = "完成";
+
+/* ── Tabs ── */
+"tab.general" = "通用";
+"tab.models" = "模型";
+"tab.style" = "风格与词库";
+"tab.history" = "历史";
+"tab.about" = "关于";
+
+/* ── Pipeline / Status Messages ── */
+"pipeline.busy" = "上一条语音仍在处理中…";
+"pipeline.loading_llm" = "正在加载 LLM…";
+"pipeline.model_not_ready" = "语音模型未就绪，请检查网络后重试";
+"pipeline.model_load_failed" = "模型加载失败";
+"pipeline.model_load_failed_network" = "模型加载失败，请检查网络";
+"pipeline.recording" = "录音中…";
+"pipeline.transcribing" = "识别中…";
+"pipeline.formatting" = "整理中…";
+"pipeline.inserting" = "输入中…";
+"pipeline.error_prefix" = "错误: ";
+"pipeline.whisper_unloaded" = "Whisper 已卸载";
+"pipeline.llm_unloaded" = "LLM 已卸载";
+"pipeline.preparing_model" = "准备下载语音模型…";
+"pipeline.downloading" = "下载模型";
+"pipeline.compiling" = "编译模型中（首次约需 2-5 分钟）…";
+"pipeline.loading_model" = "加载模型到内存…";
+"pipeline.insert_failed_title" = "文本无法自动输入";
+"pipeline.insert_failed_body" = "文本已复制到剪贴板，请按 ⌘V 手动粘贴。\n\n原因：";
+"pipeline.mic_failed_permissions" = "麦克风启动失败，请检查权限";
+"pipeline.mic_unavailable" = "麦克风不可用";
+"pipeline.download_failed" = "模型下载失败，请检查网络连接";
+"pipeline.compile_failed" = "模型编译失败，请重试或更换模型";
+"pipeline.load_failed" = "模型加载失败，请重试";
+"pipeline.model_load_failed_prefix" = "模型加载失败: ";
+
+/* ── Menu Bar ── */
+"menubar.listening" = "正在聆听…";
+"menubar.hold" = "长按";
+"menubar.toggle" = "切换";
+
+/* ── Settings ── */
+"settings.activation" = "激活方式";
+"settings.hotkey" = "快捷键";
+"settings.mode" = "触发模式";
+"settings.tap_interval" = "双击间隔";
+"settings.output" = "输出";
+"settings.output_mode" = "输出模式";
+"settings.screen_context" = "屏幕上下文辅助";
+"settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限，仅智能整理模式生效）";
+"settings.voice_language" = "语音与语言";
+"settings.ui_language" = "界面语言";
+"settings.recognition_language" = "识别语言";
+"settings.sound_cues" = "播放提示音";
+"settings.microphone" = "麦克风";
+"settings.system_default" = "系统默认";
+"settings.permissions" = "权限管理";
+
+/* ── Model Management ── */
+"model.speech_recognition" = "语音识别";
+"model.text_formatting" = "文本整理 (LLM)";
+"model.custom_id_placeholder" = "自定义模型 ID（如 mlx-community/…）";
+"model.active" = "当前";
+"model.use" = "启用";
+"model.compiling" = "编译中…";
+"model.loading" = "加载中…";
+"model.smallest" = "最小最快 ~335 MB";
+"model.balanced" = "平衡选择 ~1 GB";
+"model.best_quality" = "质量最佳 ~2.3 GB";
+
+/* ── Enum Labels ── */
+"mode.verbatim" = "原文直出";
+"mode.smart_format" = "智能整理";
+"mode.hold_record" = "长按录音";
+"mode.double_tap" = "双击切换";
+"mode.tap_toggle" = "单击切换";
+"style.concise" = "简洁精炼";
+"style.formal" = "正式书面";
+"style.casual" = "日常口语";
+"engine.apple_speech" = "Apple 语音识别";
+
+/* ── Style & Dictionary ── */
+"style.title" = "语言风格";
+"style.prompt" = "提示词";
+"style.prompt_help" = "编辑提示词自定义风格，选择上方预设将覆盖当前内容";
+"dict.title" = "个人词库";
+"dict.subtitle" = "纠正语音识别中常见的错误词汇";
+"dict.original" = "原词";
+"dict.replacement" = "替换为";
+"dict.empty" = "暂无词条";
+"rules.title" = "编辑规则";
+"rules.subtitle" = "LLM 整理文本时遵循的额外指令";
+"rules.placeholder" = "如：所有数字用阿拉伯数字";
+"rules.empty" = "暂无规则";
+
+/* ── History & Stats ── */
+"history.total" = "总输入";
+"history.today" = "今日";
+"history.chars" = "总字数";
+"history.saved" = "精简率";
+"history.search" = "搜索历史记录…";
+"history.clear_all" = "全部清除";
+"history.clear_confirm" = "确认清除全部历史？";
+"history.empty" = "暂无输入记录";
+"history.no_match" = "无匹配记录";
+"history.date_today" = "今天";
+"history.date_yesterday" = "昨天";
+"history.chars_saved_fmt" = "精简 %d 字";
+"history.chars_added_fmt" = "增加 %d 字";
+
+/* ── Onboarding ── */
+"onboarding.welcome" = "欢迎使用 OpenType";
+"onboarding.welcome_body" = "完全本地运行的智能语音输入法。\n基于 WhisperKit 语音识别与 MLX 文本整理，无需联网。";
+"onboarding.voice_input" = "语音输入";
+"onboarding.smart_format" = "智能整理";
+"onboarding.local" = "完全本地";
+"onboarding.language" = "界面语言";
+"onboarding.grant_permissions" = "授权权限";
+"onboarding.permissions_body" = "OpenType 需要以下权限才能正常工作，也可稍后在设置中配置。";
+"onboarding.all_set" = "准备就绪";
+"onboarding.ready_body" = "OpenType 已就绪。使用快捷键即可开始语音输入。\n所有设置可通过菜单栏图标访问。";
+"onboarding.hold_hint" = "长按说话，松开输入";
+"onboarding.get_started" = "开始使用";
+
+/* ── Permissions ── */
+"perm.intro" = "OpenType 需要以下权限才能正常工作。";
+"perm.accessibility" = "辅助功能";
+"perm.accessibility_hint" = "必需 — 模拟键盘粘贴";
+"perm.accessibility_desc" = "模拟键盘粘贴，将文本输入到其他应用";
+"perm.microphone" = "麦克风";
+"perm.microphone_hint" = "必需 — 录制语音";
+"perm.microphone_desc" = "录制语音进行识别";
+"perm.speech" = "语音识别";
+"perm.speech_hint" = "可选 — 使用 Apple 语音引擎";
+"perm.speech_desc" = "使用 Apple 语音识别框架（可选）";
+"perm.screen" = "屏幕录制";
+"perm.screen_hint" = "可选 — 屏幕 OCR 辅助纠错";
+"perm.screen_desc" = "屏幕 OCR 辅助识别纠错（可选）";
+"perm.grant" = "前往授权…";
+"perm.granted" = "已授权";
+"perm.help_text" = "在系统设置中授权后，点击刷新查看最新状态";
+
+/* ── About ── */
+"about.subtitle" = "智能语音输入";
+"about.body" = "基于 WhisperKit 与 MLX 的本地化语音输入方案。\n语音识别、智能整理、个人词库，全部在设备端完成。";
+"about.feedback" = "反馈";
+
+/* ── Errors ── */
+"error.whisper_not_loaded" = "Whisper 模型未加载: %@";
+"error.no_audio" = "没有录音文件";
+"error.download_failed" = "模型下载失败: %@";
+"error.compile_failed" = "模型编译失败: %@";
+"error.load_failed" = "模型加载失败: %@";
