@@ -68,10 +68,14 @@ private struct OverlayContentView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(.ultraThinMaterial)
+                .fill(.black.opacity(0.55))
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial)
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                        .stroke(.white.opacity(0.15), lineWidth: 0.5)
                 )
         )
     }

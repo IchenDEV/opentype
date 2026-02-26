@@ -23,8 +23,8 @@ final class AudioCaptureManager {
         levelCallback = levelUpdate
 
         let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-        if authStatus == .denied || authStatus == .restricted {
-            Log.error("[AudioCapture] microphone permission denied")
+        guard authStatus == .authorized else {
+            Log.error("[AudioCapture] microphone not authorized (status: \(authStatus.rawValue))")
             return false
         }
 
@@ -34,6 +34,10 @@ final class AudioCaptureManager {
 
         let inputNode = engine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            Log.error("[AudioCapture] invalid input format: \(format)")
+            return false
+        }
 
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("opentype_recording_\(UUID().uuidString).wav")

@@ -52,12 +52,9 @@ enum LanguageStyle: String, Codable, CaseIterable {
 
     var defaultPrompt: String {
         switch self {
-        case .concise:
-            return "简洁精炼，去除冗余表达，保留核心信息，用最少的文字表达完整意思。"
-        case .formal:
-            return "正式书面语风格，适合商务邮件或学术场景，语句通顺规范。"
-        case .casual:
-            return "保持日常口语的自然感，仅修正错误和去除语气词，不要过度书面化。"
+        case .concise: return L("style.prompt.concise")
+        case .formal: return L("style.prompt.formal")
+        case .casual: return L("style.prompt.casual")
         }
     }
 
@@ -150,8 +147,8 @@ final class AppSettings: ObservableObject {
         speechEngine = SpeechEngineType(rawValue: savedEngine)
             ?? (savedEngine.contains("Whisper") || savedEngine.contains("whisper") ? .whisper : nil)
             ?? .apple
-        whisperModel = ud.string(forKey: Key.whisperModel.rawValue) ?? "large-v3-turbo"
-        llmModel = ud.string(forKey: Key.llmModel.rawValue) ?? "mlx-community/Qwen3-0.6B-4bit"
+        whisperModel = ud.string(forKey: Key.whisperModel.rawValue) ?? "large-v3"
+        llmModel = ud.string(forKey: Key.llmModel.rawValue) ?? "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
         microphoneID = ud.string(forKey: Key.microphoneID.rawValue)
         let savedOutput = ud.string(forKey: Key.outputMode.rawValue) ?? ""
         outputMode = OutputMode(rawValue: savedOutput)

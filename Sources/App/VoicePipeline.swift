@@ -30,13 +30,33 @@ final class VoicePipeline {
 
         if appState.settings.outputMode == .processed {
             appState.statusMessage = L("pipeline.loading_llm")
-            await textProcessor.warmUpLLM(model: appState.settings.llmModel)
-            appState.llmModelReady = await textProcessor.isLLMReady
+            let model = appState.settings.llmModel
+
+            let llmTask = Task {
+                await textProcessor.warmUpLLM(model: model)
+                return await textProcessor.isLLMReady
+            }
+
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                return false
+            }
+
+            let ready = await withTaskGroup(of: Bool.self) { group in
+                group.addTask { await llmTask.value }
+                group.addTask { await timeoutTask.value }
+                let first = await group.next() ?? false
+                group.cancelAll()
+                return first
+            }
+
+            appState.llmModelReady = ready
+            if !ready {
+                Log.info("[VoicePipeline] LLM warmup timed out or failed, will retry on demand")
+            }
         }
 
-        if currentEngine?.isReady ?? false {
-            appState.statusMessage = L("status.ready")
-        }
+        appState.statusMessage = L("status.ready")
     }
 
     // MARK: - Recording
@@ -233,7 +253,15 @@ final class VoicePipeline {
         switch appState.settings.speechEngine {
         case .whisper: await ensureWhisperLoaded()
         case .apple:
-            if appleSpeechEngine == nil { appleSpeechEngine = AppleSpeechEngine() }
+            if appleSpeechEngine == nil {
+                let lang = appState.settings.inputLanguage
+                let locale = Locale(identifier: lang == .chinese ? "zh-CN" : "en-US")
+                appleSpeechEngine = AppleSpeechEngine(locale: locale)
+            }
+            if !(appleSpeechEngine?.isReady ?? false) {
+                appleSpeechEngine?.requestAccess()
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
         }
     }
 

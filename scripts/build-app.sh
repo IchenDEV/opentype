@@ -2,13 +2,16 @@
 #
 # build-app.sh — Build OpenType.app and (optionally) package it as a DMG.
 #
+# Uses xcodebuild (not bare swift build) so that Metal shaders required
+# by mlx-swift are compiled into default.metallib.
+#
 # Usage:
 #   ./scripts/build-app.sh              # build .app + .dmg
 #   ./scripts/build-app.sh --app-only   # build .app only
 #   ./scripts/build-app.sh --help       # show help
 #
 # Requirements:
-#   - macOS with Xcode command-line tools
+#   - macOS with Xcode (full install, not just CLI tools)
 #   - Swift 6.0+
 #
 
@@ -23,9 +26,11 @@ VERSION="${VERSION:-1.0.0}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-BUILD_DIR="${PROJECT_DIR}/.build/arm64-apple-macosx/release"
+DERIVED_DATA="${PROJECT_DIR}/.build/xcode"
+BUILD_DIR="${DERIVED_DATA}/Build/Products/Release"
 DIST_DIR="${PROJECT_DIR}/dist"
 APP_ONLY=false
+SIGN_IDENTITY="${SIGN_IDENTITY:-}"
 
 # ─── Parse arguments ────────────────────────────────────────────────────────────
 
@@ -33,12 +38,15 @@ for arg in "$@"; do
     case "$arg" in
         --app-only)  APP_ONLY=true ;;
         --version=*) VERSION="${arg#*=}" ;;
+        --sign=*)    SIGN_IDENTITY="${arg#*=}" ;;
         --help|-h)
-            echo "Usage: $0 [--version=X.Y.Z] [--app-only] [--help]"
+            echo "Usage: $0 [--version=X.Y.Z] [--app-only] [--sign=IDENTITY] [--help]"
             echo ""
-            echo "  --version=X.Y.Z  Set version (default: 1.0.0, or \$VERSION env)"
-            echo "  --app-only       Build .app bundle only, skip DMG creation"
-            echo "  --help           Show this help"
+            echo "  --version=X.Y.Z    Set version (default: 1.0.0, or \$VERSION env)"
+            echo "  --app-only         Build .app bundle only, skip DMG creation"
+            echo "  --sign=IDENTITY    Code signing identity (default: auto-detect)"
+            echo "                     Use '--sign=-' to force ad-hoc signing"
+            echo "  --help             Show this help"
             exit 0
             ;;
         *)
@@ -56,11 +64,17 @@ DMG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.dmg"
 step() { echo ""; echo "▶ $1"; }
 done_msg() { echo "  ✓ $1"; }
 
-# ─── Step 1: Build ──────────────────────────────────────────────────────────────
+# ─── Step 1: Build with xcodebuild ─────────────────────────────────────────────
 
-step "Building ${APP_NAME} (release)…"
+step "Building ${APP_NAME} (Release via xcodebuild)…"
 cd "${PROJECT_DIR}"
-swift build -c release
+xcodebuild \
+    -scheme "${APP_NAME}" \
+    -configuration Release \
+    -derivedDataPath "${DERIVED_DATA}" \
+    -destination 'platform=macOS' \
+    build \
+    -quiet
 done_msg "Build succeeded"
 
 # ─── Step 2: Assemble .app bundle ───────────────────────────────────────────────
@@ -82,10 +96,11 @@ cp "${PROJECT_DIR}/Resources/Info.plist" "${APP_BUNDLE}/Contents/"
 # PkgInfo
 echo -n "APPL????" > "${APP_BUNDLE}/Contents/PkgInfo"
 
-# SPM resource bundle
-if [ -d "${BUILD_DIR}/OpenType_OpenType.bundle" ]; then
-    cp -R "${BUILD_DIR}/OpenType_OpenType.bundle" "${APP_BUNDLE}/Contents/Resources/"
-fi
+# Copy ALL resource bundles produced by xcodebuild (includes Metal shaders)
+for bundle in "${BUILD_DIR}"/*.bundle; do
+    [ -d "$bundle" ] || continue
+    cp -R "$bundle" "${APP_BUNDLE}/Contents/Resources/"
+done
 
 done_msg "App bundle assembled"
 
@@ -95,11 +110,30 @@ step "Generating AppIcon.icns…"
 swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources"
 done_msg "Icon generated"
 
-# ─── Step 4: Code sign (ad-hoc) ────────────────────────────────────────────────
+# ─── Step 4: Code sign ───────────────────────────────────────────────────────
 
-step "Code signing (ad-hoc)…"
-codesign --force --deep --sign - "${APP_BUNDLE}"
-done_msg "Signed"
+step "Code signing…"
+
+if [ -z "$SIGN_IDENTITY" ]; then
+    # Auto-detect: prefer Developer ID, then Apple Development, then self-signed
+    for candidate in "Developer ID Application" "Apple Development" "OpenType Signing"; do
+        if security find-identity -v -p codesigning 2>/dev/null | grep -q "$candidate"; then
+            SIGN_IDENTITY="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -n "$SIGN_IDENTITY" ] && [ "$SIGN_IDENTITY" != "-" ]; then
+    codesign --force --deep --sign "$SIGN_IDENTITY" "${APP_BUNDLE}"
+    done_msg "Signed with: $SIGN_IDENTITY"
+else
+    codesign --force --deep --sign - "${APP_BUNDLE}"
+    done_msg "Signed (ad-hoc)"
+    echo "  ⚠ Ad-hoc signing: macOS will reset permissions on each rebuild."
+    echo "    To keep permissions stable, use --sign=IDENTITY or install a"
+    echo "    development certificate (Xcode → Settings → Accounts → Manage Certificates)."
+fi
 
 # ─── Step 5: Create DMG ────────────────────────────────────────────────────────
 

@@ -87,6 +87,9 @@
 "model.smallest" = "最小最快 ~335 MB";
 "model.balanced" = "平衡选择 ~1 GB";
 "model.best_quality" = "质量最佳 ~2.3 GB";
+"model.qwen3_fast" = "Qwen3 极速 ~335 MB";
+"model.qwen3_balanced" = "Qwen3 均衡 ~1 GB";
+"model.qwen3_quality" = "Qwen3 高质量 ~2.3 GB";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "原文直出";
@@ -98,6 +101,9 @@
 "style.formal" = "正式书面";
 "style.casual" = "日常口语";
 "engine.apple_speech" = "Apple 语音识别";
+"style.prompt.concise" = "简洁精炼，去除冗余表达，保留核心信息，用最少的文字表达完整意思。";
+"style.prompt.formal" = "正式书面语风格，适合商务邮件或学术场景，语句通顺规范。";
+"style.prompt.casual" = "保持日常口语的自然感，仅修正错误和去除语气词，不要过度书面化。";
 
 /* ── Style & Dictionary ── */
 "style.title" = "语言风格";
@@ -168,6 +174,8 @@
 /* ── Errors ── */
 "error.whisper_not_loaded" = "Whisper 模型未加载: %@";
 "error.no_audio" = "没有录音文件";
+"error.no_audio_file" = "没有录音文件";
+"error.speech_not_authorized" = "语音识别未授权";
 "error.download_failed" = "模型下载失败: %@";
 "error.compile_failed" = "模型编译失败: %@";
 "error.load_failed" = "模型加载失败: %@";

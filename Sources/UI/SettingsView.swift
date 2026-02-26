@@ -22,6 +22,7 @@ struct SettingsView: View {
                 .tabItem { Label(L("tab.about"), systemImage: "info.circle") }
         }
         .frame(width: 640, height: 520)
+        .id(settings.uiLanguage)
     }
 
     // MARK: - General

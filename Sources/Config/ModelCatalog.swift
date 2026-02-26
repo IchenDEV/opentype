@@ -40,11 +40,19 @@ final class ModelCatalog: ObservableObject {
         }
     }
 
+    private static let curatedWhisperVariants = [
+        "large-v3", "large-v2", "medium", "small", "distil-large-v3",
+    ]
+
     private init() {
         let rec = WhisperKit.recommendedModels()
         let defaultID = rec.default
-        whisperModels = rec.supported.map { fullName in
-            ModelEntry(
+        let supported = Set(rec.supported)
+
+        whisperModels = Self.curatedWhisperVariants.compactMap { variant in
+            let fullName = rec.supported.first { $0.contains(variant) }
+            guard let fullName, supported.contains(fullName) else { return nil }
+            return ModelEntry(
                 id: fullName,
                 displayName: Self.shortenWhisperName(fullName),
                 hint: fullName == defaultID ? L("common.recommended") : ""
@@ -63,9 +71,12 @@ final class ModelCatalog: ObservableObject {
 
     static var defaultLLMModels: [(String, String, String)] {
         [
-            ("mlx-community/Qwen3-0.6B-4bit", "Qwen3 0.6B", L("model.smallest")),
-            ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.balanced")),
-            ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.best_quality")),
+            ("mlx-community/Qwen2.5-0.5B-Instruct-4bit", "Qwen2.5 0.5B", L("model.smallest")),
+            ("mlx-community/Qwen2.5-1.5B-Instruct-4bit", "Qwen2.5 1.5B", L("model.balanced")),
+            ("mlx-community/Qwen2.5-3B-Instruct-4bit", "Qwen2.5 3B", L("model.best_quality")),
+            ("mlx-community/Qwen3-0.6B-4bit", "Qwen3 0.6B", L("model.qwen3_fast")),
+            ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.qwen3_balanced")),
+            ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.qwen3_quality")),
         ]
     }
 

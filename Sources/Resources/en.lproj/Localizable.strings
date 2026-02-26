@@ -87,6 +87,9 @@
 "model.smallest" = "Smallest, fastest ~335 MB";
 "model.balanced" = "Balanced ~1 GB";
 "model.best_quality" = "Best quality ~2.3 GB";
+"model.qwen3_fast" = "Qwen3, fast ~335 MB";
+"model.qwen3_balanced" = "Qwen3, balanced ~1 GB";
+"model.qwen3_quality" = "Qwen3, best quality ~2.3 GB";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "Verbatim";
@@ -98,6 +101,9 @@
 "style.formal" = "Formal";
 "style.casual" = "Casual";
 "engine.apple_speech" = "Apple Speech";
+"style.prompt.concise" = "Concise and refined. Remove redundant expressions, keep core information, convey complete meaning with minimal words.";
+"style.prompt.formal" = "Formal written style suitable for business emails or academic contexts. Ensure smooth, standard sentences.";
+"style.prompt.casual" = "Keep the natural feel of everyday speech. Only correct errors and remove filler words — avoid over-formalizing.";
 
 /* ── Style & Dictionary ── */
 "style.title" = "Language Style";
@@ -168,6 +174,8 @@
 /* ── Errors ── */
 "error.whisper_not_loaded" = "Whisper model not loaded: %@";
 "error.no_audio" = "No audio recording";
+"error.no_audio_file" = "No audio file available";
+"error.speech_not_authorized" = "Speech recognition not authorized";
 "error.download_failed" = "Model download failed: %@";
 "error.compile_failed" = "Model compilation failed: %@";
 "error.load_failed" = "Model loading failed: %@";

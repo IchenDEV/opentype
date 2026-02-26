@@ -32,7 +32,7 @@ actor LLMEngine {
 
         let t0 = CFAbsoluteTimeGetCurrent()
 
-        let params = GenerateParameters(maxTokens: 512, temperature: 0.3)
+        let params = GenerateParameters(maxTokens: 2048, temperature: 0.3)
         let session = ChatSession(container, instructions: systemPrompt, generateParameters: params)
         let result = try await session.respond(to: prompt)
 
