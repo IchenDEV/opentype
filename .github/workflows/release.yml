@@ -19,9 +19,19 @@ jobs:
         id: version
         run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
+      - name: Check secrets availability
+        id: secrets-check
+        run: |
+          if [ "${{ secrets.APPLE_CERTIFICATE_P12 }}" != '' ]; then
+            echo "has-cert=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ "${{ secrets.APPLE_ID }}" != '' ] && [ "${{ secrets.APPLE_TEAM_ID }}" != '' ]; then
+            echo "has-notarize=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # ── Import signing certificate ──────────────────────────────
       - name: Import code-signing certificate
-        if: ${{ secrets.APPLE_CERTIFICATE_P12 != '' }}
+        if: steps.secrets-check.outputs.has-cert == 'true'
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -80,7 +90,7 @@ jobs:
 
       # ── Notarize (Developer ID only) ───────────────────────────
       - name: Notarize DMG
-        if: ${{ secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' }}
+        if: steps.secrets-check.outputs.has-notarize == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
