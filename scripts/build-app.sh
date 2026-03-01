@@ -113,8 +113,6 @@ done_msg "App bundle assembled"
 
 step "Generating AppIcon.icns…"
 swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources"
-# Also copy the source PNG for runtime Dock icon
-cp "${SCRIPT_DIR}/../Sources/Resources/AppIcon.png" "${APP_BUNDLE}/Contents/Resources/AppIcon.png" 2>/dev/null || true
 done_msg "Icon generated"
 
 # ─── Step 4: Code sign ───────────────────────────────────────────────────────

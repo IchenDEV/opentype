@@ -25,7 +25,7 @@ OpenType is a macOS menu bar voice input app built with Swift 6 / SwiftUI / AppK
 | `Screen/` | `ScreenOCR` — ScreenCaptureKit + Vision framework |
 | `Speech/` | `SpeechEngineProtocol`, `AppleSpeechEngine`, `WhisperEngine` |
 | `UI/` | All SwiftUI views: MenuBar, Settings (tabbed), Onboarding, Overlay HUD, History, Models, About |
-| `Resources/` | `en.lproj/` and `zh-Hans.lproj/` Localizable.strings, Sounds/, AppIcon.png |
+| `Resources/` | `en.lproj/` and `zh-Hans.lproj/` Localizable.strings, Sounds/ |
 
 ## Key Patterns
 
@@ -40,7 +40,7 @@ OpenType is a macOS menu bar voice input app built with Swift 6 / SwiftUI / AppK
 - **Dev build**: `swift build` or open `Package.swift` in Xcode
 - **Release build**: `bash scripts/build-app.sh` — uses `xcodebuild` (required for Metal shader bundling), then assembles .app and .dmg
 - **CI**: `.github/workflows/release.yml` — builds on macOS, signs, optionally notarizes, publishes to GitHub Releases
-- **Icon**: `scripts/generate-icon.swift` loads `Sources/Resources/AppIcon.png`, crops transparent edges, generates `.icns`
+- **Icon**: `scripts/generate-icon.swift` programmatically renders the icon and generates `.icns`; `Sources/App/AppIcon.swift` renders the same icon at runtime for the Dock
 
 ## Coding Conventions
 

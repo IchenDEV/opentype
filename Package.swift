@@ -22,7 +22,6 @@ let package = Package(
             path: "Sources",
             resources: [
                 .copy("Resources/Sounds"),
-                .copy("Resources/AppIcon.png"),
                 .process("Resources/en.lproj"),
                 .process("Resources/zh-Hans.lproj"),
             ],
