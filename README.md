@@ -9,15 +9,12 @@
 [![GitHub Stars](https://img.shields.io/github/stars/IchenDEV/opentype?style=flat-square&logo=github&color=ffcc00)](https://github.com/IchenDEV/opentype/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/IchenDEV/opentype?style=flat-square&logo=github&color=4a90d9)](https://github.com/IchenDEV/opentype/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/IchenDEV/opentype?style=flat-square&logo=github&color=red)](https://github.com/IchenDEV/opentype/issues)
-[![GitHub Trending](https://img.shields.io/badge/GitHub-Trending-brightgreen?style=flat-square&logo=github)](https://github.com/trending/swift)
 
 [![Platform](https://img.shields.io/badge/platform-macOS%2026%2B-black?style=flat-square&logo=apple)](https://www.apple.com/macos/)
 [![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?style=flat-square&logo=swift&logoColor=white)](https://swift.org)
 [![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2FM2%2FM3%2FM4-black?style=flat-square&logo=apple&logoColor=white)](https://www.apple.com/mac/m1/)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
-[![100% Local](https://img.shields.io/badge/100%25-Local%20%26%20Offline-success?style=flat-square&logo=shield)](https://github.com/IchenDEV/opentype)
-[![No Cloud](https://img.shields.io/badge/No%20Cloud-Privacy%20First-purple?style=flat-square&logo=lock)](https://github.com/IchenDEV/opentype)
 [![WhisperKit](https://img.shields.io/badge/Powered%20by-WhisperKit-blue?style=flat-square)](https://github.com/argmaxinc/WhisperKit)
 [![MLX](https://img.shields.io/badge/Powered%20by-MLX--LM-orange?style=flat-square)](https://github.com/ml-explore/mlx-swift-lm)
 
@@ -29,96 +26,136 @@
 
 ## Overview
 
-**OpenType** is a macOS menu bar app for local AI-powered voice input. It runs entirely on-device — no internet connection required after the initial model download. Simply hold a hotkey to start recording, release to transcribe, and the result is typed directly into whatever app you're using.
+**OpenType** is a macOS menu bar app for AI-powered voice input. It supports both fully local on-device inference and remote LLM APIs. Press a hotkey to start recording, release to transcribe, and the result is typed directly into whatever app you're using.
 
-Two modes are supported:
-- **Direct** — raw Whisper transcription, low latency
-- **LLM Polish** — transcription cleaned up by a local Qwen3 model (removes filler words, fixes grammar, applies your personal style)
+Three output modes are available:
 
-## Screenshot
-
-<img src="Docs/menubar-popover.png" alt="OpenType menu bar popover" width="480" />
-
-*The menu bar popover — showing the last transcription with one-click copy, language selection, and hotkey mode.*
+- **Verbatim** — raw transcription, lowest latency
+- **Smart Format** — transcription cleaned up by an LLM (contextual filler removal, grammar fixes, structured formatting)
+- **Voice Command** — speak a command and get an AI-generated response based on screen context
 
 ## Features
 
 | Feature | Description |
 |---|---|
-| **Offline Transcription** | WhisperKit-powered Whisper model, fully local |
-| **LLM Text Polishing** | MLX + Qwen3-0.6B 4-bit, removes filler words and cleans up dictation |
-| **Global Hotkey** | Hold Fn to record (Ctrl / Shift / Option / Fn — long-press, double-tap, or single-tap) |
-| **Screen Context** | Captures on-screen text to help the LLM correct homophones |
-| **Microphone Selection** | Choose any audio input device |
+| **Dual Speech Engines** | Apple Speech (built-in, zero download) or WhisperKit (offline Whisper models) |
+| **Smart Text Processing** | Local MLX Qwen2.5/Qwen3 or remote LLM — contextual cleanup, self-correction handling, structured list formatting |
+| **Remote LLM Support** | OpenAI, Claude (Anthropic format), Gemini, OpenRouter, SiliconFlow, Doubao, Bailian, MiniMax (CN & Global) |
+| **Global Hotkey** | Configurable key (Fn/Ctrl/Shift/Option) with long-press, double-tap, or single-tap activation |
+| **Screen Context OCR** | Captures on-screen text via ScreenCaptureKit + Vision to help the LLM correct homophones |
+| **Voice Command Mode** | Screen-aware voice assistant — summarize, reply, translate based on what's on screen |
+| **Input Memory** | Recent input history injected as LLM context for better continuity |
+| **Edit Rules** | Personal text replacement rules applied on every output |
+| **Language Style Presets** | Concise / Formal / Casual / Custom prompt per language |
+| **Input History & Stats** | Full history with raw vs. processed comparison, word count stats, configurable retention |
+| **Bilingual UI** | Chinese and English interface, independent of recognition language |
 | **Sound Feedback** | Audio cues on recording start and stop |
-| **Personal Dictionary** | Custom word replacements and LLM edit rules |
-| **Language Style** | Concise / Formal / Casual / Custom prompt |
+| **Guided Onboarding** | Step-by-step setup: permissions, model download, and first use |
 
 ## System Requirements
 
 - **OS**: macOS 26 (Tahoe) or later
 - **Chip**: Apple Silicon (M1 / M2 / M3 / M4)
-- **Disk**: ~2 GB (Whisper model ~1.5 GB + Qwen3 model ~335 MB)
+- **Disk**: ~400 MB minimum (Apple Speech + Qwen3-0.6B), up to ~4 GB with larger models
 
-## Build & Run
+## Installation
+
+### Download
+
+Grab the latest `.dmg` from [Releases](https://github.com/IchenDEV/opentype/releases), open it, and drag **OpenType.app** to Applications.
+
+> **"Cannot verify the developer" on first launch?** The app is not notarized by Apple. Before first run, execute in Terminal:
+> ```bash
+> xattr -cr /Applications/OpenType.app
+> ```
+> Or go to System Settings → Privacy & Security and click "Open Anyway".
+
+### Build from Source
 
 ```bash
-# Build (release)
-swift build -c release
+# Build .app bundle + .dmg installer
+bash scripts/build-app.sh
 
-# Run
+# Or for development
+swift build
 swift run OpenType
 
-# Open in Xcode
+# Or open in Xcode
 open Package.swift
-# Select the OpenType scheme → Release configuration → Run (⌘R)
 ```
 
 ## First Run
 
-1. Click the microphone icon in the menu bar
-2. Go to **Settings → Permissions** and grant Microphone and Accessibility access
-3. Wait for the Whisper model to download (~1.5 GB, one-time)
-4. Hold **Fn** to start dictating, release to stop and insert text
+1. Launch OpenType — it appears as a waveform icon in the menu bar
+2. The onboarding wizard guides you through permissions and model setup
+3. Grant **Microphone** and **Accessibility** permissions (required)
+4. Wait for the LLM model to download (~335 MB, one-time)
+5. Hold **Fn** to start dictating, release to stop and insert text
 
 ## Permissions
 
 | Permission | Purpose | Required |
 |---|---|---|
-| Microphone | Capture audio input | Yes |
-| Accessibility | Global hotkey + text injection (simulated ⌘V) | Yes |
-| Speech Recognition | Apple on-device ASR (optional engine) | No |
-| Screen Recording | Capture screen text for LLM context | No |
-| Network | One-time model download | First run only |
+| Microphone | Audio capture | Yes |
+| Accessibility | Global hotkey + text injection (simulated paste) | Yes |
+| Speech Recognition | Apple on-device ASR engine | Only if using Apple Speech |
+| Screen Recording | OCR for screen context and Voice Command mode | Optional |
+| Network | Model downloads; remote LLM API calls | First run / remote mode |
+
+## Remote LLM Providers
+
+OpenType supports both **OpenAI-compatible** and **Anthropic** API formats:
+
+| Provider | API Format | Base URL |
+|---|---|---|
+| OpenAI | OpenAI | `https://api.openai.com/v1` |
+| Anthropic Claude | Anthropic | `https://api.anthropic.com/v1` |
+| Google Gemini | OpenAI | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| OpenRouter | OpenAI | `https://openrouter.ai/api/v1` |
+| SiliconFlow | OpenAI | `https://api.siliconflow.cn/v1` |
+| Volcengine Doubao | OpenAI | `https://ark.cn-beijing.volces.com/api/v3` |
+| Alibaba Bailian | OpenAI | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| MiniMax (China) | OpenAI | `https://api.minimax.chat/v1` |
+| MiniMax (Global) | OpenAI | `https://api.minimaxi.chat/v1` |
 
 ## Project Structure
 
 ```
 Sources/
-├── App/          # Entry point, AppDelegate, AppState, VoicePipeline
-├── Audio/        # Microphone capture, sound playback
-├── Config/       # AppSettings (UserDefaults), model paths
+├── App/          # Entry point, AppDelegate, AppState, VoicePipeline, AppIcon
+├── Audio/        # Microphone capture (AVAudioEngine), sound playback
+├── Config/       # AppSettings, ModelCatalog, RemoteModelConfig, Localization
 ├── Hotkey/       # Global hotkey via CGEvent tap
-├── LLM/          # MLX-LM inference engine, prompt builder
-├── Output/       # Text injection (clipboard + simulated paste)
-├── Processing/   # Text cleanup, PersonalDictionary
+├── LLM/          # LLMEngine (MLX), RemoteLLMClient (OpenAI/Anthropic), PromptBuilder
+├── Output/       # Text injection (Accessibility API + clipboard paste)
+├── Processing/   # TextProcessor, InputHistory, MemoryStore, PersonalDictionary
 ├── Screen/       # Screen OCR (ScreenCaptureKit + Vision)
-├── Speech/       # SpeechEngine protocol, WhisperKit, Apple Speech
-└── UI/           # SwiftUI menu bar, settings sheet, floating HUD
+├── Speech/       # SpeechEngine protocol, WhisperKit engine, Apple Speech engine
+├── UI/           # SwiftUI: MenuBar, Settings, Onboarding, Overlay, History, Models
+└── Resources/    # Localization strings (en/zh-Hans), sounds, app icon
+scripts/
+├── build-app.sh            # Build .app bundle and .dmg installer
+├── generate-icon.swift     # Generate AppIcon.icns from source PNG
+└── create-signing-cert.sh  # Generate self-signed code signing certificate
 ```
 
 ## Tech Stack
 
 - [WhisperKit](https://github.com/argmaxinc/WhisperKit) — offline Whisper speech recognition
-- [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) — local LLM inference on Apple Silicon
+- [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) — local LLM inference on Apple Silicon (Qwen2.5 / Qwen3)
 - **SwiftUI + AppKit** — native macOS UI
 - **ScreenCaptureKit + Vision** — screen OCR
 - **AVAudioEngine** — low-latency microphone capture
+- **Apple Speech Framework** — on-device speech recognition
+
+## License
+
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
 
-Made with ❤️ for Apple Silicon
+Made with care for Apple Silicon
 
 </div>

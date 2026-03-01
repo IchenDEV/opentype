@@ -6,7 +6,6 @@ struct SettingsView: View {
 
     var onUnloadWhisper: (() -> Void)?
     var onUnloadLLM: (() -> Void)?
-    @State private var showPermissions = false
 
     var body: some View {
         TabView {
@@ -18,7 +17,7 @@ struct SettingsView: View {
                 .tabItem { Label(L("tab.style"), systemImage: "text.book.closed") }
             HistoryStatsView()
                 .tabItem { Label(L("tab.history"), systemImage: "clock.arrow.circlepath") }
-            AboutView()
+            aboutTab
                 .tabItem { Label(L("tab.about"), systemImage: "info.circle") }
         }
         .frame(width: 640, height: 520)
@@ -51,41 +50,48 @@ struct SettingsView: View {
                 Picker(L("settings.output_mode"), selection: $settings.outputMode) {
                     ForEach(OutputMode.allCases, id: \.self) { Text($0.label) }
                 }
-            }
-
-            Section(L("settings.voice_language")) {
-                Picker(L("settings.ui_language"), selection: $settings.uiLanguage) {
-                    ForEach(UILanguage.allCases, id: \.self) { Text($0.displayName) }
-                }
                 Picker(L("settings.recognition_language"), selection: $settings.inputLanguage) {
                     ForEach(InputLanguage.allCases, id: \.self) { Text($0.rawValue) }
                 }
-                Toggle(L("settings.sound_cues"), isOn: $settings.playSounds)
-                microphonePicker
-                Toggle(L("settings.screen_context"), isOn: $settings.useScreenContext)
-                    .help(L("settings.screen_context_help"))
             }
 
-            Section {
-                Button {
-                    showPermissions = true
-                } label: {
-                    Label(L("settings.permissions"), systemImage: "lock.shield")
+            Section(L("settings.audio")) {
+                microphonePicker
+                Toggle(isOn: $settings.useScreenContext) {
+                    Text(L("settings.screen_context"))
                 }
-                .sheet(isPresented: $showPermissions) {
-                    PermissionsView()
-                        .environmentObject(settings)
-                        .frame(width: 480, height: 380)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button(L("common.done")) { showPermissions = false }
-                            }
-                        }
+                .help(L("settings.screen_context_help"))
+                Toggle(isOn: $settings.playSounds) {
+                    Text(L("settings.sound_cues"))
+                }
+            }
+
+            Section(L("settings.memory")) {
+                Toggle(isOn: $settings.enableMemory) {
+                    Text(L("settings.enable_memory"))
+                }
+                Picker(L("settings.memory_window"), selection: $settings.memoryWindowMinutes) {
+                    Text(String(format: L("settings.memory_minutes_fmt"), 5)).tag(5)
+                    Text(String(format: L("settings.memory_minutes_fmt"), 15)).tag(15)
+                    Text(String(format: L("settings.memory_minutes_fmt"), 30)).tag(30)
+                    Text(String(format: L("settings.memory_minutes_fmt"), 60)).tag(60)
+                }
+            }
+
+            Section(L("settings.interface")) {
+                Picker(L("settings.ui_language"), selection: $settings.uiLanguage) {
+                    ForEach(UILanguage.allCases, id: \.self) { Text($0.displayName) }
                 }
             }
         }
         .formStyle(.grouped)
-        .padding()
+        .scrollContentBackground(.hidden)
+    }
+
+    // MARK: - About (with Permissions)
+
+    private var aboutTab: some View {
+        AboutView()
     }
 
     private var microphonePicker: some View {

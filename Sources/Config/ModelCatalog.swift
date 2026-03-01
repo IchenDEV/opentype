@@ -12,10 +12,34 @@ final class ModelCatalog: ObservableObject {
 
     private let settings = AppSettings.shared
 
+    /// LLM model family categories
+    enum ModelFamily: String, CaseIterable {
+        case qwen = "Qwen"
+        case gemma = "Gemma"
+        case llama = "Llama"
+
+        var icon: String {
+            switch self {
+            case .qwen: return "q.circle.fill"
+            case .gemma: return "g.circle.fill"
+            case .llama: return "l.circle.fill"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .qwen: return L("model.family.qwen")
+            case .gemma: return L("model.family.gemma")
+            case .llama: return L("model.family.llama")
+            }
+        }
+    }
+
     struct ModelEntry: Identifiable, Equatable {
         let id: String
         let displayName: String
         let hint: String
+        let family: ModelFamily?
         var status: ModelStatus = .notDownloaded
         var cacheSize: Int64 = 0
         var downloadProgress: Double = 0
@@ -55,7 +79,8 @@ final class ModelCatalog: ObservableObject {
             return ModelEntry(
                 id: fullName,
                 displayName: Self.shortenWhisperName(fullName),
-                hint: fullName == defaultID ? L("common.recommended") : ""
+                hint: fullName == defaultID ? L("common.recommended") : "",
+                family: nil
             )
         }
 
@@ -64,19 +89,30 @@ final class ModelCatalog: ObservableObject {
         }
 
         llmModels = Self.defaultLLMModels.map {
-            ModelEntry(id: $0.0, displayName: $0.1, hint: $0.2)
+            ModelEntry(id: $0.0, displayName: $0.1, hint: $0.2, family: $0.3)
         }
         refreshStatus()
     }
 
-    static var defaultLLMModels: [(String, String, String)] {
+    static var defaultLLMModels: [(String, String, String, ModelFamily?)] {
         [
-            ("mlx-community/Qwen2.5-0.5B-Instruct-4bit", "Qwen2.5 0.5B", L("model.smallest")),
-            ("mlx-community/Qwen2.5-1.5B-Instruct-4bit", "Qwen2.5 1.5B", L("model.balanced")),
-            ("mlx-community/Qwen2.5-3B-Instruct-4bit", "Qwen2.5 3B", L("model.best_quality")),
-            ("mlx-community/Qwen3-0.6B-4bit", "Qwen3 0.6B", L("model.qwen3_fast")),
-            ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.qwen3_balanced")),
-            ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.qwen3_quality")),
+            // Qwen Family
+            ("mlx-community/Qwen2.5-0.5B-Instruct-4bit", "Qwen2.5 0.5B", L("model.smallest"), .qwen),
+            ("mlx-community/Qwen2.5-1.5B-Instruct-4bit", "Qwen2.5 1.5B", L("model.balanced"), .qwen),
+            ("mlx-community/Qwen2.5-3B-Instruct-4bit", "Qwen2.5 3B", L("model.best_quality"), .qwen),
+            ("mlx-community/Qwen3-0.6B-4bit", "Qwen3 0.6B", L("model.qwen3_fast"), .qwen),
+            ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.qwen3_balanced"), .qwen),
+            ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.qwen3_quality"), .qwen),
+            ("mlx-community/Qwen3-30B-A3B-4bit", "Qwen3 30B-A3B", L("model.qwen3_moe"), .qwen),
+
+            // Gemma Family (Google)
+            ("mlx-community/gemma-3-1b-it-4bit", "Gemma 3 1B", L("model.gemma_fast"), .gemma),
+            ("mlx-community/gemma-3-4b-it-4bit", "Gemma 3 4B", L("model.gemma_balanced"), .gemma),
+            ("mlx-community/gemma-3-12b-it-4bit", "Gemma 3 12B", L("model.gemma_quality"), .gemma),
+
+            // Llama Family (Meta)
+            ("mlx-community/Llama-4-Scout-17B-16E-Instruct-4bit", "Llama 4 Scout", L("model.llama_balanced"), .llama),
+            ("mlx-community/Llama-4-Maverick-17B-128E-Instruct-4bit", "Llama 4 Maverick", L("model.llama_quality"), .llama),
         ]
     }
 
@@ -130,6 +166,7 @@ final class ModelCatalog: ObservableObject {
 
             _ = try await WhisperKit.download(
                 variant: id,
+                downloadBase: Self.whisperDownloadBase,
                 progressCallback: { [weak self] p in
                     Task { @MainActor in
                         guard let self, let i = self.whisperModels.firstIndex(where: { $0.id == id }) else { return }
@@ -217,7 +254,7 @@ final class ModelCatalog: ObservableObject {
     func addCustomLLM(_ modelID: String) {
         guard !modelID.isEmpty, !llmModels.contains(where: { $0.id == modelID }) else { return }
         let name = modelID.components(separatedBy: "/").last ?? modelID
-        llmModels.append(ModelEntry(id: modelID, displayName: name, hint: L("common.custom")))
+        llmModels.append(ModelEntry(id: modelID, displayName: name, hint: L("common.custom"), family: nil))
         refreshStatus()
     }
 
@@ -250,13 +287,19 @@ final class ModelCatalog: ObservableObject {
         return "\(bytes) B"
     }
 
-    /// HubApi default: ~/Documents/huggingface/models/
-    private static let hubModelsBase: URL = {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return docs.appendingPathComponent("huggingface/models")
+    /// Custom download base for WhisperKit — ~/Library/Application Support/OpenType/huggingface/
+    static let whisperDownloadBase: URL = {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let base = appSupport.appendingPathComponent("OpenType/huggingface")
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base
     }()
 
-    // MARK: Whisper cache — ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/<variant>/
+    private static let hubModelsBase: URL = {
+        whisperDownloadBase.appendingPathComponent("models")
+    }()
+
+    // MARK: Whisper cache
 
     private func whisperVariantDir(_ variant: String) -> URL {
         Self.hubModelsBase
@@ -268,6 +311,11 @@ final class ModelCatalog: ObservableObject {
         let dir = whisperVariantDir(variant)
         guard FileManager.default.fileExists(atPath: dir.path) else { return 0 }
         return Self.directorySize(at: dir)
+    }
+
+    /// Returns true if the Whisper variant is already downloaded (skip download progress UI).
+    func isWhisperDownloaded(_ variant: String) -> Bool {
+        whisperVariantSize(variant) > 0
     }
 
     private func deleteWhisperVariant(_ variant: String) {

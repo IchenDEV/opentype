@@ -4,16 +4,12 @@ struct DictionaryStyleView: View {
     @EnvironmentObject var settings: AppSettings
     @StateObject private var dictionary = PersonalDictionary.shared
 
-    @State private var newOriginal = ""
-    @State private var newReplacement = ""
     @State private var newRule = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 styleSection
-                Divider()
-                dictionarySection
                 Divider()
                 editRulesSection
             }
@@ -28,7 +24,7 @@ struct DictionaryStyleView: View {
             Label(L("style.title"), systemImage: "paintbrush")
                 .font(.headline)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 ForEach(LanguageStyle.allCases, id: \.self) { style in
                     StylePresetCard(
                         style: style,
@@ -57,61 +53,6 @@ struct DictionaryStyleView: View {
                 Text(L("style.prompt_help"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    // MARK: - Dictionary
-
-    private var dictionarySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(L("dict.title"), systemImage: "character.book.closed")
-                .font(.headline)
-            Text(L("dict.subtitle"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 8) {
-                TextField(L("dict.original"), text: $newOriginal)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 120)
-                Image(systemName: "arrow.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                TextField(L("dict.replacement"), text: $newReplacement)
-                    .textFieldStyle(.roundedBorder)
-                Button(L("common.add")) {
-                    guard !newOriginal.isEmpty, !newReplacement.isEmpty else { return }
-                    dictionary.addEntry(original: newOriginal, replacement: newReplacement)
-                    newOriginal = ""
-                    newReplacement = ""
-                }
-                .controlSize(.small)
-            }
-
-            if dictionary.entries.isEmpty {
-                emptyHint(L("dict.empty"))
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(dictionary.entries.enumerated()), id: \.element.id) { index, entry in
-                        HStack {
-                            Text(entry.original)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 100, alignment: .trailing)
-                            Image(systemName: "arrow.right")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                            Text(entry.replacement)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            deleteButton { dictionary.removeEntry(at: IndexSet(integer: index)) }
-                        }
-                        .font(.system(size: 12))
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 10)
-                        if index < dictionary.entries.count - 1 { Divider().padding(.horizontal, 10) }
-                    }
-                }
-                .listCard()
             }
         }
     }
@@ -203,7 +144,7 @@ private struct StylePresetCard: View {
                     .multilineTextAlignment(.leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
+            .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(isSelected ? Color.accentColor.opacity(0.08) : Color(nsColor: .controlBackgroundColor))
@@ -215,6 +156,7 @@ private struct StylePresetCard: View {
             )
         }
         .buttonStyle(.plain)
+        .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
     }
 }
 

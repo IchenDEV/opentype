@@ -24,6 +24,15 @@ enum ScreenOCR {
         CGPreflightScreenCaptureAccess()
     }
 
+    static func checkScreenCapturePermission() async -> Bool {
+        do {
+            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     static func requestPermissionIfNeeded() {
         if !CGPreflightScreenCaptureAccess() {
             CGRequestScreenCaptureAccess()

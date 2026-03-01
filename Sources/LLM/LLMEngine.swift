@@ -25,14 +25,14 @@ actor LLMEngine {
         Log.info("[LLMEngine] model loaded in \(String(format: "%.1f", elapsed))s")
     }
 
-    func generate(prompt: String, systemPrompt: String? = nil) async throws -> String {
+    func generate(prompt: String, systemPrompt: String? = nil, maxTokens: Int = 2048) async throws -> String {
         guard let container else {
             throw LLMError.modelNotLoaded
         }
 
         let t0 = CFAbsoluteTimeGetCurrent()
 
-        let params = GenerateParameters(maxTokens: 2048, temperature: 0.3)
+        let params = GenerateParameters(maxTokens: maxTokens, temperature: 0.3)
         let session = ChatSession(container, instructions: systemPrompt, generateParameters: params)
         let result = try await session.respond(to: prompt)
 

@@ -23,8 +23,9 @@
 
 /* ── Tabs ── */
 "tab.general" = "General";
+"tab.voice" = "Voice";
 "tab.models" = "Models";
-"tab.style" = "Style";
+"tab.style" = "Style & Rules";
 "tab.history" = "History";
 "tab.about" = "About";
 
@@ -61,11 +62,19 @@
 
 /* ── Settings ── */
 "settings.activation" = "Activation";
+"settings.interface" = "Interface";
+"settings.recognition" = "Recognition";
+"settings.audio" = "Audio";
+"settings.speech_engine" = "Speech engine";
 "settings.hotkey" = "Hotkey";
 "settings.mode" = "Mode";
 "settings.tap_interval" = "Double-tap interval";
 "settings.output" = "Output";
 "settings.output_mode" = "Output mode";
+"settings.memory" = "Memory";
+"settings.enable_memory" = "Enable input memory";
+"settings.memory_window" = "Memory window";
+"settings.memory_minutes_fmt" = "%d minutes";
 "settings.screen_context" = "Screen context assist";
 "settings.screen_context_help" = "Capture on-screen text to help the LLM correct homophones (requires Screen Recording permission, only active in Smart Format mode)";
 "settings.voice_language" = "Voice & Language";
@@ -75,10 +84,36 @@
 "settings.microphone" = "Microphone";
 "settings.system_default" = "System Default";
 "settings.permissions" = "Permissions";
+"settings.history_retention" = "History retention";
+"retention.forever" = "Keep Forever";
+"retention.three_days" = "3 Days";
+"retention.seven_days" = "7 Days";
+"retention.one_month" = "1 Month";
+
+/* ── Remote LLM ── */
+"remote.title" = "Remote LLM";
+"remote.use_remote" = "Use remote LLM";
+"remote.provider" = "Provider";
+"remote.api_key" = "API Key";
+"remote.base_url" = "Base URL";
+"remote.model" = "Model";
+"remote.test" = "Test Connection";
+"remote.test_success" = "Connection successful!";
+"remote.test_failed" = "Connection failed";
+"remote.custom" = "Custom";
+"remote.doubao" = "Volcengine Doubao";
+"remote.bailian" = "Alibaba Bailian";
+"remote.siliconflow" = "SiliconFlow";
+"remote.minimax_cn" = "MiniMax (China)";
+"remote.minimax_global" = "MiniMax (Global)";
 
 /* ── Model Management ── */
 "model.speech_recognition" = "Speech Recognition";
 "model.text_formatting" = "Text Formatting (LLM)";
+"model.family.title" = "Model Family";
+"model.family.qwen" = "Alibaba Qwen - Multilingual";
+"model.family.gemma" = "Google Gemma - Lightweight";
+"model.family.llama" = "Meta Llama - General Purpose";
 "model.custom_id_placeholder" = "Custom model ID (e.g. mlx-community/…)";
 "model.active" = "Active";
 "model.use" = "Use";
@@ -90,19 +125,30 @@
 "model.qwen3_fast" = "Qwen3, fast ~335 MB";
 "model.qwen3_balanced" = "Qwen3, balanced ~1 GB";
 "model.qwen3_quality" = "Qwen3, best quality ~2.3 GB";
+"model.qwen3_moe" = "Qwen3 MoE flagship, recommended ~5 GB";
+"model.gemma_fast" = "Gemma 3, fast ~600 MB";
+"model.gemma_balanced" = "Gemma 3, balanced ~2.5 GB";
+"model.gemma_quality" = "Gemma 3, best quality ~7 GB";
+"model.llama_balanced" = "Llama 4 Scout, balanced ~10 GB";
+"model.llama_quality" = "Llama 4 Maverick, high quality ~25 GB";
+"model.import_local" = "Import Local Model…";
+"model.import_invalid" = "Invalid model directory: config.json not found";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "Verbatim";
 "mode.smart_format" = "Smart Format";
+"mode.voice_command" = "Voice Command";
 "mode.hold_record" = "Hold to Record";
 "mode.double_tap" = "Double-tap Toggle";
 "mode.tap_toggle" = "Tap Toggle";
 "style.concise" = "Concise";
 "style.formal" = "Formal";
+"style.professional" = "Professional";
 "style.casual" = "Casual";
 "engine.apple_speech" = "Apple Speech";
 "style.prompt.concise" = "Concise and refined. Remove redundant expressions, keep core information, convey complete meaning with minimal words.";
 "style.prompt.formal" = "Formal written style suitable for business emails or academic contexts. Ensure smooth, standard sentences.";
+"style.prompt.professional" = "Professional structured output. When the content contains multiple points (e.g. 'first, second, third'), format as: a one-sentence summary title followed by a colon and newline, then numbered items (1. 2. 3.), each on its own line. When there are no clear bullet points, use formal written style with clear paragraphs.";
 "style.prompt.casual" = "Keep the natural feel of everyday speech. Only correct errors and remove filler words — avoid over-formalizing.";
 
 /* ── Style & Dictionary ── */
@@ -133,6 +179,7 @@
 "history.date_yesterday" = "Yesterday";
 "history.chars_saved_fmt" = "−%d chars";
 "history.chars_added_fmt" = "+%d chars";
+"history.raw_label" = "Original";
 
 /* ── Onboarding ── */
 "onboarding.welcome" = "Welcome to OpenType";
@@ -147,6 +194,11 @@
 "onboarding.ready_body" = "OpenType is ready. Use the hotkey to start voice input.\nYou can adjust all settings from the menu bar icon.";
 "onboarding.hold_hint" = "Hold to speak, release to insert";
 "onboarding.get_started" = "Get Started";
+"onboarding.model_prep" = "Model Preparation";
+"onboarding.model_prep_body" = "OpenType needs to download a small language model for text processing. This only happens once.";
+"onboarding.downloading_model" = "Downloading model…";
+"onboarding.model_ready" = "Model ready!";
+"onboarding.skip_download" = "Skip, download later";
 
 /* ── Permissions ── */
 "perm.intro" = "OpenType requires the following permissions to function properly.";

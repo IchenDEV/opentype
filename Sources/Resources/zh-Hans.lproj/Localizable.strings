@@ -23,8 +23,9 @@
 
 /* ── Tabs ── */
 "tab.general" = "通用";
+"tab.voice" = "语音";
 "tab.models" = "模型";
-"tab.style" = "风格与词库";
+"tab.style" = "风格与规则";
 "tab.history" = "历史";
 "tab.about" = "关于";
 
@@ -61,11 +62,19 @@
 
 /* ── Settings ── */
 "settings.activation" = "激活方式";
+"settings.interface" = "界面";
+"settings.recognition" = "识别引擎";
+"settings.audio" = "音频";
+"settings.speech_engine" = "语音引擎";
 "settings.hotkey" = "快捷键";
 "settings.mode" = "触发模式";
 "settings.tap_interval" = "双击间隔";
 "settings.output" = "输出";
 "settings.output_mode" = "输出模式";
+"settings.memory" = "记忆";
+"settings.enable_memory" = "启用输入记忆";
+"settings.memory_window" = "记忆时间窗口";
+"settings.memory_minutes_fmt" = "%d 分钟";
 "settings.screen_context" = "屏幕上下文辅助";
 "settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限，仅智能整理模式生效）";
 "settings.voice_language" = "语音与语言";
@@ -75,10 +84,36 @@
 "settings.microphone" = "麦克风";
 "settings.system_default" = "系统默认";
 "settings.permissions" = "权限管理";
+"settings.history_retention" = "历史保留时长";
+"retention.forever" = "永久保留";
+"retention.three_days" = "保留 3 天";
+"retention.seven_days" = "保留 7 天";
+"retention.one_month" = "保留 1 个月";
+
+/* ── Remote LLM ── */
+"remote.title" = "远程 LLM";
+"remote.use_remote" = "使用远程 LLM";
+"remote.provider" = "服务商";
+"remote.api_key" = "API Key";
+"remote.base_url" = "接口地址";
+"remote.model" = "模型";
+"remote.test" = "测试连接";
+"remote.test_success" = "连接成功！";
+"remote.test_failed" = "连接失败";
+"remote.custom" = "自定义";
+"remote.doubao" = "火山引擎豆包";
+"remote.bailian" = "阿里百炼";
+"remote.siliconflow" = "硅基流动";
+"remote.minimax_cn" = "MiniMax（国内）";
+"remote.minimax_global" = "MiniMax（海外）";
 
 /* ── Model Management ── */
 "model.speech_recognition" = "语音识别";
 "model.text_formatting" = "文本整理 (LLM)";
+"model.family.title" = "模型系列";
+"model.family.qwen" = "阿里通义千问 - 多语言";
+"model.family.gemma" = "Google Gemma - 轻量";
+"model.family.llama" = "Meta Llama - 通用";
 "model.custom_id_placeholder" = "自定义模型 ID（如 mlx-community/…）";
 "model.active" = "当前";
 "model.use" = "启用";
@@ -90,19 +125,31 @@
 "model.qwen3_fast" = "Qwen3 极速 ~335 MB";
 "model.qwen3_balanced" = "Qwen3 均衡 ~1 GB";
 "model.qwen3_quality" = "Qwen3 高质量 ~2.3 GB";
+"model.qwen3_moe" = "Qwen3 MoE 旗舰，推荐 ~5 GB";
+"model.gemma_fast" = "Gemma 3 极速 ~600 MB";
+"model.gemma_balanced" = "Gemma 3 均衡 ~2.5 GB";
+"model.gemma_quality" = "Gemma 3 高质量 ~7 GB";
+"model.llama_balanced" = "Llama 4 Scout 均衡 ~10 GB";
+"model.llama_quality" = "Llama 4 Maverick 高质量 ~25 GB";
+"model.import_local" = "导入本地模型…";
+"model.import_invalid" = "无效的模型目录：未找到 config.json";
+"model.import_failed" = "导入失败";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "原文直出";
 "mode.smart_format" = "智能整理";
+"mode.voice_command" = "语音指令";
 "mode.hold_record" = "长按录音";
 "mode.double_tap" = "双击切换";
 "mode.tap_toggle" = "单击切换";
 "style.concise" = "简洁精炼";
 "style.formal" = "正式书面";
+"style.professional" = "专业结构";
 "style.casual" = "日常口语";
 "engine.apple_speech" = "Apple 语音识别";
 "style.prompt.concise" = "简洁精炼，去除冗余表达，保留核心信息，用最少的文字表达完整意思。";
 "style.prompt.formal" = "正式书面语风格，适合商务邮件或学术场景，语句通顺规范。";
+"style.prompt.professional" = "专业结构化输出。当内容包含多个要点（如"第一、第二、第三"或"首先、其次、最后"），输出格式为：先用一句话总结作为标题，后接冒号并换行，再逐条列出要点，每个要点用编号格式（1. 2. 3.），每条单独一行。没有明显要点时，使用正式书面风格，保持段落清晰。";
 "style.prompt.casual" = "保持日常口语的自然感，仅修正错误和去除语气词，不要过度书面化。";
 
 /* ── Style & Dictionary ── */
@@ -133,6 +180,7 @@
 "history.date_yesterday" = "昨天";
 "history.chars_saved_fmt" = "精简 %d 字";
 "history.chars_added_fmt" = "增加 %d 字";
+"history.raw_label" = "原始识别";
 
 /* ── Onboarding ── */
 "onboarding.welcome" = "欢迎使用 OpenType";
@@ -147,6 +195,11 @@
 "onboarding.ready_body" = "OpenType 已就绪。使用快捷键即可开始语音输入。\n所有设置可通过菜单栏图标访问。";
 "onboarding.hold_hint" = "长按说话，松开输入";
 "onboarding.get_started" = "开始使用";
+"onboarding.model_prep" = "准备模型";
+"onboarding.model_prep_body" = "OpenType 需要下载一个小型语言模型用于文本处理，仅需下载一次。";
+"onboarding.downloading_model" = "正在下载模型…";
+"onboarding.model_ready" = "模型已就绪！";
+"onboarding.skip_download" = "跳过，稍后下载";
 
 /* ── Permissions ── */
 "perm.intro" = "OpenType 需要以下权限才能正常工作。";

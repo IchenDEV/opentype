@@ -16,11 +16,13 @@ enum UILanguage: String, Codable, CaseIterable {
 enum OutputMode: String, Codable, CaseIterable {
     case direct = "direct"
     case processed = "processed"
+    case command = "command"
 
     var label: String {
         switch self {
         case .direct: return L("mode.verbatim")
         case .processed: return L("mode.smart_format")
+        case .command: return L("mode.voice_command")
         }
     }
 }
@@ -40,12 +42,14 @@ enum SpeechEngineType: String, Codable, CaseIterable {
 enum LanguageStyle: String, Codable, CaseIterable {
     case concise = "concise"
     case formal = "formal"
+    case professional = "professional"
     case casual = "casual"
 
     var label: String {
         switch self {
         case .concise: return L("style.concise")
         case .formal: return L("style.formal")
+        case .professional: return L("style.professional")
         case .casual: return L("style.casual")
         }
     }
@@ -54,6 +58,7 @@ enum LanguageStyle: String, Codable, CaseIterable {
         switch self {
         case .concise: return L("style.prompt.concise")
         case .formal: return L("style.prompt.formal")
+        case .professional: return L("style.prompt.professional")
         case .casual: return L("style.prompt.casual")
         }
     }
@@ -62,6 +67,7 @@ enum LanguageStyle: String, Codable, CaseIterable {
         switch self {
         case .concise: return "scissors"
         case .formal: return "doc.text"
+        case .professional: return "list.number"
         case .casual: return "bubble.left"
         }
     }
@@ -84,6 +90,31 @@ enum ActivationMode: String, Codable, CaseIterable {
         case .longPress: return L("mode.hold_record")
         case .doubleTap: return L("mode.double_tap")
         case .toggle: return L("mode.tap_toggle")
+        }
+    }
+}
+
+enum HistoryRetention: String, Codable, CaseIterable {
+    case forever = "forever"
+    case threeDays = "threeDays"
+    case sevenDays = "sevenDays"
+    case oneMonth = "oneMonth"
+
+    var label: String {
+        switch self {
+        case .forever: return L("retention.forever")
+        case .threeDays: return L("retention.three_days")
+        case .sevenDays: return L("retention.seven_days")
+        case .oneMonth: return L("retention.one_month")
+        }
+    }
+
+    var timeInterval: TimeInterval? {
+        switch self {
+        case .forever: return nil
+        case .threeDays: return 3 * 24 * 3600
+        case .sevenDays: return 7 * 24 * 3600
+        case .oneMonth: return 30 * 24 * 3600
         }
     }
 }
@@ -125,6 +156,14 @@ final class AppSettings: ObservableObject {
     @Published var useScreenContext: Bool
     @Published var hasCompletedOnboarding: Bool
     @Published var uiLanguage: UILanguage
+    @Published var historyRetention: HistoryRetention
+    @Published var enableMemory: Bool
+    @Published var memoryWindowMinutes: Int
+    @Published var useRemoteLLM: Bool
+    @Published var remoteProvider: RemoteProvider
+    @Published var remoteAPIKey: String
+    @Published var remoteBaseURL: String
+    @Published var remoteModel: String
 
     private let defaults = UserDefaults.standard
     private var cancellables = Set<AnyCancellable>()
@@ -132,7 +171,9 @@ final class AppSettings: ObservableObject {
     private enum Key: String {
         case hotkeyType, activationMode, tapInterval, speechEngine, whisperModel, llmModel
         case microphoneID, outputMode, languageStyle, customStylePrompt, playSounds
-        case inputLanguage, useScreenContext, hasCompletedOnboarding, uiLanguage
+        case inputLanguage, useScreenContext, hasCompletedOnboarding, uiLanguage, historyRetention
+        case enableMemory, memoryWindowMinutes
+        case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
     }
 
     private init() {
@@ -169,6 +210,14 @@ final class AppSettings: ObservableObject {
         useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? true
         hasCompletedOnboarding = ud.bool(forKey: Key.hasCompletedOnboarding.rawValue)
         uiLanguage = UILanguage(rawValue: ud.string(forKey: Key.uiLanguage.rawValue) ?? "") ?? .chinese
+        historyRetention = HistoryRetention(rawValue: ud.string(forKey: Key.historyRetention.rawValue) ?? "") ?? .forever
+        enableMemory = ud.object(forKey: Key.enableMemory.rawValue) as? Bool ?? true
+        memoryWindowMinutes = (ud.integer(forKey: Key.memoryWindowMinutes.rawValue)).nonZeroInt ?? 30
+        useRemoteLLM = ud.bool(forKey: Key.useRemoteLLM.rawValue)
+        remoteProvider = RemoteProvider(rawValue: ud.string(forKey: Key.remoteProvider.rawValue) ?? "") ?? .custom
+        remoteAPIKey = ud.string(forKey: Key.remoteAPIKey.rawValue) ?? ""
+        remoteBaseURL = ud.string(forKey: Key.remoteBaseURL.rawValue) ?? ""
+        remoteModel = ud.string(forKey: Key.remoteModel.rawValue) ?? ""
 
         setupPersistence()
     }
@@ -189,6 +238,14 @@ final class AppSettings: ObservableObject {
         $useScreenContext.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useScreenContext.rawValue) }.store(in: &cancellables)
         $hasCompletedOnboarding.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.hasCompletedOnboarding.rawValue) }.store(in: &cancellables)
         $uiLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue) }.store(in: &cancellables)
+        $historyRetention.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.historyRetention.rawValue) }.store(in: &cancellables)
+        $enableMemory.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableMemory.rawValue) }.store(in: &cancellables)
+        $memoryWindowMinutes.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.memoryWindowMinutes.rawValue) }.store(in: &cancellables)
+        $useRemoteLLM.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useRemoteLLM.rawValue) }.store(in: &cancellables)
+        $remoteProvider.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.remoteProvider.rawValue) }.store(in: &cancellables)
+        $remoteAPIKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteAPIKey.rawValue) }.store(in: &cancellables)
+        $remoteBaseURL.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteBaseURL.rawValue) }.store(in: &cancellables)
+        $remoteModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteModel.rawValue) }.store(in: &cancellables)
     }
 
     var zh: Bool { uiLanguage == .chinese }
@@ -196,4 +253,8 @@ final class AppSettings: ObservableObject {
 
 private extension Double {
     var nonZero: Double? { self == 0 ? nil : self }
+}
+
+private extension Int {
+    var nonZeroInt: Int? { self == 0 ? nil : self }
 }

@@ -79,6 +79,7 @@ final class WhisperEngine: SpeechEngine {
             do {
                 folder = try await WhisperKit.download(
                     variant: selectedModel,
+                    downloadBase: ModelCatalog.whisperDownloadBase,
                     progressCallback: { p in
                         let now = Date()
                         let elapsed = now.timeIntervalSince(lastTime)

@@ -21,7 +21,10 @@ set -euo pipefail
 
 APP_NAME="OpenType"
 BUNDLE_ID="com.opentype.voiceinput"
-VERSION="${VERSION:-1.0.0}"
+# Default: use latest git tag (strip leading "v"), fallback to 0.0.0-dev
+if [ -z "${VERSION:-}" ]; then
+    VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0-dev")"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -42,7 +45,7 @@ for arg in "$@"; do
         --help|-h)
             echo "Usage: $0 [--version=X.Y.Z] [--app-only] [--sign=IDENTITY] [--help]"
             echo ""
-            echo "  --version=X.Y.Z    Set version (default: 1.0.0, or \$VERSION env)"
+            echo "  --version=X.Y.Z    Set version (default: latest git tag, or \$VERSION env)"
             echo "  --app-only         Build .app bundle only, skip DMG creation"
             echo "  --sign=IDENTITY    Code signing identity (default: auto-detect)"
             echo "                     Use '--sign=-' to force ad-hoc signing"
@@ -64,15 +67,17 @@ DMG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.dmg"
 step() { echo ""; echo "▶ $1"; }
 done_msg() { echo "  ✓ $1"; }
 
-# ─── Step 1: Build with xcodebuild ─────────────────────────────────────────────
+# ─── Step 1: Build with xcodebuild (Universal Binary) ─────────────────────────
 
-step "Building ${APP_NAME} (Release via xcodebuild)…"
+step "Building ${APP_NAME} (Release, arm64)…"
 cd "${PROJECT_DIR}"
 xcodebuild \
     -scheme "${APP_NAME}" \
     -configuration Release \
     -derivedDataPath "${DERIVED_DATA}" \
     -destination 'platform=macOS' \
+    ARCHS="arm64" \
+    ONLY_ACTIVE_ARCH=NO \
     build \
     -quiet
 done_msg "Build succeeded"
@@ -108,14 +113,17 @@ done_msg "App bundle assembled"
 
 step "Generating AppIcon.icns…"
 swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources"
+# Also copy the source PNG for runtime Dock icon
+cp "${SCRIPT_DIR}/../Sources/Resources/AppIcon.png" "${APP_BUNDLE}/Contents/Resources/AppIcon.png" 2>/dev/null || true
 done_msg "Icon generated"
 
 # ─── Step 4: Code sign ───────────────────────────────────────────────────────
 
-step "Code signing…"
+step "Code signing (hardened runtime + entitlements)…"
+
+ENTITLEMENTS="${PROJECT_DIR}/Resources/OpenType.entitlements"
 
 if [ -z "$SIGN_IDENTITY" ]; then
-    # Auto-detect: prefer Developer ID, then Apple Development, then self-signed
     for candidate in "Developer ID Application" "Apple Development" "OpenType Signing"; do
         if security find-identity -v -p codesigning 2>/dev/null | grep -q "$candidate"; then
             SIGN_IDENTITY="$candidate"
@@ -124,15 +132,16 @@ if [ -z "$SIGN_IDENTITY" ]; then
     done
 fi
 
+SIGN_FLAGS=(--force --deep --options runtime --entitlements "$ENTITLEMENTS")
+
 if [ -n "$SIGN_IDENTITY" ] && [ "$SIGN_IDENTITY" != "-" ]; then
-    codesign --force --deep --sign "$SIGN_IDENTITY" "${APP_BUNDLE}"
-    done_msg "Signed with: $SIGN_IDENTITY"
+    codesign "${SIGN_FLAGS[@]}" --sign "$SIGN_IDENTITY" "${APP_BUNDLE}"
+    done_msg "Signed with: $SIGN_IDENTITY (hardened runtime)"
 else
-    codesign --force --deep --sign - "${APP_BUNDLE}"
-    done_msg "Signed (ad-hoc)"
-    echo "  ⚠ Ad-hoc signing: macOS will reset permissions on each rebuild."
-    echo "    To keep permissions stable, use --sign=IDENTITY or install a"
-    echo "    development certificate (Xcode → Settings → Accounts → Manage Certificates)."
+    codesign "${SIGN_FLAGS[@]}" --sign - "${APP_BUNDLE}"
+    done_msg "Signed (ad-hoc, hardened runtime)"
+    echo "  ⚠ Ad-hoc signing: first launch on other machines may require:"
+    echo "    xattr -cr OpenType.app"
 fi
 
 # ─── Step 5: Create DMG ────────────────────────────────────────────────────────

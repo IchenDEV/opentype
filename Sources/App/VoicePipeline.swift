@@ -28,7 +28,7 @@ final class VoicePipeline {
     func warmUp() async {
         await ensureEngineLoaded()
 
-        if appState.settings.outputMode == .processed {
+        if appState.settings.outputMode == .processed || appState.settings.outputMode == .command {
             appState.statusMessage = L("pipeline.loading_llm")
             let model = appState.settings.llmModel
 
@@ -87,7 +87,9 @@ final class VoicePipeline {
         appState.phase = .recording
         appState.statusMessage = L("pipeline.recording")
 
-        if appState.settings.useScreenContext && appState.settings.outputMode == .processed {
+        let needsScreenContext = (appState.settings.useScreenContext && appState.settings.outputMode == .processed)
+            || appState.settings.outputMode == .command
+        if needsScreenContext {
             if ScreenOCR.hasScreenCapturePermission {
                 screenOCRTask = Task.detached(priority: .utility) {
                     await ScreenOCR.captureAndRecognize()
@@ -184,11 +186,13 @@ final class VoicePipeline {
                 return
             }
 
+                let memoryContext = settings.enableMemory ? MemoryStore.recentContext(windowMinutes: settings.memoryWindowMinutes) : ""
                 finalText = await textProcessor.process(
                     text: raw,
                     stylePrompt: settings.customStylePrompt,
                     model: settings.llmModel,
-                    screenContext: screenContext
+                    screenContext: screenContext,
+                    memoryContext: memoryContext
                 )
             } else {
                 screenOCRTask?.cancel()
@@ -208,7 +212,7 @@ final class VoicePipeline {
             Log.sensitive("[VoicePipeline] inserting \(finalText.count) chars")
             let insertResult = await textInserter.insert(text: finalText, targetApp: targetApp)
 
-            let wasProcessed = settings.outputMode == .processed
+            let wasProcessed = settings.outputMode == .processed || settings.outputMode == .command
             InputHistory.shared.addRecord(rawText: raw, processedText: finalText, wasProcessed: wasProcessed)
 
             appState.lastInsertedText = finalText
@@ -275,6 +279,7 @@ final class VoicePipeline {
         whisperEngine = engine
         let catalog = ModelCatalog.shared
 
+        let alreadyDownloaded = catalog.isWhisperDownloaded(modelID)
         appState.phase = .downloading
         appState.statusMessage = L("pipeline.preparing_model")
         appState.downloadProgress = 0
@@ -294,17 +299,24 @@ final class VoicePipeline {
 
                     switch dp.stage {
                     case .downloading:
-                        let pct = Int(min(dp.fraction / 0.6, 1.0) * 100)
-                        let speed = lastSpeedText.isEmpty ? "" : " · \(lastSpeedText)"
-                        self.appState.statusMessage = L("pipeline.downloading") + " \(pct)%\(speed)"
-                        self.appState.downloadSizeText = lastSizeText
-                        self.appState.downloadSpeedText = lastSpeedText
-                        catalog.updateWhisperStatus(modelID, status: .downloading, detail: "\(pct)%")
+                        if alreadyDownloaded {
+                            self.appState.statusMessage = L("pipeline.loading_model")
+                            self.appState.downloadSizeText = ""
+                            self.appState.downloadSpeedText = ""
+                            catalog.updateWhisperStatus(modelID, status: .loading, detail: L("model.loading"))
+                        } else {
+                            let pct = Int(min(dp.fraction / 0.6, 1.0) * 100)
+                            let speed = lastSpeedText.isEmpty ? "" : " · \(lastSpeedText)"
+                            self.appState.statusMessage = L("pipeline.downloading") + " \(pct)%\(speed)"
+                            self.appState.downloadSizeText = lastSizeText
+                            self.appState.downloadSpeedText = lastSpeedText
+                            catalog.updateWhisperStatus(modelID, status: .downloading, detail: "\(pct)%")
+                        }
                     case .compiling:
-                        self.appState.statusMessage = L("pipeline.compiling")
+                        self.appState.statusMessage = L("pipeline.loading_model")
                         self.appState.downloadSizeText = ""
                         self.appState.downloadSpeedText = ""
-                        catalog.updateWhisperStatus(modelID, status: .compiling, detail: L("model.compiling"))
+                        catalog.updateWhisperStatus(modelID, status: .compiling, detail: L("model.loading"))
                     case .loading:
                         self.appState.statusMessage = L("pipeline.loading_model")
                         self.appState.downloadSizeText = ""

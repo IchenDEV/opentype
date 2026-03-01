@@ -119,30 +119,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         return img
     }
 
+    /// macOS recording indicator orange (matches the system camera/mic dot).
+    private static let recordingOrange = NSColor(red: 1.0, green: 0.624, blue: 0.04, alpha: 1.0)
+
     private static func recordingIcon(level: Float) -> NSImage {
         let size = NSSize(width: 18, height: 18)
         let img = NSImage(size: size, flipped: false) { rect in
-            let bgRect = rect.insetBy(dx: 0.5, dy: 0.5)
-            NSColor.systemYellow.withAlphaComponent(0.9).setFill()
-            NSBezierPath(roundedRect: bgRect, xRadius: 4, yRadius: 4).fill()
-
             let barCount = 5
-            let barWidth: CGFloat = 1.5
-            let spacing: CGFloat = 1.2
+            let barWidth: CGFloat = 2.0
+            let spacing: CGFloat = 1.5
             let totalW = CGFloat(barCount) * barWidth + CGFloat(barCount - 1) * spacing
             let startX = (rect.width - totalW) / 2
-            let maxH: CGFloat = rect.height - 6
+            let maxH: CGFloat = rect.height - 4
             let time = Date().timeIntervalSinceReferenceDate
 
-            NSColor.black.withAlphaComponent(0.75).setFill()
+            recordingOrange.setFill()
             for i in 0..<barCount {
                 let offset = Double(i) / Double(barCount) * .pi * 2
                 let wave = (sin(time * 10 + offset) + 1) / 2
-                let normalized = CGFloat(max(level, 0.15))
-                let barH = max(2, normalized * maxH * CGFloat(wave))
+                let normalized = CGFloat(max(level, 0.18))
+                let barH = max(3, normalized * maxH * CGFloat(wave))
                 let x = startX + CGFloat(i) * (barWidth + spacing)
                 let y = (rect.height - barH) / 2
-                NSBezierPath(roundedRect: NSRect(x: x, y: y, width: barWidth, height: barH), xRadius: 0.5, yRadius: 0.5).fill()
+                NSBezierPath(roundedRect: NSRect(x: x, y: y, width: barWidth, height: barH), xRadius: 1, yRadius: 1).fill()
             }
             return true
         }

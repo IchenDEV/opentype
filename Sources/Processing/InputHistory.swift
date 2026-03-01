@@ -50,6 +50,7 @@ final class InputHistory: ObservableObject {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("input_history.json")
         load()
+        pruneExpired()
     }
 
     func addRecord(rawText: String, processedText: String, wasProcessed: Bool) {
@@ -58,6 +59,7 @@ final class InputHistory: ObservableObject {
         if records.count > Self.maxRecords {
             records = Array(records.prefix(Self.maxRecords))
         }
+        pruneExpired()
         save()
     }
 
@@ -114,5 +116,13 @@ final class InputHistory: ObservableObject {
         if let decoded = try? decoder.decode([InputRecord].self, from: data) {
             records = decoded
         }
+    }
+
+    private func pruneExpired() {
+        guard let interval = AppSettings.shared.historyRetention.timeInterval else { return }
+        let cutoff = Date().addingTimeInterval(-interval)
+        let before = records.count
+        records.removeAll { $0.date < cutoff }
+        if records.count < before { save() }
     }
 }

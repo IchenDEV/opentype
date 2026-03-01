@@ -31,10 +31,14 @@ final class HotkeyManager {
             return
         }
 
-        if !hasPrompted {
-            hasPrompted = true
+        // Only prompt once per install — use UserDefaults to avoid nagging on every launch
+        let key = "hotkeyAccessibilityPrompted"
+        if !UserDefaults.standard.bool(forKey: key) {
+            UserDefaults.standard.set(true, forKey: key)
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
             _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        } else {
+            Log.info("[HotkeyManager] Accessibility not granted, waiting silently (user was prompted before)")
         }
 
         setupGlobalMonitor()

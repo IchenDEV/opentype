@@ -6,6 +6,8 @@ struct OnboardingView: View {
     let onComplete: () -> Void
     @State private var step = 0
     @ObservedObject private var settings = AppSettings.shared
+    @ObservedObject private var catalog = ModelCatalog.shared
+    @State private var skippedModelDownload = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,6 +15,7 @@ struct OnboardingView: View {
                 switch step {
                 case 0: welcomePage
                 case 1: permissionsPage
+                case 2: modelPrepPage
                 default: readyPage
                 }
             }
@@ -192,11 +195,96 @@ struct OnboardingView: View {
         axGranted = AXIsProcessTrusted()
         micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
-        screenGranted = ScreenOCR.hasScreenCapturePermission
+        Task { @MainActor in
+            let granted = await ScreenOCR.checkScreenCapturePermission()
+            screenGranted = granted
+        }
     }
 
     private func openURL(_ string: String) {
         if let url = URL(string: string) { NSWorkspace.shared.open(url) }
+    }
+
+    // MARK: - Model Preparation
+
+    private var modelPrepPage: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("onboarding.model_prep"))
+                    .font(.system(size: 20, weight: .bold))
+                Text(L("onboarding.model_prep_body"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 24)
+
+            if let model = catalog.llmModels.first(where: { $0.id == settings.llmModel }) {
+                HStack(spacing: 8) {
+                    Text(model.displayName)
+                        .font(.system(size: 13, weight: .medium))
+                    if !model.hint.isEmpty {
+                        Text("·")
+                            .foregroundStyle(.secondary)
+                        Text(model.hint)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+
+                if model.status.isBusy {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ProgressView(value: model.downloadProgress)
+                            .progressViewStyle(.linear)
+                        if !model.downloadDetail.isEmpty {
+                            Text(model.downloadDetail)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                        Text(model.status == .downloaded || model.status == .ready
+                             ? L("onboarding.model_ready")
+                             : L("onboarding.downloading_model"))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                } else if model.status == .downloaded || model.status == .ready {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(L("onboarding.model_ready"))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            if !canContinueFromModelPrep {
+                Button(L("onboarding.skip_download")) {
+                    skippedModelDownload = true
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 32)
+        .onAppear {
+            if !skippedModelDownload,
+               let model = catalog.llmModels.first(where: { $0.id == settings.llmModel }),
+               model.status != .downloaded && model.status != .ready && !model.status.isBusy {
+                Task {
+                    await catalog.downloadLLM(settings.llmModel)
+                }
+            }
+        }
+    }
+
+    private var canContinueFromModelPrep: Bool {
+        skippedModelDownload ||
+        catalog.llmModels.first(where: { $0.id == settings.llmModel })?.status == .downloaded ||
+        catalog.llmModels.first(where: { $0.id == settings.llmModel })?.status == .ready
     }
 
     // MARK: - Ready
@@ -244,7 +332,12 @@ struct OnboardingView: View {
             Spacer()
             stepIndicator
             Spacer()
-            if step < 2 {
+            if step == 2 {
+                Button(L("common.continue")) { step += 1 }
+                    .controlSize(.regular)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canContinueFromModelPrep)
+            } else if step < 3 {
                 Button(L("common.continue")) { step += 1 }
                     .controlSize(.regular)
                     .keyboardShortcut(.defaultAction)
@@ -260,7 +353,7 @@ struct OnboardingView: View {
 
     private var stepIndicator: some View {
         HStack(spacing: 6) {
-            ForEach(0..<3, id: \.self) { i in
+            ForEach(0..<4, id: \.self) { i in
                 Circle()
                     .fill(i == step ? Color.accentColor : Color.secondary.opacity(0.3))
                     .frame(width: 6, height: 6)

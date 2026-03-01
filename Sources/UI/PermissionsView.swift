@@ -112,7 +112,10 @@ struct PermissionsView: View {
         accessibilityGranted = AXIsProcessTrusted()
         microphoneGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
-        screenCaptureGranted = ScreenOCR.hasScreenCapturePermission
+        Task { @MainActor in
+            let granted = await ScreenOCR.checkScreenCapturePermission()
+            screenCaptureGranted = granted
+        }
     }
 
     private func openAccessibility() {

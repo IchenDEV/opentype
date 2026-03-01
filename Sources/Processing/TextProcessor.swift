@@ -2,28 +2,18 @@ import Foundation
 
 final class TextProcessor {
     private let llm = LLMEngine()
+    private let remoteLLMClient = RemoteLLMClient()
     private let dictionary = PersonalDictionary.shared
 
     var isLLMReady: Bool {
-        get async { await llm.isLoaded }
+        get async {
+            if AppSettings.shared.useRemoteLLM { return true }
+            return await llm.isLoaded
+        }
     }
 
-    /// Pure filler sounds and unambiguous filler phrases — safe to always remove.
-    private static let fillerWords: [String] = [
-        "嗯嗯", "啊啊", "哦哦", "呃呃",
-        "嗯", "啊", "哦", "呃",
-        "那个啥", "就是那个", "怎么说呢", "怎么说",
-        "你知道吗", "我跟你说", "那什么",
-    ]
-
-    /// Words that CAN be filler but also appear in legitimate sentences.
-    /// Only removed when they form filler-like patterns (sentence-initial, repeated, etc.)
-    private static let ambiguousFillers: [String] = [
-        "这个", "那个", "就是", "然后", "的话",
-        "呀", "呢", "嘛", "哈",
-    ]
-
     func warmUpLLM(model: String) async {
+        if AppSettings.shared.useRemoteLLM { return }
         do {
             try await llm.loadModel(id: model)
         } catch {
@@ -33,37 +23,92 @@ final class TextProcessor {
 
     func basicClean(text: String) -> String {
         var result = text
-        result = removeFillerWords(result)
         result = dictionary.applyReplacements(to: result)
         result = normalizeWhitespace(result)
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func process(text: String, stylePrompt: String, model: String, screenContext: String = "") async -> String {
+    func process(text: String, stylePrompt: String, model: String, screenContext: String = "", memoryContext: String = "") async -> String {
+        let settings = AppSettings.shared
+
+        var systemPrompt = PromptBuilder.buildSystemPrompt(
+            stylePrompt: stylePrompt,
+            screenContext: screenContext,
+            memoryContext: memoryContext,
+            inputLanguage: settings.inputLanguage
+        )
+
+        let rulesDesc = dictionary.activeRulesDescription()
+        if !rulesDesc.isEmpty {
+            systemPrompt += "\n\n额外编辑规则：\n\(rulesDesc)"
+        }
+
+        let userPrompt = PromptBuilder.buildUserPrompt(text: text)
+
         do {
-            try await llm.loadModel(id: model)
-
-            var systemPrompt = PromptBuilder.buildSystemPrompt(
-                stylePrompt: stylePrompt,
-                screenContext: screenContext
-            )
-
-            let rulesDesc = dictionary.activeRulesDescription()
-            if !rulesDesc.isEmpty {
-                systemPrompt += "\n\n额外编辑规则：\n\(rulesDesc)"
+            var result: String
+            if settings.useRemoteLLM {
+                result = try await remoteLLMClient.generate(
+                    prompt: userPrompt,
+                    systemPrompt: systemPrompt,
+                    baseURL: settings.remoteBaseURL,
+                    apiKey: settings.remoteAPIKey,
+                    model: settings.remoteModel,
+                    provider: settings.remoteProvider
+                )
+            } else {
+                try await llm.loadModel(id: model)
+                result = try await llm.generate(
+                    prompt: userPrompt,
+                    systemPrompt: systemPrompt
+                )
             }
-
-            let userPrompt = PromptBuilder.buildUserPrompt(text: text)
-            var result = try await llm.generate(
-                prompt: userPrompt,
-                systemPrompt: systemPrompt
-            )
 
             result = stripThinkingTags(result)
             result = dictionary.applyReplacements(to: result)
             return result.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             Log.error("[TextProcessor] LLM failed, falling back to basicClean: \(error.localizedDescription)")
+            return basicClean(text: text)
+        }
+    }
+
+    /// Command mode: uses voice command system prompt, higher max tokens.
+    func processCommand(text: String, model: String, screenContext: String, memoryContext: String = "") async -> String {
+        let settings = AppSettings.shared
+        let systemPrompt = PromptBuilder.buildCommandSystemPrompt(
+            screenContext: screenContext,
+            memoryContext: memoryContext,
+            inputLanguage: settings.inputLanguage
+        )
+        let userPrompt = text
+
+        do {
+            var result: String
+            if settings.useRemoteLLM {
+                result = try await remoteLLMClient.generate(
+                    prompt: userPrompt,
+                    systemPrompt: systemPrompt,
+                    baseURL: settings.remoteBaseURL,
+                    apiKey: settings.remoteAPIKey,
+                    model: settings.remoteModel,
+                    provider: settings.remoteProvider,
+                    maxTokens: 4096
+                )
+            } else {
+                try await llm.loadModel(id: model)
+                result = try await llm.generate(
+                    prompt: userPrompt,
+                    systemPrompt: systemPrompt,
+                    maxTokens: 4096
+                )
+            }
+
+            result = stripThinkingTags(result)
+            result = dictionary.applyReplacements(to: result)
+            return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            Log.error("[TextProcessor] Command LLM failed, falling back to basicClean: \(error.localizedDescription)")
             return basicClean(text: text)
         }
     }
@@ -97,29 +142,6 @@ final class TextProcessor {
             options: .regularExpression
         )
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func removeFillerWords(_ text: String) -> String {
-        var result = text
-        for word in Self.fillerWords {
-            result = result.replacingOccurrences(of: word, with: "")
-        }
-        result = removeAmbiguousFillers(result)
-        return result
-    }
-
-    /// Removes ambiguous fillers only at sentence/clause boundaries (start of text,
-    /// after punctuation) — not in the middle of meaningful phrases.
-    private func removeAmbiguousFillers(_ text: String) -> String {
-        var result = text
-        for word in Self.ambiguousFillers {
-            let startPattern = "^(\(NSRegularExpression.escapedPattern(for: word)))([，,。.！!？?\\s]|$)"
-            result = result.replacingOccurrences(of: startPattern, with: "$2", options: .regularExpression)
-
-            let afterPuncPattern = "([，,。.！!？?])(\(NSRegularExpression.escapedPattern(for: word)))([，,。.！!？?\\s]|$)"
-            result = result.replacingOccurrences(of: afterPuncPattern, with: "$1$3", options: .regularExpression)
-        }
-        return result
     }
 
     private func normalizeWhitespace(_ text: String) -> String {
