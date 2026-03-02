@@ -11,7 +11,8 @@ enum Loc {
     private static var cachedBundle: Bundle?
 
     static func string(_ key: String) -> String {
-        let lang = AppSettings.shared.uiLanguage
+        // Read UserDefaults directly to avoid circular init with AppSettings.shared
+        let lang = UILanguage(rawValue: UserDefaults.standard.string(forKey: "uiLanguage") ?? "") ?? .chinese
         if lang != cachedLang {
             cachedLang = lang
             let code = lang == .chinese ? "zh-Hans" : "en"
