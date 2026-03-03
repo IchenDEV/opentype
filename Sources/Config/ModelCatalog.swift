@@ -104,6 +104,10 @@ final class ModelCatalog: ObservableObject {
             ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.qwen3_balanced"), .qwen),
             ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.qwen3_quality"), .qwen),
             ("mlx-community/Qwen3-30B-A3B-4bit", "Qwen3 30B-A3B", L("model.qwen3_moe"), .qwen),
+            ("mlx-community/Qwen3.5-0.8B-MLX-4bit", "Qwen3.5 0.8B", L("model.qwen35_tiny"), .qwen),
+            ("mlx-community/Qwen3.5-2B-MLX-4bit", "Qwen3.5 2B", L("model.qwen35_fast"), .qwen),
+            ("mlx-community/Qwen3.5-4B-MLX-4bit", "Qwen3.5 4B", L("model.qwen35_balanced"), .qwen),
+            ("mlx-community/Qwen3.5-9B-MLX-4bit", "Qwen3.5 9B", L("model.qwen35_quality"), .qwen),
 
             // Gemma Family (Google)
             ("mlx-community/gemma-3-1b-it-4bit", "Gemma 3 1B", L("model.gemma_fast"), .gemma),
