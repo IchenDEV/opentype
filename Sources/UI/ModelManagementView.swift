@@ -16,6 +16,7 @@ struct ModelManagementView: View {
     @State private var remoteTestSuccess: Bool?
     @State private var isTestingRemote = false
     @State private var selectedModelFamily: ModelCatalog.ModelFamily? = .qwen
+    private let benchmarkEngine = LLMEngine()
 
     var body: some View {
         ScrollView {
@@ -302,9 +303,20 @@ struct ModelManagementView: View {
                             .clipShape(Capsule())
                     }
                 }
-                Text(model.hint)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(model.hint)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    if let tps = model.benchmarkTPS {
+                        Text(String(format: "%.1f tok/s", tps))
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.orange.opacity(0.12))
+                            .foregroundStyle(.orange)
+                            .clipShape(Capsule())
+                    }
+                }
             }
 
             Spacer()
@@ -368,6 +380,23 @@ struct ModelManagementView: View {
             .controlSize(.mini)
         }
 
+        if type == .llm && (model.status == .downloaded || model.status == .ready) {
+            if model.isBenchmarking {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Button {
+                    Task { await runBenchmark(model.id) }
+                } label: {
+                    Image(systemName: "speedometer")
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(L("model.benchmark"))
+            }
+        }
+
         if model.status.canDelete {
             Button(role: .destructive) {
                 if isActive {
@@ -386,6 +415,25 @@ struct ModelManagementView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
+        }
+    }
+
+    private func runBenchmark(_ modelID: String) async {
+        guard let idx = catalog.llmModels.firstIndex(where: { $0.id == modelID }) else { return }
+        catalog.llmModels[idx].isBenchmarking = true
+        catalog.llmModels[idx].benchmarkTPS = nil
+
+        do {
+            let result = try await benchmarkEngine.benchmark(modelID: modelID)
+            if let i = catalog.llmModels.firstIndex(where: { $0.id == modelID }) {
+                catalog.llmModels[i].benchmarkTPS = result.tokensPerSecond
+                catalog.llmModels[i].isBenchmarking = false
+            }
+        } catch {
+            Log.error("[Benchmark] failed: \(error.localizedDescription)")
+            if let i = catalog.llmModels.firstIndex(where: { $0.id == modelID }) {
+                catalog.llmModels[i].isBenchmarking = false
+            }
         }
     }
 

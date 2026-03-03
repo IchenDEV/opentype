@@ -44,10 +44,13 @@ final class ModelCatalog: ObservableObject {
         var cacheSize: Int64 = 0
         var downloadProgress: Double = 0
         var downloadDetail: String = ""
+        var benchmarkTPS: Double?
+        var isBenchmarking: Bool = false
 
         static func == (lhs: Self, rhs: Self) -> Bool {
             lhs.id == rhs.id && lhs.status == rhs.status &&
-            lhs.cacheSize == rhs.cacheSize && lhs.downloadProgress == rhs.downloadProgress
+            lhs.cacheSize == rhs.cacheSize && lhs.downloadProgress == rhs.downloadProgress &&
+            lhs.benchmarkTPS == rhs.benchmarkTPS && lhs.isBenchmarking == rhs.isBenchmarking
         }
     }
 

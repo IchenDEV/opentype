@@ -117,6 +117,7 @@
 "model.custom_id_placeholder" = "自定义模型 ID（如 mlx-community/…）";
 "model.active" = "当前";
 "model.use" = "启用";
+"model.benchmark" = "测速";
 "model.compiling" = "编译中…";
 "model.loading" = "加载中…";
 "model.smallest" = "最小最快 ~335 MB";
@@ -151,10 +152,15 @@
 "style.professional" = "专业结构";
 "style.casual" = "日常口语";
 "engine.apple_speech" = "Apple 语音识别";
-"style.prompt.concise" = "简洁精炼，去除冗余表达，保留核心信息，用最少的文字表达完整意思。";
-"style.prompt.formal" = "正式书面语风格，适合商务邮件或学术场景，语句通顺规范。";
-"style.prompt.professional" = "专业结构化输出。当内容包含多个要点（如\"第一、第二、第三\"或\"首先、其次、最后\"），输出格式为：先用一句话总结作为标题，后接冒号并换行，再逐条列出要点，每个要点用编号格式（1. 2. 3.），每条单独一行。没有明显要点时，使用正式书面风格，保持段落清晰。";
-"style.prompt.casual" = "保持日常口语的自然感，仅修正错误和去除语气词，不要过度书面化。";
+"style.prompt.concise" = "极简风格。激进压缩：删除所有修饰语、过渡句、重复表达，只保留核心信息。长句拆短，能一句话说完绝不用两句。适合备忘录、便签、快速记录。";
+"style.prompt.formal" = "正式书面风格。使用规范的书面用语，避免口语化表达。句式工整，逻辑连贯，适合商务邮件、报告、学术写作。用\"此外/因此/综上\"等连接词保持段落衔接。";
+"style.prompt.professional" = "专业结构化风格。强制结构化所有输出：多要点内容必须使用编号列表（1. 2. 3.），每条独立一行；2 个以上段落必须用空行分隔；如果内容可提炼主题，首行用一句话概括作为标题后接冒号。适合会议纪要、技术文档、任务清单。";
+"style.prompt.casual" = "轻松口语风格。最小程度修改：只纠正明显错别字和语音识别错误，保留口语化表达和语气词，不做书面化改写。适合聊天消息、朋友圈、日常笔记。";
+
+/* ── Custom System Prompt ── */
+"custom_prompt.title" = "自定义系统提示词";
+"custom_prompt.desc" = "开启后将完全覆盖内置的系统提示词和风格预设，使用你自己编写的提示词来处理语音文本。";
+"custom_prompt.hint" = "提示词将直接作为 LLM 的 System Prompt 使用。屏幕上下文和输入记忆仍会自动附加。";
 
 /* ── Style & Dictionary ── */
 "style.title" = "语言风格";

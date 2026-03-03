@@ -9,11 +9,53 @@ struct DictionaryStyleView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                styleSection
+                customSystemPromptSection
+                if !settings.useCustomSystemPrompt {
+                    Divider()
+                    styleSection
+                }
                 Divider()
                 editRulesSection
             }
             .padding(20)
+        }
+    }
+
+    // MARK: - Custom System Prompt
+
+    private var customSystemPromptSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(L("custom_prompt.title"), systemImage: "terminal")
+                    .font(.headline)
+                Spacer()
+                Toggle("", isOn: $settings.useCustomSystemPrompt)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .labelsHidden()
+            }
+
+            Text(L("custom_prompt.desc"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if settings.useCustomSystemPrompt {
+                TextEditor(text: $settings.customSystemPrompt)
+                    .font(.system(size: 11.5, design: .monospaced))
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .frame(minHeight: 140, maxHeight: 280)
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    )
+
+                Text(L("custom_prompt.hint"))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 

@@ -159,6 +159,8 @@ final class AppSettings: ObservableObject {
     @Published var historyRetention: HistoryRetention
     @Published var enableMemory: Bool
     @Published var memoryWindowMinutes: Int
+    @Published var useCustomSystemPrompt: Bool
+    @Published var customSystemPrompt: String
     @Published var useRemoteLLM: Bool
     @Published var remoteProvider: RemoteProvider
     @Published var remoteAPIKey: String
@@ -173,6 +175,7 @@ final class AppSettings: ObservableObject {
         case microphoneID, outputMode, languageStyle, customStylePrompt, playSounds
         case inputLanguage, useScreenContext, hasCompletedOnboarding, uiLanguage, historyRetention
         case enableMemory, memoryWindowMinutes
+        case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
     }
 
@@ -213,6 +216,8 @@ final class AppSettings: ObservableObject {
         historyRetention = HistoryRetention(rawValue: ud.string(forKey: Key.historyRetention.rawValue) ?? "") ?? .forever
         enableMemory = ud.object(forKey: Key.enableMemory.rawValue) as? Bool ?? true
         memoryWindowMinutes = (ud.integer(forKey: Key.memoryWindowMinutes.rawValue)).nonZeroInt ?? 30
+        useCustomSystemPrompt = ud.bool(forKey: Key.useCustomSystemPrompt.rawValue)
+        customSystemPrompt = ud.string(forKey: Key.customSystemPrompt.rawValue) ?? ""
         useRemoteLLM = ud.bool(forKey: Key.useRemoteLLM.rawValue)
         remoteProvider = RemoteProvider(rawValue: ud.string(forKey: Key.remoteProvider.rawValue) ?? "") ?? .custom
         remoteAPIKey = ud.string(forKey: Key.remoteAPIKey.rawValue) ?? ""
@@ -241,6 +246,8 @@ final class AppSettings: ObservableObject {
         $historyRetention.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.historyRetention.rawValue) }.store(in: &cancellables)
         $enableMemory.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableMemory.rawValue) }.store(in: &cancellables)
         $memoryWindowMinutes.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.memoryWindowMinutes.rawValue) }.store(in: &cancellables)
+        $useCustomSystemPrompt.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useCustomSystemPrompt.rawValue) }.store(in: &cancellables)
+        $customSystemPrompt.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.customSystemPrompt.rawValue) }.store(in: &cancellables)
         $useRemoteLLM.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useRemoteLLM.rawValue) }.store(in: &cancellables)
         $remoteProvider.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.remoteProvider.rawValue) }.store(in: &cancellables)
         $remoteAPIKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteAPIKey.rawValue) }.store(in: &cancellables)

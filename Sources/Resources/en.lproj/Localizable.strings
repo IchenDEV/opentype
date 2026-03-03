@@ -117,6 +117,7 @@
 "model.custom_id_placeholder" = "Custom model ID (e.g. mlx-community/…)";
 "model.active" = "Active";
 "model.use" = "Use";
+"model.benchmark" = "Benchmark";
 "model.compiling" = "Compiling…";
 "model.loading" = "Loading…";
 "model.smallest" = "Smallest, fastest ~335 MB";
@@ -150,10 +151,15 @@
 "style.professional" = "Professional";
 "style.casual" = "Casual";
 "engine.apple_speech" = "Apple Speech";
-"style.prompt.concise" = "Concise and refined. Remove redundant expressions, keep core information, convey complete meaning with minimal words.";
-"style.prompt.formal" = "Formal written style suitable for business emails or academic contexts. Ensure smooth, standard sentences.";
-"style.prompt.professional" = "Professional structured output. When the content contains multiple points (e.g. 'first, second, third'), format as: a one-sentence summary title followed by a colon and newline, then numbered items (1. 2. 3.), each on its own line. When there are no clear bullet points, use formal written style with clear paragraphs.";
-"style.prompt.casual" = "Keep the natural feel of everyday speech. Only correct errors and remove filler words — avoid over-formalizing.";
+"style.prompt.concise" = "Minimalist style. Aggressively compress: strip all modifiers, transitions, and redundancies — keep only core information. Break long sentences short. If it fits in one sentence, never use two. Ideal for memos, notes, quick capture.";
+"style.prompt.formal" = "Formal written style. Use proper written language, avoid colloquialisms. Well-structured sentences with logical flow. Suitable for business emails, reports, academic writing. Use transitional phrases to maintain paragraph coherence.";
+"style.prompt.professional" = "Professional structured style. Force-structure all output: multiple points must use numbered lists (1. 2. 3.), one item per line; 2+ paragraphs must be separated by blank lines; if content has a summarizable theme, lead with a one-line title followed by a colon. Ideal for meeting notes, technical docs, task lists.";
+"style.prompt.casual" = "Casual conversational style. Minimal edits only: fix obvious typos and speech recognition errors, preserve colloquial expressions and tone. No formal rewriting. Ideal for chat messages, social posts, everyday notes.";
+
+/* ── Custom System Prompt ── */
+"custom_prompt.title" = "Custom System Prompt";
+"custom_prompt.desc" = "When enabled, completely overrides the built-in system prompt and style presets with your own prompt for processing voice text.";
+"custom_prompt.hint" = "This prompt is sent directly as the LLM System Prompt. Screen context and input memory are still appended automatically.";
 
 /* ── Style & Dictionary ── */
 "style.title" = "Language Style";
