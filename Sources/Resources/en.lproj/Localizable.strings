@@ -128,9 +128,9 @@
 "model.qwen3_quality" = "Qwen3, best quality ~2.3 GB";
 "model.qwen3_moe" = "Qwen3 MoE flagship, recommended ~5 GB";
 "model.qwen35_tiny" = "Qwen3.5, fastest ~620 MB";
-"model.qwen35_fast" = "Qwen3.5, fast ~1.7 GB";
-"model.qwen35_balanced" = "Qwen3.5, balanced ~3 GB";
-"model.qwen35_quality" = "Qwen3.5, best quality ~6 GB";
+"model.qwen35_fast" = "Qwen3.5, fast ~1.5 GB";
+"model.qwen35_quality" = "Qwen3.5, best quality 5-bit ~5.5 GB";
+"model.qwen35_moe" = "Qwen3.5 MoE flagship ~6 GB";
 "model.gemma_fast" = "Gemma 3, fast ~600 MB";
 "model.gemma_balanced" = "Gemma 3, balanced ~2.5 GB";
 "model.gemma_quality" = "Gemma 3, best quality ~7 GB";

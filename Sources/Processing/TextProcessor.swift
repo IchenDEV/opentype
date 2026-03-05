@@ -43,7 +43,7 @@ final class TextProcessor {
             systemPrompt += "\n\n额外编辑规则：\n\(rulesDesc)"
         }
 
-        let userPrompt = PromptBuilder.buildUserPrompt(text: text)
+        let userPrompt = PromptBuilder.buildUserPrompt(text: text, inputLanguage: settings.inputLanguage)
 
         do {
             var result: String
@@ -57,7 +57,7 @@ final class TextProcessor {
                     provider: settings.remoteProvider
                 )
             } else {
-                try await llm.loadModel(id: model)
+                await ensureModelLoaded(model)
                 result = try await llm.generate(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt
@@ -96,7 +96,7 @@ final class TextProcessor {
                     maxTokens: 4096
                 )
             } else {
-                try await llm.loadModel(id: model)
+                await ensureModelLoaded(model)
                 result = try await llm.generate(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,
@@ -110,6 +110,15 @@ final class TextProcessor {
         } catch {
             Log.error("[TextProcessor] Command LLM failed, falling back to basicClean: \(error.localizedDescription)")
             return basicClean(text: text)
+        }
+    }
+
+    private func ensureModelLoaded(_ model: String) async {
+        guard !(await llm.isLoaded) else { return }
+        do {
+            try await llm.loadModel(id: model)
+        } catch {
+            Log.error("[TextProcessor] on-demand model load failed: \(error.localizedDescription)")
         }
     }
 

@@ -28,32 +28,22 @@ final class VoicePipeline {
     func warmUp() async {
         await ensureEngineLoaded()
 
-        if appState.settings.outputMode == .processed || appState.settings.outputMode == .command {
-            appState.statusMessage = L("pipeline.loading_llm")
-            let model = appState.settings.llmModel
+        let needsLLM = appState.settings.outputMode == .processed || appState.settings.outputMode == .command
+        guard needsLLM, !appState.settings.useRemoteLLM else {
+            appState.statusMessage = L("status.ready")
+            return
+        }
 
-            let llmTask = Task {
-                await textProcessor.warmUpLLM(model: model)
-                return await textProcessor.isLLMReady
-            }
+        appState.statusMessage = L("pipeline.loading_llm")
+        let model = appState.settings.llmModel
 
-            let timeoutTask = Task {
-                try? await Task.sleep(nanoseconds: 30_000_000_000)
-                return false
-            }
+        await textProcessor.warmUpLLM(model: model)
+        appState.llmModelReady = await textProcessor.isLLMReady
 
-            let ready = await withTaskGroup(of: Bool.self) { group in
-                group.addTask { await llmTask.value }
-                group.addTask { await timeoutTask.value }
-                let first = await group.next() ?? false
-                group.cancelAll()
-                return first
-            }
-
-            appState.llmModelReady = ready
-            if !ready {
-                Log.info("[VoicePipeline] LLM warmup timed out or failed, will retry on demand")
-            }
+        if appState.llmModelReady {
+            Log.info("[VoicePipeline] LLM model loaded into memory, ready for instant inference")
+        } else {
+            Log.info("[VoicePipeline] LLM warmup failed, will retry on demand")
         }
 
         appState.statusMessage = L("status.ready")

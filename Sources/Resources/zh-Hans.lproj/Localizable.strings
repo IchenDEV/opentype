@@ -128,9 +128,9 @@
 "model.qwen3_quality" = "Qwen3 高质量 ~2.3 GB";
 "model.qwen3_moe" = "Qwen3 MoE 旗舰，推荐 ~5 GB";
 "model.qwen35_tiny" = "Qwen3.5 极速 ~620 MB";
-"model.qwen35_fast" = "Qwen3.5 快速 ~1.7 GB";
-"model.qwen35_balanced" = "Qwen3.5 均衡 ~3 GB";
-"model.qwen35_quality" = "Qwen3.5 高质量 ~6 GB";
+"model.qwen35_fast" = "Qwen3.5 快速 ~1.5 GB";
+"model.qwen35_quality" = "Qwen3.5 高质量 5-bit ~5.5 GB";
+"model.qwen35_moe" = "Qwen3.5 MoE 旗舰 ~6 GB";
 "model.gemma_fast" = "Gemma 3 极速 ~600 MB";
 "model.gemma_balanced" = "Gemma 3 均衡 ~2.5 GB";
 "model.gemma_quality" = "Gemma 3 高质量 ~7 GB";
