@@ -156,10 +156,10 @@ final class VoicePipeline {
             }
 
             if raw.isEmpty {
-                Log.info("[VoicePipeline] empty transcription, resetting")
+                Log.info("[VoicePipeline] empty transcription, no speech detected")
                 appState.phase = .idle
-                appState.statusMessage = L("status.ready")
-                overlay.hide()
+                appState.statusMessage = L("status.no_speech_detected")
+                hideOverlayAfterDelay()
                 return
             }
 

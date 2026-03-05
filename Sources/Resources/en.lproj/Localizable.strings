@@ -20,6 +20,7 @@
 /* ── Status ── */
 "status.ready" = "Ready";
 "status.done" = "Done";
+"status.no_speech_detected" = "No Speech detected";
 
 /* ── Tabs ── */
 "tab.general" = "General";

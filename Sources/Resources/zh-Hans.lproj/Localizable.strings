@@ -20,6 +20,7 @@
 /* ── Status ── */
 "status.ready" = "就绪";
 "status.done" = "完成";
+"status.no_speech_detected" = "未检测到语音";
 
 /* ── Tabs ── */
 "tab.general" = "通用";
