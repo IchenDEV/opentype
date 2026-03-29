@@ -153,6 +153,7 @@
 "style.professional" = "专业结构";
 "style.casual" = "日常口语";
 "engine.apple_speech" = "Apple 语音识别";
+"engine.volc_asr" = "豆包语音识别";
 "style.prompt.concise" = "极简风格。激进压缩：删除所有修饰语、过渡句、重复表达，只保留核心信息。长句拆短，能一句话说完绝不用两句。适合备忘录、便签、快速记录。";
 "style.prompt.formal" = "正式书面风格。使用规范的书面用语，避免口语化表达。句式工整，逻辑连贯，适合商务邮件、报告、学术写作。用\"此外/因此/综上\"等连接词保持段落衔接。";
 "style.prompt.professional" = "专业结构化风格。强制结构化所有输出：多要点内容必须使用编号列表（1. 2. 3.），每条独立一行；2 个以上段落必须用空行分隔；如果内容可提炼主题，首行用一句话概括作为标题后接冒号。适合会议纪要、技术文档、任务清单。";
@@ -243,3 +244,13 @@
 "error.download_failed" = "模型下载失败: %@";
 "error.compile_failed" = "模型编译失败: %@";
 "error.load_failed" = "模型加载失败: %@";
+"error.volc_not_configured" = "豆包语音识别未配置 — 请在 设置 → 模型 中填写 API 凭据";
+"error.volc_invalid_endpoint" = "语音识别接口地址无效";
+"error.volc_audio_conversion" = "音频转换为 PCM 16kHz 失败";
+"error.volc_timeout" = "语音识别请求超时";
+
+/* ── 豆包语音识别 ── */
+"volc.config_hint" = "填写火山引擎豆包语音识别凭据，可从火山引擎控制台获取。";
+"volc.app_key" = "App Key（应用 ID）";
+"volc.access_key" = "Access Token";
+"volc.resource_id" = "资源 ID";

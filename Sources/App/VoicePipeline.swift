@@ -11,13 +11,16 @@ final class VoicePipeline {
     private let overlay = OverlayPanel()
     private var whisperEngine: WhisperEngine?
     private var appleSpeechEngine: AppleSpeechEngine?
+    private var volcSpeechEngine: VolcSpeechEngine?
     private var screenOCRTask: Task<String, Never>?
     private var processingTask: Task<Void, Never>?
+    private var hideOverlayTask: Task<Void, Never>?
 
     private var currentEngine: (any SpeechEngine)? {
         switch appState.settings.speechEngine {
         case .whisper: return whisperEngine
         case .apple: return appleSpeechEngine
+        case .volc: return volcSpeechEngine
         }
     }
 
@@ -72,6 +75,8 @@ final class VoicePipeline {
 
         processingTask?.cancel()
         processingTask = nil
+        hideOverlayTask?.cancel()
+        hideOverlayTask = nil
 
         appState.reset()
         appState.phase = .recording
@@ -256,6 +261,13 @@ final class VoicePipeline {
                 appleSpeechEngine?.requestAccess()
                 try? await Task.sleep(nanoseconds: 500_000_000)
             }
+        case .volc:
+            let s = appState.settings
+            volcSpeechEngine = VolcSpeechEngine(
+                appKey: s.volcAppKey,
+                accessKey: s.volcAccessKey,
+                resourceId: s.volcResourceId
+            )
         }
     }
 
@@ -361,8 +373,10 @@ final class VoicePipeline {
     }
 
     private func hideOverlayAfterDelay() {
-        Task { @MainActor in
+        hideOverlayTask?.cancel()
+        hideOverlayTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled, !appState.isRecording else { return }
             overlay.hide()
         }
     }

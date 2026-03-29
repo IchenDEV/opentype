@@ -20,7 +20,7 @@
 /* ── Status ── */
 "status.ready" = "Ready";
 "status.done" = "Done";
-"status.no_speech_detected" = "No Speech detected";
+"status.no_speech_detected" = "No Speech Detected";
 
 /* ── Tabs ── */
 "tab.general" = "General";
@@ -152,6 +152,7 @@
 "style.professional" = "Professional";
 "style.casual" = "Casual";
 "engine.apple_speech" = "Apple Speech";
+"engine.volc_asr" = "Doubao ASR";
 "style.prompt.concise" = "Minimalist style. Aggressively compress: strip all modifiers, transitions, and redundancies — keep only core information. Break long sentences short. If it fits in one sentence, never use two. Ideal for memos, notes, quick capture.";
 "style.prompt.formal" = "Formal written style. Use proper written language, avoid colloquialisms. Well-structured sentences with logical flow. Suitable for business emails, reports, academic writing. Use transitional phrases to maintain paragraph coherence.";
 "style.prompt.professional" = "Professional structured style. Force-structure all output: multiple points must use numbered lists (1. 2. 3.), one item per line; 2+ paragraphs must be separated by blank lines; if content has a summarizable theme, lead with a one-line title followed by a colon. Ideal for meeting notes, technical docs, task lists.";
@@ -242,3 +243,13 @@
 "error.download_failed" = "Model download failed: %@";
 "error.compile_failed" = "Model compilation failed: %@";
 "error.load_failed" = "Model loading failed: %@";
+"error.volc_not_configured" = "Doubao ASR not configured — enter API credentials in Settings → Models";
+"error.volc_invalid_endpoint" = "Invalid ASR endpoint URL";
+"error.volc_audio_conversion" = "Audio conversion to PCM 16kHz failed";
+"error.volc_timeout" = "ASR request timed out";
+
+/* ── Volc ASR ── */
+"volc.config_hint" = "Enter your Volcengine Doubao ASR credentials. Get them from the Volcengine console.";
+"volc.app_key" = "App Key (App ID)";
+"volc.access_key" = "Access Token";
+"volc.resource_id" = "Resource ID";
