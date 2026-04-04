@@ -145,14 +145,14 @@ final class ModelCatalog: ObservableObject {
         for i in whisperModels.indices where !whisperModels[i].status.isBusy {
             let size = whisperVariantSize(whisperModels[i].id)
             whisperModels[i].cacheSize = size
-            if whisperModels[i].status != .ready {
+            if whisperModels[i].status != .ready && !whisperModels[i].status.isError {
                 whisperModels[i].status = size > 0 ? .downloaded : .notDownloaded
             }
         }
         for i in llmModels.indices where !llmModels[i].status.isBusy {
             let size = llmRepoSize(llmModels[i].id)
             llmModels[i].cacheSize = size
-            if llmModels[i].status != .ready {
+            if llmModels[i].status != .ready && !llmModels[i].status.isError {
                 llmModels[i].status = size > 0 ? .downloaded : .notDownloaded
             }
         }
@@ -246,6 +246,7 @@ final class ModelCatalog: ObservableObject {
         } catch {
             if let i = llmModels.firstIndex(where: { $0.id == id }) {
                 llmModels[i].status = .error(error.localizedDescription)
+                llmModels[i].cacheSize = llmRepoSize(id)
                 llmModels[i].downloadDetail = ""
             }
         }

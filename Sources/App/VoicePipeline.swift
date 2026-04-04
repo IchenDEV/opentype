@@ -242,8 +242,14 @@ final class VoicePipeline {
     }
 
     func unloadLLM() {
+        processingTask?.cancel()
+        processingTask = nil
+        if appState.phase == .processing {
+            appState.phase = .idle
+            appState.statusMessage = L("status.ready")
+        }
         appState.llmModelReady = false
-        appState.statusMessage = L("pipeline.llm_unloaded")
+        Task { await textProcessor.unloadLLM() }
     }
 
     // MARK: - Engine loading

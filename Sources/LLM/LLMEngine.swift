@@ -101,6 +101,11 @@ actor LLMEngine {
 
     var isLoaded: Bool { container != nil }
 
+    func unload() {
+        container = nil
+        currentModelID = nil
+    }
+
     private static func applyNoThink(prompt: String, modelID: String?) -> String {
         guard let id = modelID?.lowercased(), id.contains("qwen3") else { return prompt }
         return "/no_think\n\(prompt)"
