@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         setupPipeline()
         setupHotkey()
         observePhaseForIcon()
+        observeMenuBarIconSetting()
 
         if !AppSettings.shared.hasCompletedOnboarding {
             showOnboarding()
@@ -112,11 +113,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     // MARK: - Icon drawing
 
     private static func micIcon() -> NSImage {
-        guard let img = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "OpenType") else {
+        let name = AppSettings.shared.menuBarIcon.symbolName
+        guard let img = NSImage(systemSymbolName: name, accessibilityDescription: "OpenType") else {
             return NSImage()
         }
         img.isTemplate = true
         return img
+    }
+
+    private func observeMenuBarIconSetting() {
+        AppSettings.shared.$menuBarIcon
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self, !self.appState.isRecording else { return }
+                self.statusItem?.button?.image = Self.micIcon()
+            }
+            .store(in: &cancellables)
     }
 
     /// macOS recording indicator orange (matches the system camera/mic dot).

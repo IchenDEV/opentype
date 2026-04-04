@@ -81,6 +81,10 @@
 "settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限，仅智能整理模式生效）";
 "settings.voice_language" = "语音与语言";
 "settings.ui_language" = "界面语言";
+"settings.menubar_icon" = "菜单栏图标";
+"icon.mic" = "麦克风";
+"icon.waveform" = "波形";
+"icon.bubble" = "对话气泡";
 "settings.recognition_language" = "识别语言";
 "settings.sound_cues" = "播放提示音";
 "settings.microphone" = "麦克风";
