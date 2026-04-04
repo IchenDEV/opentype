@@ -170,7 +170,7 @@ final class AppSettings: ObservableObject {
     @Published var remoteModel: String
     @Published var volcAppKey: String
     @Published var volcAccessKey: String
-    @Published var volcResourceId: String
+    let volcResourceId = "volc.seedasr.sauc"
 
     private let defaults = UserDefaults.standard
     private var cancellables = Set<AnyCancellable>()
@@ -182,7 +182,7 @@ final class AppSettings: ObservableObject {
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
-        case volcAppKey, volcAccessKey, volcResourceId
+        case volcAppKey, volcAccessKey
     }
 
     private init() {
@@ -231,7 +231,6 @@ final class AppSettings: ObservableObject {
         remoteModel = ud.string(forKey: Key.remoteModel.rawValue) ?? ""
         volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
-        volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.bigasr.sauc.duration"
 
         setupPersistence()
     }
@@ -264,7 +263,6 @@ final class AppSettings: ObservableObject {
         $remoteModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteModel.rawValue) }.store(in: &cancellables)
         $volcAppKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAppKey.rawValue) }.store(in: &cancellables)
         $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
-        $volcResourceId.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcResourceId.rawValue) }.store(in: &cancellables)
     }
 
     var zh: Bool { uiLanguage == .chinese }
