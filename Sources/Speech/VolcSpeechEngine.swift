@@ -35,7 +35,9 @@ final class VolcSpeechEngine: SpeechEngine {
 
         let volcLang = volcLanguage(from: language)
         try await sendFullClientRequest(ws: ws, language: volcLang)
-        let _ = try await receiveResponse(ws: ws)
+        if let handshake = try await receiveResponse(ws: ws), let code = handshake.errorCode {
+            throw VolcASRError.serverError(code: code, message: handshake.errorMessage ?? "Unknown")
+        }
 
         let text = try await streamAudioAndCollect(ws: ws, pcmData: pcmData)
 
@@ -56,8 +58,7 @@ final class VolcSpeechEngine: SpeechEngine {
         request.setValue(resourceId, forHTTPHeaderField: "X-Api-Resource-Id")
         request.setValue(connectId, forHTTPHeaderField: "X-Api-Connect-Id")
 
-        let session = URLSession(configuration: .default)
-        let ws = session.webSocketTask(with: request)
+        let ws = URLSession.shared.webSocketTask(with: request)
         ws.resume()
         return ws
     }
@@ -139,7 +140,7 @@ final class VolcSpeechEngine: SpeechEngine {
                 try await Task.sleep(nanoseconds: Self.timeoutSeconds * 1_000_000_000)
                 throw VolcASRError.timeout
             }
-            let result = try await group.next()!
+            guard let result = try await group.next() else { throw VolcASRError.timeout }
             group.cancelAll()
             return result
         }

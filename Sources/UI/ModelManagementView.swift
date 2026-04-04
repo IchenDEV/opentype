@@ -68,9 +68,9 @@ struct ModelManagementView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
 
-            SecureField(L("volc.access_key"), text: $settings.volcAccessKey)
-                .textFieldStyle(.roundedBorder)
             TextField(L("volc.app_key"), text: $settings.volcAppKey)
+                .textFieldStyle(.roundedBorder)
+            SecureField(L("volc.access_key"), text: $settings.volcAccessKey)
                 .textFieldStyle(.roundedBorder)
             TextField(L("volc.resource_id"), text: $settings.volcResourceId)
                 .textFieldStyle(.roundedBorder)
