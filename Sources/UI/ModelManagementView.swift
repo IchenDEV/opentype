@@ -95,11 +95,12 @@ struct ModelManagementView: View {
 
             // Models list for selected family
             if let family = selectedModelFamily {
-                modelList(
-                    catalog.llmModels.filter { $0.family == family },
-                    activeID: settings.llmModel,
-                    type: .llm
-                )
+                let familyModels = catalog.llmModels.filter { $0.family == family }
+                if family == .qwen {
+                    groupedQwenModelList(familyModels, activeID: settings.llmModel)
+                } else {
+                    modelList(familyModels, activeID: settings.llmModel, type: .llm)
+                }
             }
 
             HStack(spacing: 8) {
@@ -283,6 +284,30 @@ struct ModelManagementView: View {
     // MARK: - Shared List
 
     private enum ModelType { case whisper, llm }
+
+    private func qwenSeries(from displayName: String) -> String {
+        displayName.components(separatedBy: " ").first ?? displayName
+    }
+
+    private func groupedQwenModelList(
+        _ models: [ModelCatalog.ModelEntry], activeID: String
+    ) -> some View {
+        let seriesOrder = ["Qwen2.5", "Qwen3", "Qwen3.5"]
+        let grouped = Dictionary(grouping: models) { qwenSeries(from: $0.displayName) }
+        let series = seriesOrder.filter { grouped[$0] != nil }
+
+        return VStack(spacing: 8) {
+            ForEach(series, id: \.self) { seriesName in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(seriesName)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 2)
+                    modelList(grouped[seriesName] ?? [], activeID: activeID, type: .llm)
+                }
+            }
+        }
+    }
 
     private func modelList(
         _ models: [ModelCatalog.ModelEntry], activeID: String, type: ModelType
