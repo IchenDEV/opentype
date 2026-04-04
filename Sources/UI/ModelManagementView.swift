@@ -25,6 +25,9 @@ struct ModelManagementView: View {
                 if settings.speechEngine == .whisper {
                     whisperSection
                 }
+                if settings.speechEngine == .volc {
+                    volcSection
+                }
                 Divider()
                 llmSection
                 Divider()
@@ -54,6 +57,23 @@ struct ModelManagementView: View {
     private var whisperSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             modelList(catalog.whisperModels, activeID: settings.whisperModel, type: .whisper)
+        }
+    }
+
+    // MARK: - Volc ASR
+
+    private var volcSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("volc.config_hint"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            TextField(L("volc.app_key"), text: $settings.volcAppKey)
+                .textFieldStyle(.roundedBorder)
+            SecureField(L("volc.access_key"), text: $settings.volcAccessKey)
+                .textFieldStyle(.roundedBorder)
+            TextField(L("volc.resource_id"), text: $settings.volcResourceId)
+                .textFieldStyle(.roundedBorder)
         }
     }
 

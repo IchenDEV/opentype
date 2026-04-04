@@ -38,7 +38,7 @@ Three output modes are available:
 
 | Feature | Description |
 |---|---|
-| **Dual Speech Engines** | Apple Speech (built-in, zero download) or WhisperKit (offline Whisper models) |
+| **Triple Speech Engines** | Apple Speech (built-in), WhisperKit (offline Whisper), or Doubao ASR (Volcengine cloud) |
 | **Smart Text Processing** | Local MLX Qwen2.5/Qwen3 or remote LLM — contextual cleanup, self-correction handling, structured list formatting |
 | **Remote LLM Support** | OpenAI, Claude (Anthropic format), Gemini, OpenRouter, SiliconFlow, Doubao, Bailian, MiniMax (CN & Global) |
 | **Global Hotkey** | Configurable key (Fn/Ctrl/Shift/Option) with long-press, double-tap, or single-tap activation |
@@ -130,7 +130,7 @@ Sources/
 ├── Output/       # Text injection (Accessibility API + clipboard paste)
 ├── Processing/   # TextProcessor, InputHistory, MemoryStore, PersonalDictionary
 ├── Screen/       # Screen OCR (ScreenCaptureKit + Vision)
-├── Speech/       # SpeechEngine protocol, WhisperKit engine, Apple Speech engine
+├── Speech/       # SpeechEngine protocol, WhisperKit, Apple Speech, Doubao ASR engines
 ├── UI/           # SwiftUI: MenuBar, Settings, Onboarding, Overlay, History, Models
 └── Resources/    # Localization strings (en/zh-Hans), sounds, app icon
 scripts/

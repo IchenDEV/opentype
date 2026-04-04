@@ -30,11 +30,13 @@ enum OutputMode: String, Codable, CaseIterable {
 enum SpeechEngineType: String, Codable, CaseIterable {
     case whisper = "whisper"
     case apple = "apple"
+    case volc = "volc"
 
     var label: String {
         switch self {
         case .whisper: return "WhisperKit"
         case .apple: return L("engine.apple_speech")
+        case .volc: return L("engine.volc_asr")
         }
     }
 }
@@ -166,6 +168,9 @@ final class AppSettings: ObservableObject {
     @Published var remoteAPIKey: String
     @Published var remoteBaseURL: String
     @Published var remoteModel: String
+    @Published var volcAppKey: String
+    @Published var volcAccessKey: String
+    @Published var volcResourceId: String
 
     private let defaults = UserDefaults.standard
     private var cancellables = Set<AnyCancellable>()
@@ -177,6 +182,7 @@ final class AppSettings: ObservableObject {
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
+        case volcAppKey, volcAccessKey, volcResourceId
     }
 
     private init() {
@@ -223,6 +229,9 @@ final class AppSettings: ObservableObject {
         remoteAPIKey = ud.string(forKey: Key.remoteAPIKey.rawValue) ?? ""
         remoteBaseURL = ud.string(forKey: Key.remoteBaseURL.rawValue) ?? ""
         remoteModel = ud.string(forKey: Key.remoteModel.rawValue) ?? ""
+        volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
+        volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
+        volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.bigasr.sauc.duration"
 
         setupPersistence()
     }
@@ -253,6 +262,9 @@ final class AppSettings: ObservableObject {
         $remoteAPIKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteAPIKey.rawValue) }.store(in: &cancellables)
         $remoteBaseURL.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteBaseURL.rawValue) }.store(in: &cancellables)
         $remoteModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteModel.rawValue) }.store(in: &cancellables)
+        $volcAppKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAppKey.rawValue) }.store(in: &cancellables)
+        $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
+        $volcResourceId.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcResourceId.rawValue) }.store(in: &cancellables)
     }
 
     var zh: Bool { uiLanguage == .chinese }

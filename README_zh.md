@@ -38,7 +38,7 @@
 
 | 功能 | 说明 |
 |---|---|
-| **双语音引擎** | Apple 语音识别（内置，无需下载）或 WhisperKit（离线 Whisper 模型） |
+| **三语音引擎** | Apple 语音识别（内置）、WhisperKit（离线 Whisper 模型）或豆包语音识别（火山引擎云端） |
 | **智能文字处理** | 本地 MLX Qwen2.5/Qwen3 或远程 LLM — 上下文感知的语气词清理、自动纠正、列表格式化 |
 | **远程 LLM** | 支持 OpenAI、Claude（Anthropic 格式）、Gemini、OpenRouter、硅基流动、豆包、百炼、MiniMax（国内/海外） |
 | **全局快捷键** | 可配置按键（Fn/Ctrl/Shift/Option），支持长按、双击、单击三种触发模式 |
@@ -130,7 +130,7 @@ Sources/
 ├── Output/       # 文本注入（Accessibility API + 剪贴板粘贴）
 ├── Processing/   # 文本处理器、输入历史、记忆系统、个人词库
 ├── Screen/       # 屏幕 OCR（ScreenCaptureKit + Vision）
-├── Speech/       # 语音识别协议、WhisperKit 引擎、Apple Speech 引擎
+├── Speech/       # 语音识别协议、WhisperKit 引擎、Apple Speech 引擎、豆包语音识别引擎
 ├── UI/           # SwiftUI：菜单栏、设置面板、新手引导、浮动 HUD、历史、模型管理
 └── Resources/    # 本地化字符串（中/英）、音效、应用图标
 scripts/
