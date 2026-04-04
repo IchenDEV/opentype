@@ -198,7 +198,7 @@ final class AppSettings: ObservableObject {
             ?? (savedEngine.contains("Whisper") || savedEngine.contains("whisper") ? .whisper : nil)
             ?? .apple
         whisperModel = ud.string(forKey: Key.whisperModel.rawValue) ?? "large-v3"
-        llmModel = ud.string(forKey: Key.llmModel.rawValue) ?? "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        llmModel = ud.string(forKey: Key.llmModel.rawValue) ?? "mlx-community/Qwen3-0.6B-4bit"
         microphoneID = ud.string(forKey: Key.microphoneID.rawValue)
         let savedOutput = ud.string(forKey: Key.outputMode.rawValue) ?? ""
         outputMode = OutputMode(rawValue: savedOutput)

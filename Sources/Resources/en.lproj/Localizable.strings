@@ -16,6 +16,7 @@
 "common.cannot_undo" = "This action cannot be undone.";
 "common.recommended" = "Recommended";
 "common.custom" = "Custom";
+"common.retry" = "Retry";
 
 /* ── Status ── */
 "status.ready" = "Ready";
@@ -211,6 +212,7 @@
 "onboarding.downloading_model" = "Downloading model…";
 "onboarding.model_ready" = "Model ready!";
 "onboarding.skip_download" = "Skip, download later";
+"onboarding.download_failed" = "Download failed";
 
 /* ── Permissions ── */
 "perm.intro" = "OpenType requires the following permissions to function properly.";

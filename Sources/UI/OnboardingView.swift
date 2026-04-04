@@ -255,6 +255,24 @@ struct OnboardingView: View {
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
+                } else if case .error(let msg) = model.status {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(L("onboarding.download_failed"))
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                            Text(msg)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                    Button(L("common.retry")) {
+                        Task { await catalog.downloadLLM(settings.llmModel) }
+                    }
+                    .controlSize(.small)
                 }
             }
 

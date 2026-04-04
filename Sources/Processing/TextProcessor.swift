@@ -12,6 +12,10 @@ final class TextProcessor {
         }
     }
 
+    func unloadLLM() async {
+        await llm.unload()
+    }
+
     func warmUpLLM(model: String) async {
         if AppSettings.shared.useRemoteLLM { return }
         do {

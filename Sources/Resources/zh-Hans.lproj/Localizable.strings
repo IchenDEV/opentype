@@ -16,6 +16,7 @@
 "common.cannot_undo" = "此操作不可撤销。";
 "common.recommended" = "推荐";
 "common.custom" = "自定义";
+"common.retry" = "重试";
 
 /* ── Status ── */
 "status.ready" = "就绪";
@@ -212,6 +213,7 @@
 "onboarding.downloading_model" = "正在下载模型…";
 "onboarding.model_ready" = "模型已就绪！";
 "onboarding.skip_download" = "跳过，稍后下载";
+"onboarding.download_failed" = "下载失败";
 
 /* ── Permissions ── */
 "perm.intro" = "OpenType 需要以下权限才能正常工作。";
