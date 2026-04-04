@@ -82,6 +82,38 @@ struct SettingsView: View {
                 Picker(L("settings.ui_language"), selection: $settings.uiLanguage) {
                     ForEach(UILanguage.allCases, id: \.self) { Text($0.displayName) }
                 }
+                HStack {
+                    Text(L("settings.menubar_icon"))
+                    Spacer()
+                    HStack(spacing: 12) {
+                        ForEach(MenuBarIcon.allCases, id: \.self) { icon in
+                            Button {
+                                settings.menuBarIcon = icon
+                            } label: {
+                                Image(systemName: icon.symbolName)
+                                    .font(.system(size: 16))
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        settings.menuBarIcon == icon
+                                            ? Color.accentColor.opacity(0.15)
+                                            : Color.clear
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(
+                                                settings.menuBarIcon == icon
+                                                    ? Color.accentColor
+                                                    : Color.clear,
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(icon.label)
+                        }
+                    }
+                }
             }
         }
         .formStyle(.grouped)

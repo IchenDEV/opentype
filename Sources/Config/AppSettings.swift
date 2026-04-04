@@ -121,6 +121,28 @@ enum HistoryRetention: String, Codable, CaseIterable {
     }
 }
 
+enum MenuBarIcon: String, Codable, CaseIterable {
+    case mic = "mic"
+    case waveform = "waveform"
+    case bubble = "bubble"
+
+    var symbolName: String {
+        switch self {
+        case .mic: return "mic.fill"
+        case .waveform: return "waveform"
+        case .bubble: return "bubble.left.fill"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .mic: return L("icon.mic")
+        case .waveform: return L("icon.waveform")
+        case .bubble: return L("icon.bubble")
+        }
+    }
+}
+
 enum InputLanguage: String, Codable, CaseIterable {
     case chinese = "中文"
     case english = "English"
@@ -168,6 +190,7 @@ final class AppSettings: ObservableObject {
     @Published var remoteAPIKey: String
     @Published var remoteBaseURL: String
     @Published var remoteModel: String
+    @Published var menuBarIcon: MenuBarIcon
     @Published var volcAppKey: String
     @Published var volcAccessKey: String
     let volcResourceId = "volc.seedasr.sauc"
@@ -182,6 +205,7 @@ final class AppSettings: ObservableObject {
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
+        case menuBarIcon
         case volcAppKey, volcAccessKey
     }
 
@@ -229,6 +253,7 @@ final class AppSettings: ObservableObject {
         remoteAPIKey = ud.string(forKey: Key.remoteAPIKey.rawValue) ?? ""
         remoteBaseURL = ud.string(forKey: Key.remoteBaseURL.rawValue) ?? ""
         remoteModel = ud.string(forKey: Key.remoteModel.rawValue) ?? ""
+        menuBarIcon = MenuBarIcon(rawValue: ud.string(forKey: Key.menuBarIcon.rawValue) ?? "") ?? .mic
         volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
 
@@ -261,6 +286,7 @@ final class AppSettings: ObservableObject {
         $remoteAPIKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteAPIKey.rawValue) }.store(in: &cancellables)
         $remoteBaseURL.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteBaseURL.rawValue) }.store(in: &cancellables)
         $remoteModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteModel.rawValue) }.store(in: &cancellables)
+        $menuBarIcon.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.menuBarIcon.rawValue) }.store(in: &cancellables)
         $volcAppKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAppKey.rawValue) }.store(in: &cancellables)
         $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
     }
