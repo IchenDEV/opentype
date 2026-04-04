@@ -49,23 +49,50 @@ final class OverlayPanel {
 
 private struct OverlayContentView: View {
     @EnvironmentObject var appState: AppState
+    @State private var fakeProgress: Double = 0
+    @State private var progressTimer: Timer?
+
+    private var showsProgress: Bool {
+        switch appState.phase {
+        case .transcribing, .processing, .inserting: return true
+        default: return false
+        }
+    }
 
     var body: some View {
-        HStack(spacing: 10) {
-            statusIcon
-                .frame(width: 16, height: 16)
-            Text(appState.statusMessage)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            if appState.isRecording {
-                WaveformView(level: appState.audioLevel)
-                    .frame(width: 30, height: 14)
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                statusIcon
+                    .frame(width: 16, height: 16)
+                Text(appState.statusMessage)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                if appState.isRecording {
+                    WaveformView(level: appState.audioLevel)
+                        .frame(width: 30, height: 14)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, showsProgress ? 8 : 10)
+
+            if showsProgress {
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(.white.opacity(0.15))
+                        .frame(height: 3)
+                        .overlay(alignment: .leading) {
+                            Capsule()
+                                .fill(.orange)
+                                .frame(width: geo.size.width * fakeProgress, height: 3)
+                        }
+                }
+                .frame(height: 3)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(.black.opacity(0.55))
@@ -78,6 +105,41 @@ private struct OverlayContentView: View {
                         .stroke(.white.opacity(0.15), lineWidth: 0.5)
                 )
         )
+        .onChange(of: appState.phase) { _, newPhase in
+            handlePhaseChange(newPhase)
+        }
+        .animation(.easeInOut(duration: 0.3), value: fakeProgress)
+        .animation(.easeInOut(duration: 0.2), value: showsProgress)
+    }
+
+    private func handlePhaseChange(_ phase: AppPhase) {
+        progressTimer?.invalidate()
+        progressTimer = nil
+
+        switch phase {
+        case .transcribing:
+            fakeProgress = 0.05
+            startProgressTimer(target: 0.3, step: 0.04, interval: 0.15)
+        case .processing:
+            if fakeProgress < 0.3 { fakeProgress = 0.3 }
+            startProgressTimer(target: 0.92, step: 0.01, interval: 0.3)
+        case .inserting:
+            fakeProgress = 0.95
+        case .done:
+            fakeProgress = 1.0
+        default:
+            fakeProgress = 0
+        }
+    }
+
+    private func startProgressTimer(target: Double, step: Double, interval: TimeInterval) {
+        progressTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { _ in
+            Task { @MainActor in
+                if fakeProgress < target {
+                    fakeProgress = min(fakeProgress + step, target)
+                }
+            }
+        }
     }
 
     private var statusIcon: some View {
@@ -90,9 +152,12 @@ private struct OverlayContentView: View {
                 Image(systemName: "ellipsis")
                     .foregroundStyle(.yellow)
                     .symbolEffect(.variableColor.iterative)
-            case .processing:
+            case .processing, .inserting:
                 Image(systemName: "brain")
                     .foregroundStyle(.orange)
+            case .downloading:
+                Image(systemName: "arrow.down.circle")
+                    .foregroundStyle(.blue)
             case .done:
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
