@@ -68,7 +68,7 @@ final class ModelCatalog: ObservableObject {
     }
 
     private static let curatedWhisperVariants = [
-        "large-v3-turbo", "large-v3", "large-v2", "medium", "small", "distil-large-v3",
+        "large-v3-turbo", "large-v3", "large-v2", "medium", "small", "base", "tiny",
     ]
 
     private init() {
