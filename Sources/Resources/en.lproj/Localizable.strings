@@ -258,3 +258,4 @@
 "volc.config_hint" = "Enter your Volcengine Doubao ASR credentials. Get them from the Volcengine console.";
 "volc.app_key" = "App Key (App ID)";
 "volc.access_key" = "Access Token";
+"volc.resource_id" = "Resource ID";
