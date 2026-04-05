@@ -81,7 +81,7 @@ actor LLMEngine {
             ) { tokens in
                 tokenCount += tokens.count
                 output.append(contentsOf: tokens)
-                return output.count >= 128 ? .stop : .more
+                return output.count >= 256 ? .stop : .more
             }
             return result.output
         }
