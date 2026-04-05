@@ -25,19 +25,39 @@ final class VolcSpeechEngine: SpeechEngine {
         guard isReady else { throw VolcASRError.notConfigured }
         guard let url = audioURL else { throw VolcASRError.noAudioFile }
 
+        Log.info("[VolcASR] connecting: endpoint=\(Self.endpoint) resourceId=\(resourceId) appKey=\(appKey.prefix(4))***")
+
         let t0 = CFAbsoluteTimeGetCurrent()
         let pcmData = try convertToPCM16k(url: url)
         guard !pcmData.isEmpty else { return "" }
+        Log.info("[VolcASR] audio converted: \(pcmData.count) bytes PCM 16kHz")
 
         let connectId = UUID().uuidString
         let ws = try openWebSocket(connectId: connectId)
         defer { ws.cancel(with: .normalClosure, reason: nil) }
 
         let volcLang = volcLanguage(from: language)
-        try await sendFullClientRequest(ws: ws, language: volcLang)
-        if let handshake = try await receiveResponse(ws: ws), let code = handshake.errorCode {
-            throw VolcASRError.serverError(code: code, message: handshake.errorMessage ?? "Unknown")
+        Log.info("[VolcASR] sending full client request, language=\(volcLang ?? "auto")")
+        do {
+            try await sendFullClientRequest(ws: ws, language: volcLang)
+        } catch {
+            Log.error("[VolcASR] send full client request failed: \(error.localizedDescription)")
+            throw error
         }
+
+        Log.info("[VolcASR] waiting for handshake response...")
+        do {
+            if let handshake = try await receiveResponse(ws: ws), let code = handshake.errorCode {
+                Log.error("[VolcASR] handshake error: code=\(code) message=\(handshake.errorMessage ?? "nil")")
+                throw VolcASRError.serverError(code: code, message: handshake.errorMessage ?? "Unknown")
+            }
+        } catch let error as VolcASRError {
+            throw error
+        } catch {
+            Log.error("[VolcASR] handshake failed: \(error.localizedDescription)")
+            throw error
+        }
+        Log.info("[VolcASR] handshake ok, streaming audio...")
 
         let text = try await streamAudioAndCollect(ws: ws, pcmData: pcmData)
 
