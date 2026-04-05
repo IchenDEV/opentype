@@ -252,6 +252,18 @@ final class VoicePipeline {
         Task { await textProcessor.unloadLLM() }
     }
 
+    func loadLLM() {
+        guard !appState.settings.useRemoteLLM else { return }
+        let model = appState.settings.llmModel
+        guard !model.isEmpty else { return }
+        Task {
+            appState.statusMessage = L("pipeline.loading_llm")
+            await textProcessor.warmUpLLM(model: model)
+            appState.llmModelReady = await textProcessor.isLLMReady
+            appState.statusMessage = appState.llmModelReady ? L("status.ready") : L("pipeline.model_load_failed")
+        }
+    }
+
     // MARK: - Engine loading
 
     private func ensureEngineLoaded() async {

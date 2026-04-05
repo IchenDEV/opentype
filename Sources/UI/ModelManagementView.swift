@@ -8,6 +8,7 @@ struct ModelManagementView: View {
 
     var onUnloadWhisper: (() -> Void)?
     var onUnloadLLM: (() -> Void)?
+    var onLoadLLM: (() -> Void)?
 
     @State private var customLLMInput = ""
     @State private var showImportError = false
@@ -420,6 +421,7 @@ struct ModelManagementView: View {
                 case .llm:
                     onUnloadLLM?()
                     settings.llmModel = model.id
+                    onLoadLLM?()
                 }
             }
             .controlSize(.mini)
