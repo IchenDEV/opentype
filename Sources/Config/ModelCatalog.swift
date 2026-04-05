@@ -68,7 +68,7 @@ final class ModelCatalog: ObservableObject {
     }
 
     private static let curatedWhisperVariants = [
-        "large-v3", "large-v2", "medium", "small", "distil-large-v3",
+        "large-v3-turbo", "large-v3", "large-v2", "medium", "small", "base", "tiny",
     ]
 
     private init() {
@@ -77,7 +77,11 @@ final class ModelCatalog: ObservableObject {
         let supported = Set(rec.supported)
 
         whisperModels = Self.curatedWhisperVariants.compactMap { variant in
-            let fullName = rec.supported.first { $0.contains(variant) }
+            let fullName = rec.supported.first { name in
+                guard let range = name.range(of: variant) else { return false }
+                let after = name[range.upperBound...]
+                return after.isEmpty || after.first == "_"
+            }
             guard let fullName, supported.contains(fullName) else { return nil }
             return ModelEntry(
                 id: fullName,
@@ -211,6 +215,14 @@ final class ModelCatalog: ObservableObject {
         deleteWhisperVariant(id)
         whisperModels[idx].status = .notDownloaded
         whisperModels[idx].cacheSize = 0
+
+        if settings.whisperModel == id {
+            settings.whisperModel = nextAvailableWhisper(excluding: id) ?? whisperModels.first?.id ?? ""
+        }
+    }
+
+    func nextAvailableWhisper(excluding id: String) -> String? {
+        whisperModels.first { $0.id != id && ($0.status == .downloaded || $0.status == .ready) }?.id
     }
 
     // MARK: - LLM Operations
@@ -257,6 +269,14 @@ final class ModelCatalog: ObservableObject {
         if let dir = llmRepoDir(id) { try? FileManager.default.removeItem(at: dir) }
         llmModels[idx].status = .notDownloaded
         llmModels[idx].cacheSize = 0
+
+        if settings.llmModel == id {
+            settings.llmModel = nextAvailableLLM(excluding: id) ?? llmModels.first?.id ?? ""
+        }
+    }
+
+    func nextAvailableLLM(excluding id: String) -> String? {
+        llmModels.first { $0.id != id && ($0.status == .downloaded || $0.status == .ready) }?.id
     }
 
     func addCustomLLM(_ modelID: String) {

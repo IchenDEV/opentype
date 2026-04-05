@@ -11,9 +11,11 @@ enum PromptBuilder {
         } else {
             let basePrompt: String
             switch inputLanguage {
-            case .chinese:
+            case .auto, .chinese, .cantonese:
                 basePrompt = chineseSystemPrompt
             case .english:
+                basePrompt = englishSystemPrompt
+            case .japanese, .korean:
                 basePrompt = englishSystemPrompt
             }
             parts = [basePrompt]
@@ -128,9 +130,9 @@ enum PromptBuilder {
 
     static func buildUserPrompt(text: String, inputLanguage: InputLanguage = .chinese) -> String {
         switch inputLanguage {
-        case .chinese:
+        case .auto, .chinese, .cantonese:
             return "[以下是语音识别原文，请整理为书面文字]\n\(text)"
-        case .english:
+        case .english, .japanese, .korean:
             return "[Raw speech transcription below — reformat into written text]\n\(text)"
         }
     }

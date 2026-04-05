@@ -175,12 +175,15 @@ final class WhisperEngine: SpeechEngine {
 
         let t0 = CFAbsoluteTimeGetCurrent()
 
+        let promptTokens = chinesePromptTokens(for: language)
+
         let options = DecodingOptions(
             language: language,
-            usePrefillPrompt: true,
+            usePrefillPrompt: language != nil,
             usePrefillCache: true,
             skipSpecialTokens: true,
             withoutTimestamps: true,
+            promptTokens: promptTokens,
             suppressBlank: true
         )
 
@@ -200,6 +203,11 @@ final class WhisperEngine: SpeechEngine {
         isReady = false
         isLoading = false
         loadError = nil
+    }
+
+    private func chinesePromptTokens(for language: String?) -> [Int]? {
+        guard language == "zh" else { return nil }
+        return whisperKit?.tokenizer?.encode(text: "以下是普通话的句子。")
     }
 
     private func dp(_ fraction: Double, stage: DownloadProgress.Stage) -> DownloadProgress {

@@ -145,7 +145,7 @@ final class VoicePipeline {
     /// Runs transcription → LLM → text insertion. Separated from stop() so it can be cancelled.
     private func processRecording(
         audioURL: URL?,
-        language: String,
+        language: String?,
         settings: AppSettings,
         targetApp: NSRunningApplication?
     ) async {
@@ -259,8 +259,7 @@ final class VoicePipeline {
         case .whisper: await ensureWhisperLoaded()
         case .apple:
             if appleSpeechEngine == nil {
-                let lang = appState.settings.inputLanguage
-                let locale = Locale(identifier: lang == .chinese ? "zh-CN" : "en-US")
+                let locale = Locale(identifier: appState.settings.inputLanguage.localeIdentifier)
                 appleSpeechEngine = AppleSpeechEngine(locale: locale)
             }
             if !(appleSpeechEngine?.isReady ?? false) {

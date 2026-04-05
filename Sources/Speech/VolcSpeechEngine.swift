@@ -339,6 +339,7 @@ final class VolcSpeechEngine: SpeechEngine {
         case "en": return "en-US"
         case "ja": return "ja-JP"
         case "ko": return "ko-KR"
+        case "yue": return "yue-CN"
         case "de": return "de-DE"
         case "fr": return "fr-FR"
         case "es": return "es-MX"

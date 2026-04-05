@@ -144,20 +144,31 @@ enum MenuBarIcon: String, Codable, CaseIterable {
 }
 
 enum InputLanguage: String, Codable, CaseIterable {
+    case auto = "Auto"
     case chinese = "中文"
     case english = "English"
+    case japanese = "日本語"
+    case korean = "한국어"
+    case cantonese = "粤语"
 
-    var whisperCode: String {
+    var whisperCode: String? {
         switch self {
+        case .auto: return nil
         case .chinese: return "zh"
         case .english: return "en"
+        case .japanese: return "ja"
+        case .korean: return "ko"
+        case .cantonese: return "yue"
         }
     }
 
     var localeIdentifier: String {
         switch self {
-        case .chinese: return "zh-CN"
+        case .auto, .chinese: return "zh-CN"
         case .english: return "en-US"
+        case .japanese: return "ja-JP"
+        case .korean: return "ko-KR"
+        case .cantonese: return "zh-HK"
         }
     }
 }
