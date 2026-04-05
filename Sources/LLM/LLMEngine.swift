@@ -61,7 +61,7 @@ actor LLMEngine {
             modelID: modelID
         )
         let systemPrompt = "你是语音转文字后处理引擎。直接输出整理后的文本，不要任何解释。"
-        let params = GenerateParameters(maxTokens: 256, temperature: 0.3)
+        let params = GenerateParameters(maxTokens: 512, temperature: 0.3)
 
         var tokenCount = 0
         let genT0 = CFAbsoluteTimeGetCurrent()
