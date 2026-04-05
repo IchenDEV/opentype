@@ -72,6 +72,8 @@ struct ModelManagementView: View {
                 .textFieldStyle(.roundedBorder)
             SecureField(L("volc.access_key"), text: $settings.volcAccessKey)
                 .textFieldStyle(.roundedBorder)
+            TextField(L("volc.resource_id"), text: $settings.volcResourceId)
+                .textFieldStyle(.roundedBorder)
         }
     }
 

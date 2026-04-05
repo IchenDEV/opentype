@@ -204,7 +204,7 @@ final class AppSettings: ObservableObject {
     @Published var menuBarIcon: MenuBarIcon
     @Published var volcAppKey: String
     @Published var volcAccessKey: String
-    let volcResourceId = "volc.seedasr.sauc"
+    @Published var volcResourceId: String
 
     private let defaults = UserDefaults.standard
     private var cancellables = Set<AnyCancellable>()
@@ -217,7 +217,7 @@ final class AppSettings: ObservableObject {
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
         case menuBarIcon
-        case volcAppKey, volcAccessKey
+        case volcAppKey, volcAccessKey, volcResourceId
     }
 
     private init() {
@@ -267,6 +267,7 @@ final class AppSettings: ObservableObject {
         menuBarIcon = MenuBarIcon(rawValue: ud.string(forKey: Key.menuBarIcon.rawValue) ?? "") ?? .mic
         volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
+        volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.seedasr.sauc.duration"
 
         setupPersistence()
     }
@@ -300,6 +301,7 @@ final class AppSettings: ObservableObject {
         $menuBarIcon.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.menuBarIcon.rawValue) }.store(in: &cancellables)
         $volcAppKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAppKey.rawValue) }.store(in: &cancellables)
         $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
+        $volcResourceId.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcResourceId.rawValue) }.store(in: &cancellables)
     }
 
     var zh: Bool { uiLanguage == .chinese }
