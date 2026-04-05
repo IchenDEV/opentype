@@ -68,7 +68,7 @@ final class ModelCatalog: ObservableObject {
     }
 
     private static let curatedWhisperVariants = [
-        "large-v3", "large-v2", "medium", "small", "distil-large-v3",
+        "large-v3-turbo", "large-v3", "large-v2", "medium", "small", "distil-large-v3",
     ]
 
     private init() {
@@ -77,7 +77,11 @@ final class ModelCatalog: ObservableObject {
         let supported = Set(rec.supported)
 
         whisperModels = Self.curatedWhisperVariants.compactMap { variant in
-            let fullName = rec.supported.first { $0.contains(variant) }
+            let fullName = rec.supported.first { name in
+                guard let range = name.range(of: variant) else { return false }
+                let after = name[range.upperBound...]
+                return after.isEmpty || after.first == "_"
+            }
             guard let fullName, supported.contains(fullName) else { return nil }
             return ModelEntry(
                 id: fullName,

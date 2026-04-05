@@ -44,8 +44,15 @@ final class AppleSpeechEngine: SpeechEngine {
         }
 
         if let lang = language {
-            let locale = Locale(identifier: lang == "zh" ? "zh-CN" : "en-US")
-            if let newRecognizer = SFSpeechRecognizer(locale: locale) {
+            let localeId: String
+            switch lang {
+            case "zh": localeId = "zh-CN"
+            case "ja": localeId = "ja-JP"
+            case "ko": localeId = "ko-KR"
+            case "yue": localeId = "zh-HK"
+            default: localeId = "en-US"
+            }
+            if let newRecognizer = SFSpeechRecognizer(locale: Locale(identifier: localeId)) {
                 recognizer = newRecognizer
             }
         }
