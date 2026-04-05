@@ -170,24 +170,33 @@ final class VolcSpeechEngine: SpeechEngine {
         case json = 0x01
     }
 
-    private func buildMessage(type: MessageType, flags: UInt8, serialization: Serialization, payload: Data) -> Data {
-        var data = Data(capacity: 4 + 4 + payload.count)
-        // Byte 0: version(0001) | header_size(0001)
+    private enum PayloadCompression: UInt8 {
+        case none = 0x00
+        case gzip = 0x01
+    }
+
+    private func buildMessage(type: MessageType, flags: UInt8, serialization: Serialization, compression: PayloadCompression = .gzip, payload: Data) -> Data {
+        let finalPayload: Data
+        let actualCompression: PayloadCompression
+        if compression == .gzip, let compressed = Gzip.compress(payload) {
+            finalPayload = compressed
+            actualCompression = .gzip
+        } else {
+            finalPayload = payload
+            actualCompression = .none
+        }
+
+        var data = Data(capacity: 4 + 4 + finalPayload.count)
         data.append(0x11)
-        // Byte 1: message_type(4bit) | flags(4bit)
         data.append((type.rawValue << 4) | (flags & 0x0F))
-        // Byte 2: serialization(4bit) | compression(4bit) — no compression
-        data.append(serialization.rawValue << 4)
-        // Byte 3: reserved
+        data.append((serialization.rawValue << 4) | actualCompression.rawValue)
         data.append(0x00)
-        // Payload size (big-endian uint32)
-        let size = UInt32(payload.count)
+        let size = UInt32(finalPayload.count)
         data.append(UInt8((size >> 24) & 0xFF))
         data.append(UInt8((size >> 16) & 0xFF))
         data.append(UInt8((size >> 8) & 0xFF))
         data.append(UInt8(size & 0xFF))
-        // Payload
-        data.append(payload)
+        data.append(finalPayload)
         return data
     }
 
@@ -220,7 +229,14 @@ final class VolcSpeechEngine: SpeechEngine {
             return ParsedResponse(isFinal: (flags & 0x02) != 0)
         }
 
-        let payloadData = Data(data[offset..<(offset + payloadSize)])
+        let isGzip = (data[2] & 0x0F) == PayloadCompression.gzip.rawValue
+        let rawPayload = Data(data[offset..<(offset + payloadSize)])
+        let payloadData: Data
+        if isGzip, let decompressed = Gzip.decompress(rawPayload) {
+            payloadData = decompressed
+        } else {
+            payloadData = rawPayload
+        }
         guard let json = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] else {
             return ParsedResponse(isFinal: (flags & 0x02) != 0)
         }
