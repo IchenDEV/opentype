@@ -215,6 +215,14 @@ final class ModelCatalog: ObservableObject {
         deleteWhisperVariant(id)
         whisperModels[idx].status = .notDownloaded
         whisperModels[idx].cacheSize = 0
+
+        if settings.whisperModel == id {
+            settings.whisperModel = nextAvailableWhisper(excluding: id) ?? whisperModels.first?.id ?? ""
+        }
+    }
+
+    func nextAvailableWhisper(excluding id: String) -> String? {
+        whisperModels.first { $0.id != id && ($0.status == .downloaded || $0.status == .ready) }?.id
     }
 
     // MARK: - LLM Operations
@@ -261,6 +269,14 @@ final class ModelCatalog: ObservableObject {
         if let dir = llmRepoDir(id) { try? FileManager.default.removeItem(at: dir) }
         llmModels[idx].status = .notDownloaded
         llmModels[idx].cacheSize = 0
+
+        if settings.llmModel == id {
+            settings.llmModel = nextAvailableLLM(excluding: id) ?? llmModels.first?.id ?? ""
+        }
+    }
+
+    func nextAvailableLLM(excluding id: String) -> String? {
+        llmModels.first { $0.id != id && ($0.status == .downloaded || $0.status == .ready) }?.id
     }
 
     func addCustomLLM(_ modelID: String) {
