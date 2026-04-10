@@ -267,7 +267,7 @@ final class AppSettings: ObservableObject {
         menuBarIcon = MenuBarIcon(rawValue: ud.string(forKey: Key.menuBarIcon.rawValue) ?? "") ?? .mic
         volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
-        volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.seedasr.sauc.duration"
+        volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.bigasr.sauc.duration"
 
         setupPersistence()
     }

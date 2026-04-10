@@ -41,8 +41,9 @@ final class VolcSpeechEngine: SpeechEngine {
         do {
             try await sendFullClientRequest(ws: ws, language: volcLang)
         } catch {
-            Log.error("[VolcASR] send full client request failed: \(error.localizedDescription)")
-            throw error
+            let mappedError = mapTransportError(error)
+            logTransportError(mappedError, stage: "send full client request")
+            throw mappedError
         }
 
         Log.info("[VolcASR] waiting for handshake response...")
@@ -54,8 +55,9 @@ final class VolcSpeechEngine: SpeechEngine {
         } catch let error as VolcASRError {
             throw error
         } catch {
-            Log.error("[VolcASR] handshake failed: \(error.localizedDescription)")
-            throw error
+            let mappedError = mapTransportError(error)
+            logTransportError(mappedError, stage: "handshake")
+            throw mappedError
         }
         Log.info("[VolcASR] handshake ok, streaming audio...")
 
@@ -376,6 +378,21 @@ final class VolcSpeechEngine: SpeechEngine {
         default: return nil
         }
     }
+
+    private func mapTransportError(_ error: Error) -> Error {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorBadServerResponse {
+            return VolcASRError.handshakeRejected
+        }
+        return error
+    }
+
+    private func logTransportError(_ error: Error, stage: String) {
+        let nsError = error as NSError
+        Log.error(
+            "[VolcASR] \(stage) failed: domain=\(nsError.domain) code=\(nsError.code) description=\(error.localizedDescription)"
+        )
+    }
 }
 
 enum VolcASRError: LocalizedError {
@@ -384,6 +401,7 @@ enum VolcASRError: LocalizedError {
     case invalidEndpoint
     case audioConversionFailed
     case timeout
+    case handshakeRejected
     case serverError(code: Int, message: String)
 
     var errorDescription: String? {
@@ -393,6 +411,7 @@ enum VolcASRError: LocalizedError {
         case .invalidEndpoint: return L("error.volc_invalid_endpoint")
         case .audioConversionFailed: return L("error.volc_audio_conversion")
         case .timeout: return L("error.volc_timeout")
+        case .handshakeRejected: return L("error.volc_handshake_rejected")
         case .serverError(let code, let msg): return "ASR Error \(code): \(msg)"
         }
     }

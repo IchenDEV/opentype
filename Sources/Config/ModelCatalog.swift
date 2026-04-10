@@ -55,15 +55,16 @@ final class ModelCatalog: ObservableObject {
     }
 
     enum ModelStatus: Equatable {
-        case notDownloaded, downloading, compiling, loading, downloaded, ready, error(String)
+        case notDownloaded, downloading, compiling, loading, downloaded, ready, unsupported(String), error(String)
 
         var isDownloading: Bool { if case .downloading = self { return true }; return false }
         var isError: Bool { if case .error = self { return true }; return false }
+        var isUnsupported: Bool { if case .unsupported = self { return true }; return false }
         var isBusy: Bool {
             switch self { case .downloading, .compiling, .loading: return true; default: return false }
         }
         var canDelete: Bool {
-            switch self { case .downloaded, .ready, .error: return true; default: return false }
+            switch self { case .downloaded, .ready, .unsupported, .error: return true; default: return false }
         }
     }
 
@@ -97,6 +98,10 @@ final class ModelCatalog: ObservableObject {
 
         llmModels = Self.defaultLLMModels.map {
             ModelEntry(id: $0.0, displayName: $0.1, hint: $0.2, family: $0.3)
+        }
+        if let fallback = LLMModelSupport.fallbackModelID(for: settings.llmModel) {
+            Log.info("[ModelCatalog] falling back unsupported model \(settings.llmModel) -> \(fallback)")
+            settings.llmModel = fallback
         }
         refreshStatus()
     }
@@ -156,7 +161,9 @@ final class ModelCatalog: ObservableObject {
         for i in llmModels.indices where !llmModels[i].status.isBusy {
             let size = llmRepoSize(llmModels[i].id)
             llmModels[i].cacheSize = size
-            if llmModels[i].status != .ready && !llmModels[i].status.isError {
+            if let reason = LLMModelSupport.unsupportedReason(for: llmModels[i].id) {
+                llmModels[i].status = .unsupported(reason)
+            } else if llmModels[i].status != .ready && !llmModels[i].status.isError {
                 llmModels[i].status = size > 0 ? .downloaded : .notDownloaded
             }
         }
@@ -230,6 +237,10 @@ final class ModelCatalog: ObservableObject {
     func downloadLLM(_ id: String) async {
         guard let idx = llmModels.firstIndex(where: { $0.id == id }),
               !llmModels[idx].status.isDownloading else { return }
+        if let reason = LLMModelSupport.unsupportedReason(for: id) {
+            llmModels[idx].status = .unsupported(reason)
+            return
+        }
 
         llmModels[idx].status = .downloading
         llmModels[idx].downloadProgress = 0
@@ -276,7 +287,9 @@ final class ModelCatalog: ObservableObject {
     }
 
     func nextAvailableLLM(excluding id: String) -> String? {
-        llmModels.first { $0.id != id && ($0.status == .downloaded || $0.status == .ready) }?.id
+        llmModels.first {
+            $0.id != id && !$0.status.isUnsupported && ($0.status == .downloaded || $0.status == .ready)
+        }?.id
     }
 
     func addCustomLLM(_ modelID: String) {
@@ -299,9 +312,13 @@ final class ModelCatalog: ObservableObject {
 
     func updateLLMStatus(_ id: String, status: ModelStatus, detail: String = "") {
         guard let i = llmModels.firstIndex(where: { $0.id == id }) else { return }
-        llmModels[i].status = status
+        if let reason = LLMModelSupport.unsupportedReason(for: id) {
+            llmModels[i].status = .unsupported(reason)
+        } else {
+            llmModels[i].status = status
+        }
         llmModels[i].downloadDetail = detail
-        if status == .ready || status == .downloaded {
+        if llmModels[i].status == .ready || llmModels[i].status == .downloaded {
             llmModels[i].cacheSize = llmRepoSize(id)
         }
     }

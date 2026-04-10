@@ -350,9 +350,9 @@ struct ModelManagementView: View {
                     }
                 }
                 HStack(spacing: 6) {
-                    Text(model.hint)
+                    Text(secondaryText(for: model))
                         .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(model.status.isUnsupported ? .orange : .secondary)
                     if let tps = model.benchmarkTPS {
                         Text(String(format: "%.1f tok/s", tps))
                             .font(.system(size: 9, weight: .medium, design: .monospaced))
@@ -484,6 +484,13 @@ struct ModelManagementView: View {
         }
     }
 
+    private func secondaryText(for model: ModelCatalog.ModelEntry) -> String {
+        if case .unsupported(let reason) = model.status {
+            return reason
+        }
+        return model.hint
+    }
+
     private func statusDot(_ status: ModelCatalog.ModelStatus) -> some View {
         Group {
             switch status {
@@ -493,6 +500,8 @@ struct ModelManagementView: View {
                 ProgressView().controlSize(.mini)
             case .downloaded, .ready:
                 Circle().fill(.green)
+            case .unsupported:
+                Circle().fill(.orange)
             case .error:
                 Circle().fill(.red)
             }

@@ -137,6 +137,7 @@
 "model.qwen35_fast" = "Qwen3.5 快速 ~1.5 GB";
 "model.qwen35_quality" = "Qwen3.5 高质量 5-bit ~5.5 GB";
 "model.qwen35_moe" = "Qwen3.5 MoE 旗舰 ~6 GB";
+"model.unsupported_qwen35" = "当前 OpenType 集成的 MLX 运行时尚不支持 qwen3_5 架构";
 "model.gemma_fast" = "Gemma 3 极速 ~600 MB";
 "model.gemma_balanced" = "Gemma 3 均衡 ~2.5 GB";
 "model.gemma_quality" = "Gemma 3 高质量 ~7 GB";
@@ -254,6 +255,7 @@
 "error.volc_invalid_endpoint" = "语音识别接口地址无效";
 "error.volc_audio_conversion" = "音频转换为 PCM 16kHz 失败";
 "error.volc_timeout" = "语音识别请求超时";
+"error.volc_handshake_rejected" = "豆包语音识别连接被服务端拒绝。请检查 App Key、Access Token、Resource ID，以及账号是否已开通流式语音识别。";
 
 /* ── 豆包语音识别 ── */
 "volc.config_hint" = "填写火山引擎豆包语音识别凭据，可从火山引擎控制台获取。";

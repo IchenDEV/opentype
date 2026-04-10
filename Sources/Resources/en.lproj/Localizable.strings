@@ -137,6 +137,7 @@
 "model.qwen35_fast" = "Qwen3.5, fast ~1.5 GB";
 "model.qwen35_quality" = "Qwen3.5, best quality 5-bit ~5.5 GB";
 "model.qwen35_moe" = "Qwen3.5 MoE flagship ~6 GB";
+"model.unsupported_qwen35" = "Requires qwen3_5 support, which the current MLX runtime in OpenType does not load yet";
 "model.gemma_fast" = "Gemma 3, fast ~600 MB";
 "model.gemma_balanced" = "Gemma 3, balanced ~2.5 GB";
 "model.gemma_quality" = "Gemma 3, best quality ~7 GB";
@@ -253,6 +254,7 @@
 "error.volc_invalid_endpoint" = "Invalid ASR endpoint URL";
 "error.volc_audio_conversion" = "Audio conversion to PCM 16kHz failed";
 "error.volc_timeout" = "ASR request timed out";
+"error.volc_handshake_rejected" = "Doubao ASR connection was rejected by the server. Check App Key, Access Token, Resource ID, and whether streaming ASR is enabled for this account.";
 
 /* ── Volc ASR ── */
 "volc.config_hint" = "Enter your Volcengine Doubao ASR credentials. Get them from the Volcengine console.";
