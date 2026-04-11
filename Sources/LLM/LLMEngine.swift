@@ -15,6 +15,8 @@ actor LLMEngine {
 
         let config = ModelConfiguration(id: id)
         container = try await LLMModelFactory.shared.loadContainer(
+            from: MLXModelLoading.downloader,
+            using: MLXModelLoading.tokenizerLoader,
             configuration: config
         ) { p in
             progress?(p.fractionCompleted)

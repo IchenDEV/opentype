@@ -293,7 +293,7 @@ struct ModelManagementView: View {
     private func groupedQwenModelList(
         _ models: [ModelCatalog.ModelEntry], activeID: String
     ) -> some View {
-        let seriesOrder = ["Qwen2.5", "Qwen3"]
+        let seriesOrder = ["Qwen2.5", "Qwen3", "Qwen3.5"]
         let grouped = Dictionary(grouping: models) { qwenSeries(from: $0.displayName) }
         let series = seriesOrder.filter { grouped[$0] != nil }
 

@@ -114,6 +114,10 @@ final class ModelCatalog: ObservableObject {
             ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.qwen3_balanced"), .qwen),
             ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.qwen3_quality"), .qwen),
             ("mlx-community/Qwen3-30B-A3B-4bit", "Qwen3 30B-A3B", L("model.qwen3_moe"), .qwen),
+            ("mlx-community/Qwen3.5-0.8B-MLX-4bit", "Qwen3.5 0.8B", L("model.qwen35_tiny"), .qwen),
+            ("mlx-community/Qwen3.5-2B-4bit", "Qwen3.5 2B", L("model.qwen35_fast"), .qwen),
+            ("mlx-community/Qwen3.5-9B-5bit", "Qwen3.5 9B", L("model.qwen35_quality"), .qwen),
+            ("mlx-community/Qwen3.5-35B-A3B-4bit", "Qwen3.5 35B-A3B", L("model.qwen35_moe"), .qwen),
 
             // Gemma Family (Google)
             ("mlx-community/gemma-3-1b-it-4bit", "Gemma 3 1B", L("model.gemma_fast"), .gemma),
@@ -240,6 +244,8 @@ final class ModelCatalog: ObservableObject {
         do {
             let config = ModelConfiguration(id: id)
             _ = try await LLMModelFactory.shared.loadContainer(
+                from: MLXModelLoading.downloader,
+                using: MLXModelLoading.tokenizerLoader,
                 configuration: config
             ) { [weak self] p in
                 Task { @MainActor in
@@ -355,7 +361,7 @@ final class ModelCatalog: ObservableObject {
     }
 
     // MARK: LLM cache — ~/Library/Caches/models/<org>/<model>/
-    // LLMModelFactory uses defaultHubApi with downloadBase = ~/Library/Caches/
+    // MLXModelLoading keeps Hub downloads in Caches to preserve existing local models.
 
     private static let llmCacheBase: URL = {
         FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
