@@ -1,12 +1,13 @@
 {
+  "originHash" : "6c055d6596f6c9def845a4a56a50b5ed3cf4e90d771490922002c70f78cbe106",
   "pins" : [
     {
       "identity" : "mlx-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ml-explore/mlx-swift",
       "state" : {
-        "revision" : "6ba4827fb82c97d012eec9ab4b2de21f85c3b33d",
-        "version" : "0.30.6"
+        "revision" : "61b9e011e09a62b489f6bd647958f1555bdf2896",
+        "version" : "0.31.3"
       }
     },
     {
@@ -15,7 +16,7 @@
       "location" : "https://github.com/ml-explore/mlx-swift-lm",
       "state" : {
         "branch" : "main",
-        "revision" : "a3e1bf49f6f44d0e9cba29f1c4a61576f646a1b4"
+        "revision" : "7f169f9587b9fc41a506f092a4ec4d69367e4ed5"
       }
     },
     {
@@ -73,6 +74,15 @@
       }
     },
     {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
+      "state" : {
+        "revision" : "0687f71944021d616d34d922343dcef086855920",
+        "version" : "600.0.1"
+      }
+    },
+    {
       "identity" : "swift-transformers",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/huggingface/swift-transformers",
@@ -100,5 +110,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

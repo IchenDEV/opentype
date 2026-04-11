@@ -56,8 +56,9 @@ final class WhisperEngine: SpeechEngine {
         do {
             let recommended = WhisperKit.recommendedModels()
             var selectedModel = modelName ?? recommended.default
+            let localFolder = ModelStorage.localWhisperURL(selectedModel)
 
-            if !recommended.supported.contains(selectedModel) {
+            if localFolder == nil, !recommended.supported.contains(selectedModel) {
                 if let match = recommended.supported.first(where: {
                     $0.localizedCaseInsensitiveContains(selectedModel)
                 }) {
@@ -76,34 +77,38 @@ final class WhisperEngine: SpeechEngine {
             var lastBytes: Int64 = 0
 
             let folder: URL
-            do {
-                folder = try await WhisperKit.download(
-                    variant: selectedModel,
-                    downloadBase: ModelCatalog.whisperDownloadBase,
-                    progressCallback: { p in
-                        let now = Date()
-                        let elapsed = now.timeIntervalSince(lastTime)
-                        let completed = p.completedUnitCount
-                        let total = p.totalUnitCount
+            if let localFolder {
+                folder = localFolder
+            } else {
+                do {
+                    folder = try await WhisperKit.download(
+                        variant: selectedModel,
+                        downloadBase: ModelCatalog.whisperDownloadBase,
+                        progressCallback: { p in
+                            let now = Date()
+                            let elapsed = now.timeIntervalSince(lastTime)
+                            let completed = p.completedUnitCount
+                            let total = p.totalUnitCount
 
-                        var speed: Double = 0
-                        if elapsed > 0.5 {
-                            let deltaBytes = completed - lastBytes
-                            if deltaBytes > 0 { speed = Double(deltaBytes) / elapsed }
-                            lastTime = now
-                            lastBytes = completed
+                            var speed: Double = 0
+                            if elapsed > 0.5 {
+                                let deltaBytes = completed - lastBytes
+                                if deltaBytes > 0 { speed = Double(deltaBytes) / elapsed }
+                                lastTime = now
+                                lastBytes = completed
+                            }
+
+                            let frac = 0.02 + p.fractionCompleted * 0.58
+                            progress(DownloadProgress(
+                                fraction: frac, completedBytes: completed,
+                                totalBytes: total, speedBytesPerSec: speed, stage: .downloading
+                            ))
                         }
-
-                        let frac = 0.02 + p.fractionCompleted * 0.58
-                        progress(DownloadProgress(
-                            fraction: frac, completedBytes: completed,
-                            totalBytes: total, speedBytesPerSec: speed, stage: .downloading
-                        ))
-                    }
-                )
-            } catch {
-                isLoading = false
-                throw WhisperError.downloadFailed(error.localizedDescription)
+                    )
+                } catch {
+                    isLoading = false
+                    throw WhisperError.downloadFailed(error.localizedDescription)
+                }
             }
             Log.info("[WhisperEngine] download complete")
 

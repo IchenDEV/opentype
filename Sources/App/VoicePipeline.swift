@@ -169,17 +169,18 @@ final class VoicePipeline {
             }
 
             let finalText: String
-            if settings.outputMode == .processed {
+            switch settings.outputMode {
+            case .processed:
                 appState.phase = .processing
                 appState.statusMessage = L("pipeline.formatting")
 
                 let screenContext = await screenOCRTask?.value ?? ""
                 screenOCRTask = nil
 
-            guard !Task.isCancelled else {
-                resetToIdle()
-                return
-            }
+                guard !Task.isCancelled else {
+                    resetToIdle()
+                    return
+                }
 
                 let memoryContext = settings.enableMemory ? MemoryStore.recentContext(windowMinutes: settings.memoryWindowMinutes) : ""
                 finalText = await textProcessor.process(
@@ -189,7 +190,26 @@ final class VoicePipeline {
                     screenContext: screenContext,
                     memoryContext: memoryContext
                 )
-            } else {
+            case .command:
+                appState.phase = .processing
+                appState.statusMessage = L("pipeline.formatting")
+
+                let screenContext = await screenOCRTask?.value ?? ""
+                screenOCRTask = nil
+
+                guard !Task.isCancelled else {
+                    resetToIdle()
+                    return
+                }
+
+                let memoryContext = settings.enableMemory ? MemoryStore.recentContext(windowMinutes: settings.memoryWindowMinutes) : ""
+                finalText = await textProcessor.processCommand(
+                    text: raw,
+                    model: settings.llmModel,
+                    screenContext: screenContext,
+                    memoryContext: memoryContext
+                )
+            case .direct:
                 screenOCRTask?.cancel()
                 screenOCRTask = nil
                 finalText = textProcessor.basicClean(text: raw)

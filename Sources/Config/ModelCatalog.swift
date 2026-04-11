@@ -91,12 +91,17 @@ final class ModelCatalog: ObservableObject {
             )
         }
 
+        appendLocalWhisperModels()
         if !whisperModels.contains(where: { $0.id == settings.whisperModel }) {
             settings.whisperModel = defaultID
         }
 
         llmModels = Self.defaultLLMModels.map {
             ModelEntry(id: $0.0, displayName: $0.1, hint: $0.2, family: $0.3)
+        }
+        appendLocalLLMModels()
+        if !llmModels.contains(where: { $0.id == settings.llmModel }) {
+            settings.llmModel = llmModels.first?.id ?? ""
         }
         refreshStatus()
     }
@@ -145,19 +150,29 @@ final class ModelCatalog: ObservableObject {
 
     // MARK: - Status
 
-    func refreshStatus() {
+    func refreshStatus(recheckingErrors: Bool = false) {
         for i in whisperModels.indices where !whisperModels[i].status.isBusy {
-            let size = whisperVariantSize(whisperModels[i].id)
+            let id = whisperModels[i].id
+            let size = whisperVariantSize(id)
             whisperModels[i].cacheSize = size
-            if whisperModels[i].status != .ready && !whisperModels[i].status.isError {
-                whisperModels[i].status = size > 0 ? .downloaded : .notDownloaded
+            if recheckingErrors || (whisperModels[i].status != .ready && !whisperModels[i].status.isError) {
+                if ModelStorage.localWhisperURL(id) != nil, size == 0 {
+                    whisperModels[i].status = .error(L("model.local_missing"))
+                } else {
+                    whisperModels[i].status = size > 0 ? .downloaded : .notDownloaded
+                }
             }
         }
         for i in llmModels.indices where !llmModels[i].status.isBusy {
-            let size = llmRepoSize(llmModels[i].id)
+            let id = llmModels[i].id
+            let size = llmRepoSize(id)
             llmModels[i].cacheSize = size
-            if llmModels[i].status != .ready && !llmModels[i].status.isError {
-                llmModels[i].status = size > 0 ? .downloaded : .notDownloaded
+            if recheckingErrors || (llmModels[i].status != .ready && !llmModels[i].status.isError) {
+                if ModelStorage.localLLMURL(id) != nil, !llmRepoHasConfig(id) {
+                    llmModels[i].status = .error(L("model.local_missing"))
+                } else {
+                    llmModels[i].status = size > 0 ? .downloaded : .notDownloaded
+                }
             }
         }
     }
@@ -212,9 +227,16 @@ final class ModelCatalog: ObservableObject {
 
     func deleteWhisper(_ id: String) {
         guard let idx = whisperModels.firstIndex(where: { $0.id == id }) else { return }
-        deleteWhisperVariant(id)
-        whisperModels[idx].status = .notDownloaded
-        whisperModels[idx].cacheSize = 0
+        if ModelStorage.localWhisperURL(id) != nil {
+            var paths = settings.localWhisperModelPaths
+            paths.removeValue(forKey: id)
+            settings.localWhisperModelPaths = paths
+            whisperModels.remove(at: idx)
+        } else {
+            deleteWhisperVariant(id)
+            whisperModels[idx].status = .notDownloaded
+            whisperModels[idx].cacheSize = 0
+        }
 
         if settings.whisperModel == id {
             settings.whisperModel = nextAvailableWhisper(excluding: id) ?? whisperModels.first?.id ?? ""
@@ -230,6 +252,15 @@ final class ModelCatalog: ObservableObject {
     func downloadLLM(_ id: String) async {
         guard let idx = llmModels.firstIndex(where: { $0.id == id }),
               !llmModels[idx].status.isDownloading else { return }
+        if ModelStorage.localLLMURL(id) != nil {
+            llmModels[idx].status = llmRepoHasConfig(id) ? .downloaded : .error(L("model.local_missing"))
+            llmModels[idx].cacheSize = llmRepoSize(id)
+            return
+        }
+        if let dir = llmRepoDir(id), !llmRepoHasConfig(id) {
+            Log.info("[ModelCatalog] removing incomplete LLM cache before redownload: \(dir.path)")
+            try? FileManager.default.removeItem(at: dir)
+        }
 
         llmModels[idx].status = .downloading
         llmModels[idx].downloadProgress = 0
@@ -237,6 +268,8 @@ final class ModelCatalog: ObservableObject {
         do {
             let config = ModelConfiguration(id: id)
             _ = try await LLMModelFactory.shared.loadContainer(
+                from: MLXModelLoading.downloader,
+                using: MLXModelLoading.tokenizerLoader,
                 configuration: config
             ) { [weak self] p in
                 Task { @MainActor in
@@ -266,9 +299,16 @@ final class ModelCatalog: ObservableObject {
 
     func deleteLLM(_ id: String) {
         guard let idx = llmModels.firstIndex(where: { $0.id == id }) else { return }
-        if let dir = llmRepoDir(id) { try? FileManager.default.removeItem(at: dir) }
-        llmModels[idx].status = .notDownloaded
-        llmModels[idx].cacheSize = 0
+        if ModelStorage.localLLMURL(id) != nil {
+            var paths = settings.localLLMModelPaths
+            paths.removeValue(forKey: id)
+            settings.localLLMModelPaths = paths
+            llmModels.remove(at: idx)
+        } else {
+            if let dir = llmRepoDir(id) { try? FileManager.default.removeItem(at: dir) }
+            llmModels[idx].status = .notDownloaded
+            llmModels[idx].cacheSize = 0
+        }
 
         if settings.llmModel == id {
             settings.llmModel = nextAvailableLLM(excluding: id) ?? llmModels.first?.id ?? ""
@@ -283,6 +323,28 @@ final class ModelCatalog: ObservableObject {
         guard !modelID.isEmpty, !llmModels.contains(where: { $0.id == modelID }) else { return }
         let name = modelID.components(separatedBy: "/").last ?? modelID
         llmModels.append(ModelEntry(id: modelID, displayName: name, hint: L("common.custom"), family: nil))
+        refreshStatus()
+    }
+
+    func addLocalWhisper(_ url: URL) {
+        let existing = Set(whisperModels.map(\.id))
+        let id = ModelStorage.makeLocalID(prefix: "whisper", folderName: url.lastPathComponent, existing: existing)
+        var paths = settings.localWhisperModelPaths
+        paths[id] = url.path
+        settings.localWhisperModelPaths = paths
+        whisperModels.append(ModelEntry(id: id, displayName: url.lastPathComponent, hint: L("model.local"), family: nil))
+        settings.whisperModel = id
+        refreshStatus()
+    }
+
+    func addLocalLLM(_ url: URL) {
+        let existing = Set(llmModels.map(\.id))
+        let id = ModelStorage.makeLocalID(prefix: "llm", folderName: url.lastPathComponent, existing: existing)
+        var paths = settings.localLLMModelPaths
+        paths[id] = url.path
+        settings.localLLMModelPaths = paths
+        llmModels.append(ModelEntry(id: id, displayName: url.lastPathComponent, hint: L("model.local"), family: nil))
+        settings.llmModel = id
         refreshStatus()
     }
 
@@ -301,7 +363,7 @@ final class ModelCatalog: ObservableObject {
         guard let i = llmModels.firstIndex(where: { $0.id == id }) else { return }
         llmModels[i].status = status
         llmModels[i].downloadDetail = detail
-        if status == .ready || status == .downloaded {
+        if llmModels[i].status == .ready || llmModels[i].status == .downloaded {
             llmModels[i].cacheSize = llmRepoSize(id)
         }
     }
@@ -315,30 +377,18 @@ final class ModelCatalog: ObservableObject {
         return "\(bytes) B"
     }
 
-    /// Custom download base for WhisperKit — ~/Library/Application Support/OpenType/huggingface/
-    static let whisperDownloadBase: URL = {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let base = appSupport.appendingPathComponent("OpenType/huggingface")
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        return base
-    }()
-
-    private static let hubModelsBase: URL = {
-        whisperDownloadBase.appendingPathComponent("models")
-    }()
+    static var whisperDownloadBase: URL { ModelStorage.huggingFaceBase }
 
     // MARK: Whisper cache
 
     private func whisperVariantDir(_ variant: String) -> URL {
-        Self.hubModelsBase
-            .appendingPathComponent("argmaxinc/whisperkit-coreml")
-            .appendingPathComponent(variant)
+        ModelStorage.localWhisperURL(variant) ?? ModelStorage.whisperVariantDir(variant)
     }
 
     private func whisperVariantSize(_ variant: String) -> Int64 {
         let dir = whisperVariantDir(variant)
         guard FileManager.default.fileExists(atPath: dir.path) else { return 0 }
-        return Self.directorySize(at: dir)
+        return ModelStorage.directorySize(at: dir)
     }
 
     /// Returns true if the Whisper variant is already downloaded (skip download progress UI).
@@ -351,34 +401,35 @@ final class ModelCatalog: ObservableObject {
         try? FileManager.default.removeItem(at: dir)
     }
 
-    // MARK: LLM cache — ~/Library/Caches/models/<org>/<model>/
-    // LLMModelFactory uses defaultHubApi with downloadBase = ~/Library/Caches/
-
-    private static let llmCacheBase: URL = {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-            .appendingPathComponent("models")
-    }()
+    // MARK: LLM cache
 
     private func llmRepoDir(_ modelID: String) -> URL? {
-        let dir = Self.llmCacheBase.appendingPathComponent(modelID)
-        return FileManager.default.fileExists(atPath: dir.path) ? dir : nil
+        ModelStorage.llmRepoDir(modelID)
+    }
+
+    private func llmRepoHasConfig(_ modelID: String) -> Bool {
+        guard let dir = llmRepoDir(modelID) else { return false }
+        return FileManager.default.fileExists(atPath: dir.appendingPathComponent("config.json").path)
     }
 
     private func llmRepoSize(_ modelID: String) -> Int64 {
-        guard let dir = llmRepoDir(modelID) else { return 0 }
-        return Self.directorySize(at: dir)
+        guard let dir = llmRepoDir(modelID), llmRepoHasConfig(modelID) else { return 0 }
+        return ModelStorage.directorySize(at: dir)
     }
 
-    private static func directorySize(at url: URL) -> Int64 {
-        guard let enumerator = FileManager.default.enumerator(
-            at: url, includingPropertiesForKeys: [.fileSizeKey]
-        ) else { return 0 }
-        var total: Int64 = 0
-        for case let fileURL as URL in enumerator {
-            if let sz = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
-                total += Int64(sz)
-            }
+    private func appendLocalWhisperModels() {
+        for (id, path) in settings.localWhisperModelPaths.sorted(by: { $0.key < $1.key }) {
+            guard !whisperModels.contains(where: { $0.id == id }) else { continue }
+            let name = URL(fileURLWithPath: path).lastPathComponent
+            whisperModels.append(ModelEntry(id: id, displayName: name, hint: L("model.local"), family: nil))
         }
-        return total
+    }
+
+    private func appendLocalLLMModels() {
+        for (id, path) in settings.localLLMModelPaths.sorted(by: { $0.key < $1.key }) {
+            guard !llmModels.contains(where: { $0.id == id }) else { continue }
+            let name = URL(fileURLWithPath: path).lastPathComponent
+            llmModels.append(ModelEntry(id: id, displayName: name, hint: L("model.local"), family: nil))
+        }
     }
 }

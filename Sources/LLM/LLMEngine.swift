@@ -13,11 +13,21 @@ actor LLMEngine {
         Log.info("[LLMEngine] loading model: \(id)")
         let t0 = CFAbsoluteTimeGetCurrent()
 
-        let config = ModelConfiguration(id: id)
-        container = try await LLMModelFactory.shared.loadContainer(
-            configuration: config
-        ) { p in
-            progress?(p.fractionCompleted)
+        if let localURL = ModelStorage.localLLMURL(id) {
+            container = try await LLMModelFactory.shared.loadContainer(
+                from: localURL,
+                using: MLXModelLoading.tokenizerLoader
+            )
+            progress?(1)
+        } else {
+            let config = ModelConfiguration(id: id)
+            container = try await LLMModelFactory.shared.loadContainer(
+                from: MLXModelLoading.downloader,
+                using: MLXModelLoading.tokenizerLoader,
+                configuration: config
+            ) { p in
+                progress?(p.fractionCompleted)
+            }
         }
 
         currentModelID = id
@@ -61,29 +71,21 @@ actor LLMEngine {
             modelID: modelID
         )
         let systemPrompt = "你是语音转文字后处理引擎。直接输出整理后的文本，不要任何解释。"
-        let params = GenerateParameters(maxTokens: 512, temperature: 0.3)
-
-        var tokenCount = 0
+        let params = GenerateParameters(maxTokens: 256, temperature: 0.3)
         let genT0 = CFAbsoluteTimeGetCurrent()
 
-        let _ = try await container.perform { (context: ModelContext) -> String in
-            let messages: [[String: String]] = [
-                ["role": "system", "content": systemPrompt],
-                ["role": "user", "content": testPrompt],
-            ]
-            let lmInput = try await context.processor.prepare(input: .init(messages: messages))
-            var output = [Int]()
+        let messages: [[String: String]] = [
+            ["role": "system", "content": systemPrompt],
+            ["role": "user", "content": testPrompt],
+        ]
+        let lmInput = try await container.prepare(input: .init(messages: messages))
+        let stream = try await container.generate(input: lmInput, parameters: params)
 
-            let result = try MLXLMCommon.generate(
-                input: lmInput,
-                parameters: params,
-                context: context
-            ) { tokens in
-                tokenCount += tokens.count
-                output.append(contentsOf: tokens)
-                return output.count >= 256 ? .stop : .more
+        var tokenCount = 0
+        for await generation in stream {
+            if let info = generation.info {
+                tokenCount = info.generationTokenCount
             }
-            return result.output
         }
 
         let genTime = CFAbsoluteTimeGetCurrent() - genT0
