@@ -31,6 +31,14 @@ let package = Package(
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]
+        ),
+        .testTarget(
+            name: "OpenTypeTests",
+            dependencies: ["OpenType"],
+            path: "Tests/OpenTypeTests",
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]
         )
     ]
 )
