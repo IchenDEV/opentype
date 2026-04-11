@@ -13,13 +13,21 @@ actor LLMEngine {
         Log.info("[LLMEngine] loading model: \(id)")
         let t0 = CFAbsoluteTimeGetCurrent()
 
-        let config = ModelConfiguration(id: id)
-        container = try await LLMModelFactory.shared.loadContainer(
-            from: MLXModelLoading.downloader,
-            using: MLXModelLoading.tokenizerLoader,
-            configuration: config
-        ) { p in
-            progress?(p.fractionCompleted)
+        if let localURL = ModelStorage.localLLMURL(id) {
+            container = try await LLMModelFactory.shared.loadContainer(
+                from: localURL,
+                using: MLXModelLoading.tokenizerLoader
+            )
+            progress?(1)
+        } else {
+            let config = ModelConfiguration(id: id)
+            container = try await LLMModelFactory.shared.loadContainer(
+                from: MLXModelLoading.downloader,
+                using: MLXModelLoading.tokenizerLoader,
+                configuration: config
+            ) { p in
+                progress?(p.fractionCompleted)
+            }
         }
 
         currentModelID = id

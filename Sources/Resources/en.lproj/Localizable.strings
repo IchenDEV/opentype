@@ -144,6 +144,15 @@
 "model.llama_quality" = "Llama 4 Maverick, high quality ~25 GB";
 "model.import_local" = "Import Local Model…";
 "model.import_invalid" = "Invalid model directory: config.json not found";
+"model.import_failed" = "Import Failed";
+"model.import_invalid_whisper" = "Invalid Whisper model directory: MelSpectrogram, AudioEncoder, and TextDecoder are required";
+"model.local" = "Local";
+"model.custom_local" = "Custom / Local";
+"model.local_missing" = "Local model folder missing";
+"model.storage.title" = "Model Storage";
+"model.storage.choose" = "Choose Folder…";
+"model.storage.reveal" = "Show in Finder";
+"model.storage.reset" = "Use Default";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "Verbatim";

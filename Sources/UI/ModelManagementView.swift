@@ -22,6 +22,8 @@ struct ModelManagementView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                storageSection
+                Divider()
                 enginePickerSection
                 if settings.speechEngine == .whisper {
                     whisperSection
@@ -41,6 +43,32 @@ struct ModelManagementView: View {
 
     // MARK: - Engine Picker
 
+    private var storageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(L("model.storage.title"), systemImage: "externaldrive")
+                .font(.headline)
+
+            Text(ModelStorage.root.path)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .textSelection(.enabled)
+
+            HStack(spacing: 8) {
+                Button(L("model.storage.choose")) {
+                    chooseModelStorageLocation()
+                }
+                Button(L("model.storage.reveal")) {
+                    NSWorkspace.shared.activateFileViewerSelecting([ModelStorage.root])
+                }
+                Button(L("model.storage.reset")) {
+                    updateModelStoragePath(ModelStorage.defaultRoot.path)
+                }
+            }
+            .controlSize(.small)
+        }
+    }
+
     private var enginePickerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label(L("model.speech_recognition"), systemImage: "waveform")
@@ -58,6 +86,10 @@ struct ModelManagementView: View {
     private var whisperSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             modelList(catalog.whisperModels, activeID: settings.whisperModel, type: .whisper)
+            Button(L("model.import_local")) {
+                importLocalWhisper()
+            }
+            .controlSize(.small)
         }
     }
 
@@ -103,6 +135,14 @@ struct ModelManagementView: View {
                     modelList(familyModels, activeID: settings.llmModel, type: .llm)
                 }
             }
+            let customModels = catalog.llmModels.filter { $0.family == nil }
+            if !customModels.isEmpty {
+                Text(L("model.custom_local"))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 2)
+                modelList(customModels, activeID: settings.llmModel, type: .llm)
+            }
 
             HStack(spacing: 8) {
                 TextField(L("model.custom_id_placeholder"), text: $customLLMInput)
@@ -116,7 +156,7 @@ struct ModelManagementView: View {
                 .disabled(customLLMInput.isEmpty)
             }
             Button(L("model.import_local")) {
-                importLocalModel()
+                importLocalLLM()
             }
             .controlSize(.small)
         }
@@ -165,7 +205,27 @@ struct ModelManagementView: View {
         )
     }
 
-    private func importLocalModel() {
+    private func chooseModelStorageLocation() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = ModelStorage.root
+        panel.message = L("model.storage.choose")
+        if panel.runModal() == .OK, let url = panel.url {
+            updateModelStoragePath(url.path)
+        }
+    }
+
+    private func updateModelStoragePath(_ path: String) {
+        onUnloadWhisper?()
+        onUnloadLLM?()
+        settings.modelStoragePath = path
+        catalog.refreshStatus(recheckingErrors: true)
+    }
+
+    private func importLocalWhisper() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
@@ -173,25 +233,38 @@ struct ModelManagementView: View {
         panel.canCreateDirectories = false
         panel.message = L("model.import_local")
         if panel.runModal() == .OK, let url = panel.url {
-            let configURL = url.appendingPathComponent("config.json")
-            guard FileManager.default.fileExists(atPath: configURL.path) else {
+            guard isValidWhisperFolder(url) else {
+                importErrorMessage = L("model.import_invalid_whisper")
+                showImportError = true
+                return
+            }
+            onUnloadWhisper?()
+            catalog.addLocalWhisper(url)
+        }
+    }
+
+    private func importLocalLLM() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.message = L("model.import_local")
+        if panel.runModal() == .OK, let url = panel.url {
+            guard FileManager.default.fileExists(atPath: url.appendingPathComponent("config.json").path) else {
                 importErrorMessage = ""
                 showImportError = true
                 return
             }
-            let folderName = url.lastPathComponent
-            let localBase = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-                .appendingPathComponent("models/local")
-            try? FileManager.default.createDirectory(at: localBase, withIntermediateDirectories: true)
-            let destURL = localBase.appendingPathComponent(folderName)
-            try? FileManager.default.removeItem(at: destURL)
-            do {
-                try FileManager.default.createSymbolicLink(at: destURL, withDestinationURL: url)
-                catalog.addCustomLLM("local/\(folderName)")
-            } catch {
-                importErrorMessage = error.localizedDescription
-                showImportError = true
-            }
+            onUnloadLLM?()
+            catalog.addLocalLLM(url)
+        }
+    }
+
+    private func isValidWhisperFolder(_ url: URL) -> Bool {
+        ["MelSpectrogram", "AudioEncoder", "TextDecoder"].allSatisfy { name in
+            FileManager.default.fileExists(atPath: url.appendingPathComponent("\(name).mlmodelc").path) ||
+                FileManager.default.fileExists(atPath: url.appendingPathComponent("\(name).mlpackage").path)
         }
     }
 

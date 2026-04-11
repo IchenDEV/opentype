@@ -47,6 +47,16 @@ cat >"$INFO_PLIST" <<PLIST
   <string>APPL</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>OpenType needs microphone access to capture voice for transcription.</string>
+  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>OpenType uses speech recognition to convert voice to text.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>OpenType needs automation access to type text into other applications.</string>
+  <key>NSScreenCaptureUsageDescription</key>
+  <string>OpenType uses screen content for context-aware text correction.</string>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
 </dict>

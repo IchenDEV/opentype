@@ -145,6 +145,14 @@
 "model.import_local" = "导入本地模型…";
 "model.import_invalid" = "无效的模型目录：未找到 config.json";
 "model.import_failed" = "导入失败";
+"model.import_invalid_whisper" = "无效的 Whisper 模型目录：需要 MelSpectrogram、AudioEncoder 和 TextDecoder";
+"model.local" = "本地";
+"model.custom_local" = "自定义 / 本地";
+"model.local_missing" = "本地模型目录不存在";
+"model.storage.title" = "模型存储位置";
+"model.storage.choose" = "选择文件夹…";
+"model.storage.reveal" = "在 Finder 中显示";
+"model.storage.reset" = "使用默认位置";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "原文直出";

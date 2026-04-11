@@ -7,9 +7,9 @@ enum MLXModelLoading {
     static let downloader: any MLXLMCommon.Downloader = HubDownloader()
     static let tokenizerLoader: any MLXLMCommon.TokenizerLoader = TransformersTokenizerLoader()
 
-    fileprivate static let hubApi = HubApi(
-        downloadBase: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
-    )
+    fileprivate static var hubApi: HubApi {
+        HubApi(downloadBase: ModelStorage.huggingFaceBase)
+    }
 }
 
 private struct HubDownloader: MLXLMCommon.Downloader {
