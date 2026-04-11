@@ -8,7 +8,6 @@ actor LLMEngine {
     private var currentModelID: String?
 
     func loadModel(id: String, progress: (@Sendable (Double) -> Void)? = nil) async throws {
-        try validateModelSupport(id: id)
         if currentModelID == id, container != nil { return }
 
         Log.info("[LLMEngine] loading model: \(id)")
@@ -51,7 +50,6 @@ actor LLMEngine {
     }
 
     func benchmark(modelID: String) async throws -> BenchmarkResult {
-        try validateModelSupport(id: modelID)
         let loadT0 = CFAbsoluteTimeGetCurrent()
         try await loadModel(id: modelID)
         let loadTime = CFAbsoluteTimeGetCurrent() - loadT0
@@ -63,29 +61,21 @@ actor LLMEngine {
             modelID: modelID
         )
         let systemPrompt = "你是语音转文字后处理引擎。直接输出整理后的文本，不要任何解释。"
-        let params = GenerateParameters(maxTokens: 512, temperature: 0.3)
-
-        var tokenCount = 0
+        let params = GenerateParameters(maxTokens: 256, temperature: 0.3)
         let genT0 = CFAbsoluteTimeGetCurrent()
 
-        let _ = try await container.perform { (context: ModelContext) -> String in
-            let messages: [[String: String]] = [
-                ["role": "system", "content": systemPrompt],
-                ["role": "user", "content": testPrompt],
-            ]
-            let lmInput = try await context.processor.prepare(input: .init(messages: messages))
-            var output = [Int]()
+        let messages: [[String: String]] = [
+            ["role": "system", "content": systemPrompt],
+            ["role": "user", "content": testPrompt],
+        ]
+        let lmInput = try await container.prepare(input: .init(messages: messages))
+        let stream = try await container.generate(input: lmInput, parameters: params)
 
-            let result = try MLXLMCommon.generate(
-                input: lmInput,
-                parameters: params,
-                context: context
-            ) { tokens in
-                tokenCount += tokens.count
-                output.append(contentsOf: tokens)
-                return output.count >= 256 ? .stop : .more
+        var tokenCount = 0
+        for await generation in stream {
+            if let info = generation.info {
+                tokenCount = info.generationTokenCount
             }
-            return result.output
         }
 
         let genTime = CFAbsoluteTimeGetCurrent() - genT0
@@ -108,12 +98,6 @@ actor LLMEngine {
         currentModelID = nil
     }
 
-    private func validateModelSupport(id: String) throws {
-        if let reason = LLMModelSupport.unsupportedReason(for: id) {
-            throw LLMError.unsupportedModel(reason)
-        }
-    }
-
     private static func applyNoThink(prompt: String, modelID: String?) -> String {
         guard let id = modelID?.lowercased(), id.contains("qwen3") else { return prompt }
         return "/no_think\n\(prompt)"
@@ -122,12 +106,10 @@ actor LLMEngine {
 
 enum LLMError: LocalizedError {
     case modelNotLoaded
-    case unsupportedModel(String)
 
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded: return "LLM 模型未加载"
-        case .unsupportedModel(let reason): return reason
         }
     }
 }

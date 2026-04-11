@@ -293,7 +293,7 @@ struct ModelManagementView: View {
     private func groupedQwenModelList(
         _ models: [ModelCatalog.ModelEntry], activeID: String
     ) -> some View {
-        let seriesOrder = ["Qwen2.5", "Qwen3", "Qwen3.5"]
+        let seriesOrder = ["Qwen2.5", "Qwen3"]
         let grouped = Dictionary(grouping: models) { qwenSeries(from: $0.displayName) }
         let series = seriesOrder.filter { grouped[$0] != nil }
 
@@ -352,7 +352,7 @@ struct ModelManagementView: View {
                 HStack(spacing: 6) {
                     Text(secondaryText(for: model))
                         .font(.system(size: 10))
-                        .foregroundStyle(model.status.isUnsupported ? .orange : .secondary)
+                        .foregroundStyle(.secondary)
                     if let tps = model.benchmarkTPS {
                         Text(String(format: "%.1f tok/s", tps))
                             .font(.system(size: 9, weight: .medium, design: .monospaced))
@@ -485,9 +485,6 @@ struct ModelManagementView: View {
     }
 
     private func secondaryText(for model: ModelCatalog.ModelEntry) -> String {
-        if case .unsupported(let reason) = model.status {
-            return reason
-        }
         return model.hint
     }
 
@@ -500,8 +497,6 @@ struct ModelManagementView: View {
                 ProgressView().controlSize(.mini)
             case .downloaded, .ready:
                 Circle().fill(.green)
-            case .unsupported:
-                Circle().fill(.orange)
             case .error:
                 Circle().fill(.red)
             }

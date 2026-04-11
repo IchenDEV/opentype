@@ -55,16 +55,15 @@ final class ModelCatalog: ObservableObject {
     }
 
     enum ModelStatus: Equatable {
-        case notDownloaded, downloading, compiling, loading, downloaded, ready, unsupported(String), error(String)
+        case notDownloaded, downloading, compiling, loading, downloaded, ready, error(String)
 
         var isDownloading: Bool { if case .downloading = self { return true }; return false }
         var isError: Bool { if case .error = self { return true }; return false }
-        var isUnsupported: Bool { if case .unsupported = self { return true }; return false }
         var isBusy: Bool {
             switch self { case .downloading, .compiling, .loading: return true; default: return false }
         }
         var canDelete: Bool {
-            switch self { case .downloaded, .ready, .unsupported, .error: return true; default: return false }
+            switch self { case .downloaded, .ready, .error: return true; default: return false }
         }
     }
 
@@ -99,9 +98,8 @@ final class ModelCatalog: ObservableObject {
         llmModels = Self.defaultLLMModels.map {
             ModelEntry(id: $0.0, displayName: $0.1, hint: $0.2, family: $0.3)
         }
-        if let fallback = LLMModelSupport.fallbackModelID(for: settings.llmModel) {
-            Log.info("[ModelCatalog] falling back unsupported model \(settings.llmModel) -> \(fallback)")
-            settings.llmModel = fallback
+        if !llmModels.contains(where: { $0.id == settings.llmModel }) {
+            settings.llmModel = llmModels.first?.id ?? ""
         }
         refreshStatus()
     }
@@ -116,10 +114,6 @@ final class ModelCatalog: ObservableObject {
             ("mlx-community/Qwen3-1.7B-4bit", "Qwen3 1.7B", L("model.qwen3_balanced"), .qwen),
             ("mlx-community/Qwen3-4B-4bit", "Qwen3 4B", L("model.qwen3_quality"), .qwen),
             ("mlx-community/Qwen3-30B-A3B-4bit", "Qwen3 30B-A3B", L("model.qwen3_moe"), .qwen),
-            ("mlx-community/Qwen3.5-0.8B-MLX-4bit", "Qwen3.5 0.8B", L("model.qwen35_tiny"), .qwen),
-            ("mlx-community/Qwen3.5-2B-4bit", "Qwen3.5 2B", L("model.qwen35_fast"), .qwen),
-            ("mlx-community/Qwen3.5-9B-5bit", "Qwen3.5 9B", L("model.qwen35_quality"), .qwen),
-            ("mlx-community/Qwen3.5-35B-A3B-4bit", "Qwen3.5 35B-A3B", L("model.qwen35_moe"), .qwen),
 
             // Gemma Family (Google)
             ("mlx-community/gemma-3-1b-it-4bit", "Gemma 3 1B", L("model.gemma_fast"), .gemma),
@@ -161,9 +155,7 @@ final class ModelCatalog: ObservableObject {
         for i in llmModels.indices where !llmModels[i].status.isBusy {
             let size = llmRepoSize(llmModels[i].id)
             llmModels[i].cacheSize = size
-            if let reason = LLMModelSupport.unsupportedReason(for: llmModels[i].id) {
-                llmModels[i].status = .unsupported(reason)
-            } else if llmModels[i].status != .ready && !llmModels[i].status.isError {
+            if llmModels[i].status != .ready && !llmModels[i].status.isError {
                 llmModels[i].status = size > 0 ? .downloaded : .notDownloaded
             }
         }
@@ -237,9 +229,9 @@ final class ModelCatalog: ObservableObject {
     func downloadLLM(_ id: String) async {
         guard let idx = llmModels.firstIndex(where: { $0.id == id }),
               !llmModels[idx].status.isDownloading else { return }
-        if let reason = LLMModelSupport.unsupportedReason(for: id) {
-            llmModels[idx].status = .unsupported(reason)
-            return
+        if let dir = llmRepoDir(id), !llmRepoHasConfig(id) {
+            Log.info("[ModelCatalog] removing incomplete LLM cache before redownload: \(dir.path)")
+            try? FileManager.default.removeItem(at: dir)
         }
 
         llmModels[idx].status = .downloading
@@ -287,9 +279,7 @@ final class ModelCatalog: ObservableObject {
     }
 
     func nextAvailableLLM(excluding id: String) -> String? {
-        llmModels.first {
-            $0.id != id && !$0.status.isUnsupported && ($0.status == .downloaded || $0.status == .ready)
-        }?.id
+        llmModels.first { $0.id != id && ($0.status == .downloaded || $0.status == .ready) }?.id
     }
 
     func addCustomLLM(_ modelID: String) {
@@ -312,11 +302,7 @@ final class ModelCatalog: ObservableObject {
 
     func updateLLMStatus(_ id: String, status: ModelStatus, detail: String = "") {
         guard let i = llmModels.firstIndex(where: { $0.id == id }) else { return }
-        if let reason = LLMModelSupport.unsupportedReason(for: id) {
-            llmModels[i].status = .unsupported(reason)
-        } else {
-            llmModels[i].status = status
-        }
+        llmModels[i].status = status
         llmModels[i].downloadDetail = detail
         if llmModels[i].status == .ready || llmModels[i].status == .downloaded {
             llmModels[i].cacheSize = llmRepoSize(id)
@@ -381,8 +367,13 @@ final class ModelCatalog: ObservableObject {
         return FileManager.default.fileExists(atPath: dir.path) ? dir : nil
     }
 
+    private func llmRepoHasConfig(_ modelID: String) -> Bool {
+        guard let dir = llmRepoDir(modelID) else { return false }
+        return FileManager.default.fileExists(atPath: dir.appendingPathComponent("config.json").path)
+    }
+
     private func llmRepoSize(_ modelID: String) -> Int64 {
-        guard let dir = llmRepoDir(modelID) else { return 0 }
+        guard let dir = llmRepoDir(modelID), llmRepoHasConfig(modelID) else { return 0 }
         return Self.directorySize(at: dir)
     }
 
