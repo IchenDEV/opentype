@@ -1,0 +1,40 @@
+name: PR
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  basic-checks:
+    name: Basic linked rules
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run basic linked rules
+        run: bash ./scripts/ci-basic-checks.sh
+
+  build:
+    name: Build OpenType
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Ensure Metal toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
+
+      - name: Build app bundle
+        run: ./scripts/build-app.sh --app-only --sign=-
