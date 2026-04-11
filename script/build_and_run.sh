@@ -32,6 +32,11 @@ mkdir -p "$APP_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
+# Sign with entitlements so macOS 26 doesn't kill the app for Speech/mic access
+ENTITLEMENTS="$ROOT_DIR/Resources/OpenType.entitlements"
+codesign --force --sign - --options runtime --entitlements "$ENTITLEMENTS" "$APP_BINARY" 2>/dev/null \
+  || codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP_BINARY"
+
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

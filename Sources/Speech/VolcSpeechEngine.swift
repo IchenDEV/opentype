@@ -104,8 +104,6 @@ final class VolcSpeechEngine: SpeechEngine {
                 "model_name": "bigmodel",
                 "enable_itn": true,
                 "enable_punc": true,
-                "enable_ddc": false,
-                "result_type": "full",
                 "show_utterances": false
             ]
         ]
@@ -128,7 +126,7 @@ final class VolcSpeechEngine: SpeechEngine {
             let isLast = (i == totalChunks - 1)
 
             let flags: UInt8 = isLast ? 0x02 : 0x00
-            let message = buildMessage(type: .audioOnly, flags: flags, serialization: .none, payload: Data(chunk))
+            let message = buildMessage(type: .audioOnly, flags: flags, serialization: .none, compression: .none, payload: Data(chunk))
             try await ws.send(.data(message))
 
             if let resp = try await receiveResponse(ws: ws) {
@@ -261,6 +259,13 @@ final class VolcSpeechEngine: SpeechEngine {
         }
         guard let json = try? JSONSerialization.jsonObject(with: payloadData) as? [String: Any] else {
             return ParsedResponse(isFinal: (flags & 0x02) != 0)
+        }
+
+        // Check for inline error code returned via a normal server response frame
+        if let code = json["code"] as? Int, code != 0 {
+            let msg = json["message"] as? String ?? "Server error \(code)"
+            Log.error("[VolcASR] inline error: code=\(code) message=\(msg)")
+            return ParsedResponse(errorCode: code, errorMessage: msg)
         }
 
         let result = json["result"] as? [String: Any]
