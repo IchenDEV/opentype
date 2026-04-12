@@ -73,28 +73,52 @@ struct DictionaryStyleView: View {
                         isSelected: settings.languageStyle == style
                     ) {
                         settings.languageStyle = style
-                        settings.customStylePrompt = style.defaultPrompt
+                        if style.usesCustomPrompt,
+                           settings.customStylePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || LanguageStyle.looksLikePresetPrompt(settings.customStylePrompt) {
+                            settings.customStylePrompt = style.defaultPrompt
+                        }
                     }
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(L("style.prompt"))
-                    .font(.subheadline.weight(.medium))
-                TextEditor(text: $settings.customStylePrompt)
-                    .font(.system(size: 11.5, design: .monospaced))
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .frame(height: 68)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                    )
-                Text(L("style.prompt_help"))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            if settings.languageStyle.usesCustomPrompt {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L("style.prompt"))
+                        .font(.subheadline.weight(.medium))
+                    TextEditor(text: $settings.customStylePrompt)
+                        .font(.system(size: 11.5, design: .monospaced))
+                        .scrollContentBackground(.hidden)
+                        .padding(8)
+                        .frame(height: 92)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        )
+                    Text(L("style.prompt_help"))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L("style.prompt"))
+                        .font(.subheadline.weight(.medium))
+                    Text(settings.languageStyle.defaultPrompt)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        )
+                    Text(L("style.preset_help"))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
     }

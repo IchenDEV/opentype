@@ -35,7 +35,12 @@ actor LLMEngine {
         Log.info("[LLMEngine] model loaded in \(String(format: "%.1f", elapsed))s")
     }
 
-    func generate(prompt: String, systemPrompt: String? = nil, maxTokens: Int = 2048) async throws -> String {
+    func generate(
+        prompt: String,
+        systemPrompt: String? = nil,
+        maxTokens: Int = 2048,
+        temperature: Double = 0.3
+    ) async throws -> String {
         guard let container else {
             throw LLMError.modelNotLoaded
         }
@@ -43,7 +48,7 @@ actor LLMEngine {
         let t0 = CFAbsoluteTimeGetCurrent()
 
         let effectivePrompt = Self.applyNoThink(prompt: prompt, modelID: currentModelID)
-        let params = GenerateParameters(maxTokens: maxTokens, temperature: 0.3)
+        let params = GenerateParameters(maxTokens: maxTokens, temperature: Float(temperature))
         let session = ChatSession(container, instructions: systemPrompt, generateParameters: params)
         let result = try await session.respond(to: effectivePrompt)
 

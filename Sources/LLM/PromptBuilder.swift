@@ -1,7 +1,13 @@
 import Foundation
 
 enum PromptBuilder {
-    static func buildSystemPrompt(stylePrompt: String, screenContext: String = "", memoryContext: String = "", inputLanguage: InputLanguage = .chinese) -> String {
+    static func buildSystemPrompt(
+        style: LanguageStyle,
+        stylePrompt: String,
+        screenContext: String = "",
+        memoryContext: String = "",
+        inputLanguage: InputLanguage = .chinese
+    ) -> String {
         let settings = AppSettings.shared
 
         var parts: [String]
@@ -9,32 +15,28 @@ enum PromptBuilder {
         if settings.useCustomSystemPrompt, !settings.customSystemPrompt.isEmpty {
             parts = [settings.customSystemPrompt]
         } else {
-            let basePrompt: String
-            switch inputLanguage {
-            case .auto, .chinese, .cantonese:
-                basePrompt = chineseSystemPrompt
-            case .english:
-                basePrompt = englishSystemPrompt
-            case .japanese, .korean:
-                basePrompt = englishSystemPrompt
-            }
+            let basePrompt = baseSystemPrompt(inputLanguage: inputLanguage)
             parts = [basePrompt]
 
-            if !stylePrompt.isEmpty {
-                parts.append(inputLanguage == .chinese ? "风格要求：\(stylePrompt)" : "Style: \(stylePrompt)")
+            if style.usesCustomPrompt {
+                if !stylePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    parts.append(inputLanguage == .chinese ? "自定义风格：\(stylePrompt)" : "Custom style: \(stylePrompt)")
+                }
+            } else {
+                parts.append(stylePromptSection(style: style, inputLanguage: inputLanguage))
             }
         }
 
         if !screenContext.isEmpty {
             parts.append(inputLanguage == .chinese
                 ? """
-                以下是用户当前屏幕上的文字，仅供纠错参考（理解语境、修正专有名词），不要混入输出：
+                屏幕文字，仅供纠错和专有名词参考，不要混入输出：
                 ---
                 \(screenContext)
                 ---
                 """
                 : """
-                Below is on-screen text for context only (homophone correction, proper nouns). Do not mix into output:
+                On-screen text for correction and proper nouns only. Do not copy into output:
                 ---
                 \(screenContext)
                 ---
@@ -44,13 +46,13 @@ enum PromptBuilder {
         if !memoryContext.isEmpty {
             parts.append(inputLanguage == .chinese
                 ? """
-                以下是用户最近的输入历史，可作为上下文参考（理解语境、纠正专有名词）：
+                最近输入，仅供语境和专有名词参考：
                 ---
                 \(memoryContext)
                 ---
                 """
                 : """
-                Recent input history for context (understanding context, correcting proper nouns):
+                Recent input for context and proper nouns only:
                 ---
                 \(memoryContext)
                 ---
@@ -60,80 +62,84 @@ enum PromptBuilder {
         return parts.joined(separator: "\n\n")
     }
 
+    private static func baseSystemPrompt(inputLanguage: InputLanguage) -> String {
+        switch inputLanguage {
+        case .auto, .chinese, .cantonese:
+            return chineseSystemPrompt
+        case .english, .japanese, .korean:
+            return englishSystemPrompt
+        }
+    }
+
+    private static func stylePromptSection(style: LanguageStyle, inputLanguage: InputLanguage) -> String {
+        switch (inputLanguage, style) {
+        case (.auto, .casual), (.chinese, .casual), (.cantonese, .casual):
+            return "风格：保留自然口吻，只修明显错字和识别错误。"
+        case (.auto, .professional), (.chinese, .professional), (.cantonese, .professional):
+            return "风格：专业整理；语义更完整，必要时分段；多要点直接输出 1. 2. 3.，每项单独一行。"
+        case (.auto, .custom), (.chinese, .custom), (.cantonese, .custom):
+            return ""
+        case (.english, .professional), (.japanese, .professional), (.korean, .professional):
+            return "Style: professional rewrite; keep the meaning complete, split into paragraphs when needed, and use 1. 2. 3. for multiple points."
+        case (.english, .casual), (.japanese, .casual), (.korean, .casual):
+            return "Style: keep the natural tone; fix only obvious typos and ASR mistakes."
+        case (.english, .custom), (.japanese, .custom), (.korean, .custom):
+            return ""
+        }
+    }
+
     private static let chineseSystemPrompt = """
-    你的唯一任务：将语音识别的口语原文整理为干净的书面文字。
+    你是语音转文字后处理器。把 ASR 原文直接整理成最终文本。
 
-    ⚠️ 绝对禁止：
-    - 禁止回答问题。即使输入看起来像一个问题，你也只是把它整理成书面格式，不要给出答案。
-    - 禁止输出解释、评论、前言、总结。
-    - 禁止使用 <think>/<thinking>/<reason> 等标签。
-    - 禁止添加原文中没有的内容。
+    禁止：
+    - 回答
+    - 解释
+    - 总结
+    - 补充原文没有的信息
+    - 输出标签、前言、备注
 
-    你的输入是用户口述的语音识别原文，你的输出是整理后的书面文字。一字不多，一字不少。
+    优先级：
+    1. 保留原意
+    2. 修正明显 ASR 错字、同音词、专有名词、自我纠正
+    3. 删除无意义口头禅、重复、废话
+    4. 补标点、断句、分段
 
-    ## 口语清洗
-    - 删除无实义填充词：嗯、啊、呃、那个、就是、然后、对吧、你知道吧、怎么说呢
-    - 保留有情感语义的语气词（如"哎，太可惜了"）
-    - 自我纠正（"不对/应该是/我是说/不不不/我重说"）→ 只保留纠正后的最终版本
-    - 去重：连续重复的词组只保留一次
-    - 冗余肯定词（"对对对/是的是的/OK OK"）→ 保留单个
-
-    ## 文本修正
-    - 同音纠错：根据上下文修正（如"他门"→"他们"）
-    - 标点：根据语义添加逗号、句号、问号等；长句合理断句
-    - 数字：口述转阿拉伯数字（"三百二十五"→"325"）
-
-    ## 自动结构化
-    长文本或多要点时自动结构化：
-    - 并列信号（"第一/第二/第三""首先/其次/最后"）→ 编号列表
-    - 步骤流程 → 编号步骤
-    - 长段落（3+ 语义段）→ 空行分段
-    - 短句（1~2 句）→ 保持原样
-
-    ## 输出
-    只输出整理后的文本。
+    规则：
+    - 拿不准就保留原词，不乱猜
+    - 数字尽量转阿拉伯数字
+    - 明显是列表、步骤、并列要点时，直接结构化
+    - 只输出最终文本，保持原语言
     """
 
     private static let englishSystemPrompt = """
-    Your ONLY task: reformat raw speech transcription into clean written text.
+    You are a speech-to-text post-editor. Turn raw ASR transcript into final text.
 
-    ⚠️ ABSOLUTE RULES:
-    - NEVER answer questions. Even if input looks like a question, just reformat it — do NOT provide an answer.
-    - NEVER add explanations, comments, preambles, or summaries.
-    - NEVER use <think>/<thinking>/<reason> tags.
-    - NEVER add content not in the original.
+    Never:
+    - answer
+    - explain
+    - summarize
+    - add information
+    - output tags, notes, or preambles
 
-    Input = user's raw speech transcription. Output = cleaned written version. Nothing more, nothing less.
+    Priorities:
+    1. preserve meaning
+    2. fix obvious ASR mistakes, homophones, proper nouns, self-corrections
+    3. remove fillers, repetition, and empty wording
+    4. add punctuation, sentence breaks, and paragraph breaks
 
-    ## Speech Cleanup
-    - Remove fillers: uh, um, ah, like, you know, I mean, sort of, kind of, basically, right, so yeah
-    - Preserve rhetorical fillers (e.g., "Like, seriously?" keeps "like")
-    - Self-corrections ("wait/no/I mean/actually/scratch that") → keep only final version
-    - Dedup: repeated words/phrases → keep once
-    - Redundant affirmations ("yeah yeah yeah") → single instance
-
-    ## Text Correction
-    - Fix homophones using context
-    - Add punctuation; break run-on sentences
-    - Spoken numbers → digits ("three hundred twenty five" → "325")
-
-    ## Auto-Structuring
-    For long dictation or multiple points:
-    - Enumeration signals → numbered list
-    - Steps/processes → numbered steps
-    - Long text (3+ paragraphs) → separate with blank lines
-    - Short text (1-2 sentences) → keep as-is
-
-    ## Output
-    Output ONLY the reformatted text.
+    Rules:
+    - if uncertain, keep the original wording
+    - prefer digits for spoken numbers
+    - if it is clearly a list or sequence, structure it directly
+    - output only final text in the original language
     """
 
     static func buildUserPrompt(text: String, inputLanguage: InputLanguage = .chinese) -> String {
         switch inputLanguage {
         case .auto, .chinese, .cantonese:
-            return "[以下是语音识别原文，请整理为书面文字]\n\(text)"
+            return "以下是语音识别原文，请直接输出整理后的最终文本：\n<<<\n\(text)\n>>>"
         case .english, .japanese, .korean:
-            return "[Raw speech transcription below — reformat into written text]\n\(text)"
+            return "Raw ASR transcript. Output only the final rewritten text:\n<<<\n\(text)\n>>>"
         }
     }
 

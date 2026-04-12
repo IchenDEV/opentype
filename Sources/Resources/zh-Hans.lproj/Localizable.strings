@@ -163,14 +163,16 @@
 "mode.tap_toggle" = "单击切换";
 "style.concise" = "简洁精炼";
 "style.formal" = "正式书面";
-"style.professional" = "专业结构";
-"style.casual" = "日常口语";
+"style.professional" = "专业";
+"style.casual" = "口语";
+"style.custom" = "自定义";
 "engine.apple_speech" = "Apple 语音识别";
 "engine.volc_asr" = "豆包语音识别";
-"style.prompt.concise" = "极简风格。激进压缩：删除所有修饰语、过渡句、重复表达，只保留核心信息。长句拆短，能一句话说完绝不用两句。适合备忘录、便签、快速记录。";
-"style.prompt.formal" = "正式书面风格。使用规范的书面用语，避免口语化表达。句式工整，逻辑连贯，适合商务邮件、报告、学术写作。用\"此外/因此/综上\"等连接词保持段落衔接。";
-"style.prompt.professional" = "专业结构化风格。强制结构化所有输出：多要点内容必须使用编号列表（1. 2. 3.），每条独立一行；2 个以上段落必须用空行分隔；如果内容可提炼主题，首行用一句话概括作为标题后接冒号。适合会议纪要、技术文档、任务清单。";
-"style.prompt.casual" = "轻松口语风格。最小程度修改：只纠正明显错别字和语音识别错误，保留口语化表达和语气词，不做书面化改写。适合聊天消息、朋友圈、日常笔记。";
+"style.prompt.concise" = "极简。只保留核心信息，删掉修饰、重复和过渡，长句拆短。";
+"style.prompt.formal" = "正式书面。用规范表达，减少口语感，保持句子完整、逻辑顺畅。";
+"style.prompt.professional" = "专业整理。语义完整，必要时分段；多要点用编号列表，每项单独一行。";
+"style.prompt.casual" = "口语整理。只修正明显错别字和识别错误，保留自然口吻，不过度书面化。";
+"style.prompt.custom" = "按以下要求整理：保留原意，修正明显错别字和识别错误，按需要分段换行。";
 
 /* ── Custom System Prompt ── */
 "custom_prompt.title" = "自定义系统提示词";
@@ -180,7 +182,8 @@
 /* ── Style & Dictionary ── */
 "style.title" = "语言风格";
 "style.prompt" = "提示词";
-"style.prompt_help" = "编辑提示词自定义风格，选择上方预设将覆盖当前内容";
+"style.prompt_help" = "仅自定义模式会使用这里的提示词。";
+"style.preset_help" = "当前是内置模式。切换到“自定义”后，可编辑自己的提示词。";
 "dict.title" = "个人词库";
 "dict.subtitle" = "纠正语音识别中常见的错误词汇";
 "dict.original" = "原词";
