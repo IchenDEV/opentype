@@ -42,36 +42,69 @@ enum SpeechEngineType: String, Codable, CaseIterable {
 }
 
 enum LanguageStyle: String, Codable, CaseIterable {
-    case concise = "concise"
-    case formal = "formal"
-    case professional = "professional"
     case casual = "casual"
+    case professional = "professional"
+    case custom = "custom"
 
     var label: String {
         switch self {
-        case .concise: return L("style.concise")
-        case .formal: return L("style.formal")
-        case .professional: return L("style.professional")
         case .casual: return L("style.casual")
+        case .professional: return L("style.professional")
+        case .custom: return L("style.custom")
         }
     }
 
     var defaultPrompt: String {
         switch self {
-        case .concise: return L("style.prompt.concise")
-        case .formal: return L("style.prompt.formal")
-        case .professional: return L("style.prompt.professional")
         case .casual: return L("style.prompt.casual")
+        case .professional: return L("style.prompt.professional")
+        case .custom: return L("style.prompt.custom")
         }
     }
 
     var icon: String {
         switch self {
-        case .concise: return "scissors"
-        case .formal: return "doc.text"
-        case .professional: return "list.number"
         case .casual: return "bubble.left"
+        case .professional: return "list.number"
+        case .custom: return "slider.horizontal.3"
         }
+    }
+
+    var usesCustomPrompt: Bool { self == .custom }
+
+    static func migrated(from savedValue: String) -> LanguageStyle {
+        if let style = LanguageStyle(rawValue: savedValue) {
+            return style
+        }
+
+        let normalized = savedValue.lowercased()
+        if normalized.contains("casual") || savedValue.contains("口语") {
+            return .casual
+        }
+        if normalized.contains("custom") || savedValue.contains("自定义") {
+            return .custom
+        }
+        if normalized.contains("professional")
+            || normalized.contains("formal")
+            || normalized.contains("concise")
+            || savedValue.contains("专业")
+            || savedValue.contains("正式")
+            || savedValue.contains("简洁") {
+            return .professional
+        }
+        return .professional
+    }
+
+    static func looksLikePresetPrompt(_ prompt: String) -> Bool {
+        let normalized = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let prompts = [
+            L("style.prompt.casual"),
+            L("style.prompt.professional"),
+            L("style.prompt.concise"),
+            L("style.prompt.formal"),
+        ].map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        return prompts.contains(normalized)
     }
 }
 
@@ -244,14 +277,12 @@ final class AppSettings: ObservableObject {
             ?? (savedOutput.contains("整理") ? .processed : nil)
             ?? .processed
         let savedStyle = ud.string(forKey: Key.languageStyle.rawValue) ?? ""
-        let style = LanguageStyle(rawValue: savedStyle)
-            ?? (savedStyle.contains("简洁") ? .concise : savedStyle.contains("正式") ? .formal : savedStyle.contains("口语") ? .casual : nil)
-            ?? .concise
+        let style = LanguageStyle.migrated(from: savedStyle)
         languageStyle = style
         if let savedPrompt = ud.string(forKey: Key.customStylePrompt.rawValue), !savedPrompt.isEmpty {
             customStylePrompt = savedPrompt
         } else {
-            customStylePrompt = style.defaultPrompt
+            customStylePrompt = LanguageStyle.custom.defaultPrompt
         }
         playSounds = ud.object(forKey: Key.playSounds.rawValue) as? Bool ?? true
         inputLanguage = InputLanguage(rawValue: ud.string(forKey: Key.inputLanguage.rawValue) ?? "") ?? .chinese

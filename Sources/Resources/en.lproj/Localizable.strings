@@ -165,12 +165,14 @@
 "style.formal" = "Formal";
 "style.professional" = "Professional";
 "style.casual" = "Casual";
+"style.custom" = "Custom";
 "engine.apple_speech" = "Apple Speech";
 "engine.volc_asr" = "Doubao ASR";
-"style.prompt.concise" = "Minimalist style. Aggressively compress: strip all modifiers, transitions, and redundancies — keep only core information. Break long sentences short. If it fits in one sentence, never use two. Ideal for memos, notes, quick capture.";
-"style.prompt.formal" = "Formal written style. Use proper written language, avoid colloquialisms. Well-structured sentences with logical flow. Suitable for business emails, reports, academic writing. Use transitional phrases to maintain paragraph coherence.";
-"style.prompt.professional" = "Professional structured style. Force-structure all output: multiple points must use numbered lists (1. 2. 3.), one item per line; 2+ paragraphs must be separated by blank lines; if content has a summarizable theme, lead with a one-line title followed by a colon. Ideal for meeting notes, technical docs, task lists.";
-"style.prompt.casual" = "Casual conversational style. Minimal edits only: fix obvious typos and speech recognition errors, preserve colloquial expressions and tone. No formal rewriting. Ideal for chat messages, social posts, everyday notes.";
+"style.prompt.concise" = "Minimalist. Keep only core information, remove repetition and filler, break long sentences short.";
+"style.prompt.formal" = "Formal written style. Use proper wording, reduce colloquial tone, keep the text clear and well-formed.";
+"style.prompt.professional" = "Professional cleanup. Keep meaning complete, split when needed, and use numbered lists for multiple points.";
+"style.prompt.casual" = "Casual cleanup. Fix obvious typos and ASR errors, keep the natural tone, do not over-formalize.";
+"style.prompt.custom" = "Format the text with my own rules: preserve meaning, fix obvious ASR mistakes, and add line breaks when useful.";
 
 /* ── Custom System Prompt ── */
 "custom_prompt.title" = "Custom System Prompt";
@@ -180,7 +182,8 @@
 /* ── Style & Dictionary ── */
 "style.title" = "Language Style";
 "style.prompt" = "Prompt";
-"style.prompt_help" = "Edit the prompt to customize style. Selecting a preset above will overwrite it.";
+"style.prompt_help" = "Only Custom mode uses the prompt below.";
+"style.preset_help" = "This built-in mode uses a fixed prompt. Switch to Custom to edit your own.";
 "dict.title" = "Personal Dictionary";
 "dict.subtitle" = "Correct recurring speech recognition errors";
 "dict.original" = "Original";
