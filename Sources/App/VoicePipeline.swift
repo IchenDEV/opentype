@@ -245,9 +245,10 @@ final class VoicePipeline {
                 resetToIdle()
                 return
             }
+            let message = userFacingErrorMessage(for: error)
             Log.error("[VoicePipeline] error: \(error.localizedDescription)")
-            appState.phase = .error(error.localizedDescription)
-            appState.statusMessage = L("pipeline.error_prefix") + error.localizedDescription
+            appState.phase = .error(message)
+            appState.statusMessage = L("pipeline.error_prefix") + message
             hideOverlayAfterDelay()
         }
     }
@@ -439,5 +440,24 @@ final class VoicePipeline {
         alert.addButton(withTitle: L("common.ok"))
         alert.icon = NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: nil)
         alert.runModal()
+    }
+
+    private func userFacingErrorMessage(for error: Error) -> String {
+        switch error {
+        case let error as VolcASRError:
+            return error.localizedDescription
+        case let error as WhisperError:
+            return error.localizedDescription
+        case let error as AppleSpeechError:
+            return error.localizedDescription
+        case is URLError:
+            return L("error.network_request_failed")
+        default:
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain || nsError.domain.hasPrefix("Network.") {
+                return L("error.network_request_failed")
+            }
+            return L("error.operation_failed")
+        }
     }
 }

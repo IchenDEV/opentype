@@ -1,6 +1,5 @@
 import Foundation
 import AVFoundation
-import Network
 
 final class VolcSpeechEngine: SpeechEngine {
     private let appKey: String
@@ -8,10 +7,9 @@ final class VolcSpeechEngine: SpeechEngine {
     private let resourceId: String
 
     private(set) var isReady: Bool
+    private typealias Connection = (session: URLSession, task: URLSessionWebSocketTask)
 
     private static let endpoint = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
-    private static let host     = "openspeech.bytedance.com"
-    private static let path     = "/api/v3/sauc/bigmodel"
     private static let chunkSize = 6400 // ~200ms at 16kHz 16-bit mono
     private static let timeoutSeconds: UInt64 = 30
 
@@ -36,8 +34,8 @@ final class VolcSpeechEngine: SpeechEngine {
         Log.info("[VolcASR] audio converted: \(pcmData.count) bytes PCM 16kHz")
 
         let connectId = UUID().uuidString
-        let conn = try await openConnection(connectId: connectId)
-        defer { conn.cancel() }
+        let conn = try openConnection(connectId: connectId)
+        defer { closeConnection(conn) }
 
         let volcLang = volcLanguage(from: language)
         Log.info("[VolcASR] sending full client request, language=\(volcLang ?? "auto")")
@@ -69,93 +67,36 @@ final class VolcSpeechEngine: SpeechEngine {
         return text
     }
 
-    // MARK: - NWConnection (forces HTTP/1.1 via ALPN, avoiding HTTP/2 WebSocket rejection)
+    // MARK: - URLSession WebSocket
 
-    private func openConnection(connectId: String) async throws -> NWConnection {
-        // Force http/1.1 in ALPN — Volcengine BigModel does not support RFC 8441
-        // (WebSocket over HTTP/2). URLSession.shared offers h2 in ALPN and the server
-        // picks it, causing NSURLErrorBadServerResponse. NWConnection lets us restrict ALPN.
-        let tlsOpts = NWProtocolTLS.Options()
-        sec_protocol_options_add_tls_application_protocol(
-            tlsOpts.securityProtocolOptions, "http/1.1"
-        )
-
-        // skipHandshake = true: we send the HTTP/1.1 upgrade manually so we can include
-        // custom auth headers that NWProtocolWebSocket.Options doesn't expose.
-        let wsOpts = NWProtocolWebSocket.Options()
-        wsOpts.skipHandshake = true
-        wsOpts.autoReplyPing = true
-        wsOpts.maximumMessageSize = 10 * 1024 * 1024
-
-        let params = NWParameters(tls: tlsOpts)
-        params.defaultProtocolStack.applicationProtocols.insert(wsOpts, at: 0)
-
-        let conn = NWConnection(host: NWEndpoint.Host(Self.host), port: 443, using: params)
-
-        // Wait for connection ready
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-                    conn.stateUpdateHandler = { (state: NWConnection.State) in
-                        switch state {
-                        case .ready:
-                            conn.stateUpdateHandler = nil
-                            cont.resume()
-                        case .failed(let err):
-                            conn.stateUpdateHandler = nil
-                            cont.resume(throwing: err)
-                        case .cancelled:
-                            conn.stateUpdateHandler = nil
-                            cont.resume(throwing: VolcASRError.handshakeRejected)
-                        default:
-                            break
-                        }
-                    }
-                    conn.start(queue: .global(qos: .userInitiated))
-                }
-            }
-            group.addTask {
-                try await Task.sleep(nanoseconds: Self.timeoutSeconds * 1_000_000_000)
-                conn.cancel()
-                throw VolcASRError.timeout
-            }
-            try await group.next()
-            group.cancelAll()
+    private func openConnection(connectId: String) throws -> Connection {
+        guard let url = URL(string: Self.endpoint) else {
+            throw VolcASRError.invalidEndpoint
         }
 
-        // Manual HTTP/1.1 WebSocket upgrade
-        let wsKey = Data((0..<16).map { _ in UInt8.random(in: 0...255) }).base64EncodedString()
-        let upgradeReq =
-            "GET \(Self.path) HTTP/1.1\r\n" +
-            "Host: \(Self.host)\r\n" +
-            "Upgrade: websocket\r\n" +
-            "Connection: Upgrade\r\n" +
-            "Sec-WebSocket-Key: \(wsKey)\r\n" +
-            "Sec-WebSocket-Version: 13\r\n" +
-            "X-Api-App-Key: \(appKey)\r\n" +
-            "X-Api-Access-Key: \(accessKey)\r\n" +
-            "X-Api-Resource-Id: \(resourceId)\r\n" +
-            "X-Api-Connect-Id: \(connectId)\r\n" +
-            "\r\n"
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.waitsForConnectivity = false
+        configuration.timeoutIntervalForRequest = TimeInterval(Self.timeoutSeconds)
+        configuration.timeoutIntervalForResource = TimeInterval(Self.timeoutSeconds)
 
-        try await nwSend(conn: conn, data: upgradeReq.data(using: .utf8)!)
+        let session = URLSession(configuration: configuration)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = TimeInterval(Self.timeoutSeconds)
+        request.setValue(appKey, forHTTPHeaderField: "X-Api-App-Key")
+        request.setValue(accessKey, forHTTPHeaderField: "X-Api-Access-Key")
+        request.setValue(resourceId, forHTTPHeaderField: "X-Api-Resource-Id")
+        request.setValue(connectId, forHTTPHeaderField: "X-Api-Connect-Id")
 
-        // Read HTTP 101 response
-        let respData = try await nwReceiveRaw(conn: conn, maxBytes: 4096)
-        let respStr  = String(data: respData, encoding: .utf8) ?? ""
-        Log.info("[VolcASR] upgrade response: \(respStr.prefix(120))")
-        guard respStr.contains("101") else {
-            Log.error("[VolcASR] WebSocket upgrade rejected: \(respStr.prefix(200))")
-            throw VolcASRError.handshakeRejected
-        }
+        let task = session.webSocketTask(with: request)
+        task.resume()
+        Log.info("[VolcASR] WebSocket task resumed")
 
-        Log.info("[VolcASR] WebSocket upgrade complete (HTTP/1.1)")
-        return conn
+        return (session, task)
     }
 
     // MARK: - Send full client request
 
-    private func sendFullClientRequest(conn: NWConnection, language: String?) async throws {
+    private func sendFullClientRequest(conn: Connection, language: String?) async throws {
         var audio: [String: Any] = [
             "format": "pcm",
             "rate": 16000,
@@ -178,12 +119,12 @@ final class VolcSpeechEngine: SpeechEngine {
 
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
         let message = buildMessage(type: .fullClientRequest, flags: 0x00, serialization: .json, payload: jsonData)
-        try await nwSendWS(conn: conn, data: message)
+        try await sendMessage(conn: conn, data: message)
     }
 
     // MARK: - Stream audio
 
-    private func streamAudioAndCollect(conn: NWConnection, pcmData: Data) async throws -> String {
+    private func streamAudioAndCollect(conn: Connection, pcmData: Data) async throws -> String {
         let totalChunks = (pcmData.count + Self.chunkSize - 1) / Self.chunkSize
         var lastText = ""
 
@@ -195,7 +136,7 @@ final class VolcSpeechEngine: SpeechEngine {
 
             let flags: UInt8 = isLast ? 0x02 : 0x00
             let message = buildMessage(type: .audioOnly, flags: flags, serialization: .none, compression: .none, payload: Data(chunk))
-            try await nwSendWS(conn: conn, data: message)
+            try await sendMessage(conn: conn, data: message)
 
             if let resp = try await receiveResponse(conn: conn) {
                 if let text = resp.text, !text.isEmpty {
@@ -219,19 +160,8 @@ final class VolcSpeechEngine: SpeechEngine {
         var isFinal: Bool = false
     }
 
-    private func receiveResponse(conn: NWConnection) async throws -> ParsedResponse? {
-        let data = try await withThrowingTaskGroup(of: Data.self) { group in
-            group.addTask {
-                try await self.nwReceiveWS(conn: conn)
-            }
-            group.addTask {
-                try await Task.sleep(nanoseconds: Self.timeoutSeconds * 1_000_000_000)
-                throw VolcASRError.timeout
-            }
-            guard let result = try await group.next() else { throw VolcASRError.timeout }
-            group.cancelAll()
-            return result
-        }
+    private func receiveResponse(conn: Connection) async throws -> ParsedResponse? {
+        let data = try await receiveMessage(conn: conn)
         return parseResponse(data)
     }
 
@@ -361,50 +291,66 @@ final class VolcSpeechEngine: SpeechEngine {
         | UInt32(data[offset + 3])
     }
 
-    // MARK: - NWConnection helpers
+    // MARK: - WebSocket helpers
 
-    /// Send raw bytes (used for the HTTP/1.1 upgrade request)
-    private func nwSend(conn: NWConnection, data: Data) async throws {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            conn.send(content: data, completion: .contentProcessed { err in
-                if let err { cont.resume(throwing: err) }
-                else { cont.resume() }
-            })
-        }
+    private func closeConnection(_ conn: Connection) {
+        conn.task.cancel(with: .normalClosure, reason: nil)
+        conn.session.finishTasksAndInvalidate()
     }
 
-    /// Send a WebSocket binary frame
-    private func nwSendWS(conn: NWConnection, data: Data) async throws {
-        let meta    = NWProtocolWebSocket.Metadata(opcode: .binary)
-        let context = NWConnection.ContentContext(identifier: "ws-binary", metadata: [meta])
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            conn.send(content: data, contentContext: context, isComplete: true,
-                      completion: .contentProcessed { err in
-                if let err { cont.resume(throwing: err) }
-                else { cont.resume() }
-            })
-        }
-    }
-
-    /// Receive raw bytes (used to read the HTTP 101 response)
-    private func nwReceiveRaw(conn: NWConnection, maxBytes: Int) async throws -> Data {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
-            conn.receive(minimumIncompleteLength: 1, maximumLength: maxBytes) { data, _, _, err in
-                if let err { cont.resume(throwing: err) }
-                else if let data, !data.isEmpty { cont.resume(returning: data) }
-                else { cont.resume(throwing: VolcASRError.handshakeRejected) }
+    private func sendMessage(conn: Connection, data: Data) async throws {
+        do {
+            try await runWithTimeout {
+                try await conn.task.send(.data(data))
             }
+        } catch let error as URLError where error.code == .timedOut {
+            throw VolcASRError.timeout
+        } catch {
+            Log.error("[VolcASR] send failed: \(error.localizedDescription)")
+            throw error
         }
     }
 
-    /// Receive one WebSocket message (binary frame)
-    private func nwReceiveWS(conn: NWConnection) async throws -> Data {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Data, Error>) in
-            conn.receiveMessage { data, context, _, err in
-                if let err { cont.resume(throwing: err) }
-                else if let data, !data.isEmpty { cont.resume(returning: data) }
-                else { cont.resume(throwing: VolcASRError.timeout) }
+    private func receiveMessage(conn: Connection) async throws -> Data {
+        do {
+            let message = try await runWithTimeout {
+                try await conn.task.receive()
             }
+
+            switch message {
+            case .data(let data):
+                return data
+            case .string(let text):
+                Log.error("[VolcASR] unexpected text frame: \(text.prefix(200))")
+                throw VolcASRError.handshakeRejected
+            @unknown default:
+                throw VolcASRError.handshakeRejected
+            }
+        } catch let error as URLError where error.code == .timedOut {
+            throw VolcASRError.timeout
+        } catch {
+            Log.error("[VolcASR] receive failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func runWithTimeout<T>(
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: Self.timeoutSeconds * 1_000_000_000)
+                throw VolcASRError.timeout
+            }
+
+            guard let result = try await group.next() else {
+                throw VolcASRError.timeout
+            }
+            group.cancelAll()
+            return result
         }
     }
 
