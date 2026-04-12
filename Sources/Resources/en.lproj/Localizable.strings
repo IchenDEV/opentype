@@ -258,6 +258,8 @@
 "error.download_failed" = "Model download failed: %@";
 "error.compile_failed" = "Model compilation failed: %@";
 "error.load_failed" = "Model loading failed: %@";
+"error.network_request_failed" = "Network request failed — please try again";
+"error.operation_failed" = "Operation failed — please try again";
 "error.volc_not_configured" = "Doubao ASR not configured — enter API credentials in Settings → Models";
 "error.volc_invalid_endpoint" = "Invalid ASR endpoint URL";
 "error.volc_audio_conversion" = "Audio conversion to PCM 16kHz failed";
