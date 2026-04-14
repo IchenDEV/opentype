@@ -85,6 +85,9 @@
 "settings.output_mode" = "输出模式";
 "settings.instant_insert" = "快速插入，后台整理";
 "settings.instant_insert_help" = "仅在智能整理模式生效。先插入本地快速清理后的文本，整理完成后可一键替换。";
+"settings.beta" = "Beta 功能";
+"settings.streaming_beta" = "启用流式语音识别";
+"settings.streaming_beta_help" = "录音时实时显示部分识别结果，停止后等待引擎返回最终文本。该功能仍在测试中，可能不稳定。";
 "settings.memory" = "记忆";
 "settings.enable_memory" = "启用输入记忆";
 "settings.memory_window" = "记忆时间窗口";

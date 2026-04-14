@@ -220,6 +220,7 @@ final class AppSettings: ObservableObject {
     @Published var languageStyle: LanguageStyle
     @Published var customStylePrompt: String
     @Published var playSounds: Bool
+    @Published var enableStreamingRecognitionBeta: Bool
     @Published var inputLanguage: InputLanguage
     @Published var useScreenContext: Bool
     @Published var enableInstantInsert: Bool
@@ -249,6 +250,7 @@ final class AppSettings: ObservableObject {
     private enum Key: String {
         case hotkeyType, activationMode, tapInterval, speechEngine, whisperModel, llmModel
         case microphoneID, outputMode, languageStyle, customStylePrompt, playSounds
+        case enableStreamingRecognitionBeta
         case inputLanguage, useScreenContext, enableInstantInsert, hasCompletedOnboarding, uiLanguage, historyRetention
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
@@ -286,6 +288,7 @@ final class AppSettings: ObservableObject {
             customStylePrompt = LanguageStyle.custom.defaultPrompt
         }
         playSounds = ud.object(forKey: Key.playSounds.rawValue) as? Bool ?? true
+        enableStreamingRecognitionBeta = ud.bool(forKey: Key.enableStreamingRecognitionBeta.rawValue)
         inputLanguage = InputLanguage(rawValue: ud.string(forKey: Key.inputLanguage.rawValue) ?? "") ?? .chinese
         useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? false
         enableInstantInsert = ud.object(forKey: Key.enableInstantInsert.rawValue) as? Bool ?? false
@@ -324,6 +327,7 @@ final class AppSettings: ObservableObject {
         $languageStyle.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.languageStyle.rawValue) }.store(in: &cancellables)
         $customStylePrompt.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.customStylePrompt.rawValue) }.store(in: &cancellables)
         $playSounds.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.playSounds.rawValue) }.store(in: &cancellables)
+        $enableStreamingRecognitionBeta.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableStreamingRecognitionBeta.rawValue) }.store(in: &cancellables)
         $inputLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.inputLanguage.rawValue) }.store(in: &cancellables)
         $useScreenContext.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useScreenContext.rawValue) }.store(in: &cancellables)
         $enableInstantInsert.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableInstantInsert.rawValue) }.store(in: &cancellables)

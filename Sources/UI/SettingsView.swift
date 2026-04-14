@@ -61,6 +61,18 @@ struct SettingsView: View {
                 .disabled(settings.outputMode != .processed)
             }
 
+            Section(L("settings.beta")) {
+                Toggle(isOn: $settings.enableStreamingRecognitionBeta) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L("settings.streaming_beta"))
+                        Text(L("settings.streaming_beta_help"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .help(L("settings.streaming_beta_help"))
+            }
+
             Section(L("settings.audio")) {
                 microphonePicker
                 Toggle(isOn: $settings.useScreenContext) {

@@ -59,6 +59,12 @@ private struct OverlayContentView: View {
         }
     }
 
+    private var livePreview: String? {
+        guard appState.isRecording else { return nil }
+        let text = appState.rawTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -76,6 +82,16 @@ private struct OverlayContentView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, showsProgress ? 8 : 10)
+
+            if let livePreview {
+                Text(livePreview)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
+            }
 
             if showsProgress {
                 GeometryReader { geo in

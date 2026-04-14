@@ -87,14 +87,24 @@ struct MenuBarView: View {
     }
 
     private var recordingRow: some View {
-        HStack(spacing: 8) {
-            Circle().fill(.red).frame(width: 7, height: 7)
-            Text(L("menubar.listening"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-            WaveformView(level: appState.audioLevel)
-                .frame(width: 40, height: 16)
+        VStack(spacing: 4) {
+            HStack(spacing: 8) {
+                Circle().fill(.red).frame(width: 7, height: 7)
+                Text(L("menubar.listening"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                WaveformView(level: appState.audioLevel)
+                    .frame(width: 40, height: 16)
+            }
+
+            if !appState.rawTranscription.isEmpty {
+                Text(appState.rawTranscription)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
