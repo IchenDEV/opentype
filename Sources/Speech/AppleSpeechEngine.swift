@@ -82,10 +82,10 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
             return try await transcribe(audioURL: audioURL, language: language)
         }
 
-        recognitionRequest?.endAudio()
         return try await withCheckedThrowingContinuation { continuation in
             stateQueue.async {
                 self.finishContinuation = continuation
+                self.recognitionRequest?.endAudio()
             }
 
             DispatchQueue.global().asyncAfter(deadline: .now() + Self.timeoutSeconds) { [weak self] in
