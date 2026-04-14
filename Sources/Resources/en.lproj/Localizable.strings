@@ -85,6 +85,9 @@
 "settings.output_mode" = "Output mode";
 "settings.instant_insert" = "Insert quickly, format in background";
 "settings.instant_insert_help" = "Only applies to Smart Format. Insert a locally cleaned draft first, then let you replace it with the formatted version.";
+"settings.beta" = "Beta";
+"settings.streaming_beta" = "Enable streaming recognition";
+"settings.streaming_beta_help" = "Show live partial transcription while recording, and wait for the engine's final recognition result after you stop. Experimental and may be unstable.";
 "settings.memory" = "Memory";
 "settings.enable_memory" = "Enable input memory";
 "settings.memory_window" = "Memory window";

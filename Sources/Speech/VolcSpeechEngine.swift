@@ -1,13 +1,14 @@
 import Foundation
 import AVFoundation
 
-final class VolcSpeechEngine: SpeechEngine {
+final class VolcSpeechEngine: SpeechEngine, @unchecked Sendable {
     private let appKey: String
     private let accessKey: String
     private let resourceId: String
 
     private(set) var isReady: Bool
     private typealias Connection = (session: URLSession, task: URLSessionWebSocketTask)
+    private var streamingSession: VolcStreamingSession?
 
     private static let endpoint = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
     private static let chunkSize = 6400 // ~200ms at 16kHz 16-bit mono
@@ -20,7 +21,33 @@ final class VolcSpeechEngine: SpeechEngine {
         self.isReady = !appKey.isEmpty && !accessKey.isEmpty && !resourceId.isEmpty
     }
 
-    func startListening() {}
+    var supportsStreaming: Bool { true }
+
+    func startListening(language: String?, onPartialResult: @escaping @Sendable (String) -> Void) {
+        guard isReady else { return }
+        streamingSession = VolcStreamingSession(
+            engine: self,
+            language: language,
+            partialHandler: onPartialResult
+        )
+    }
+
+    func appendAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+        streamingSession?.append(buffer)
+    }
+
+    func finishListening(audioURL: URL?, language: String?) async throws -> String {
+        defer { streamingSession = nil }
+        if let streamingSession {
+            return try await streamingSession.finish()
+        }
+        return try await transcribe(audioURL: audioURL, language: language)
+    }
+
+    func cancelListening() {
+        streamingSession?.cancel()
+        streamingSession = nil
+    }
 
     func transcribe(audioURL: URL?, language: String?) async throws -> String {
         guard isReady else { throw VolcASRError.notConfigured }
@@ -32,6 +59,16 @@ final class VolcSpeechEngine: SpeechEngine {
         let pcmData = try convertToPCM16k(url: url)
         guard !pcmData.isEmpty else { return "" }
         Log.info("[VolcASR] audio converted: \(pcmData.count) bytes PCM 16kHz")
+
+        let text = try await transcribePCMData(pcmData, language: language)
+
+        let elapsed = CFAbsoluteTimeGetCurrent() - t0
+        Log.info("[VolcASR] transcribed \(text.count) chars in \(String(format: "%.1f", elapsed))s")
+        return text
+    }
+
+    func transcribePCMData(_ pcmData: Data, language: String?) async throws -> String {
+        guard !pcmData.isEmpty else { return "" }
 
         let connectId = UUID().uuidString
         let conn = try openConnection(connectId: connectId)
@@ -60,11 +97,7 @@ final class VolcSpeechEngine: SpeechEngine {
         }
         Log.info("[VolcASR] handshake ok, streaming audio...")
 
-        let text = try await streamAudioAndCollect(conn: conn, pcmData: pcmData)
-
-        let elapsed = CFAbsoluteTimeGetCurrent() - t0
-        Log.info("[VolcASR] transcribed \(text.count) chars in \(String(format: "%.1f", elapsed))s")
-        return text
+        return try await streamAudioAndCollect(conn: conn, pcmData: pcmData)
     }
 
     // MARK: - URLSession WebSocket
@@ -433,6 +466,100 @@ final class VolcSpeechEngine: SpeechEngine {
         case "ar":  return "ar-SA"
         case "id":  return "id-ID"
         default:    return nil
+        }
+    }
+}
+
+private final class VolcStreamingSession: @unchecked Sendable {
+    private let engine: VolcSpeechEngine
+    private let language: String?
+    private let partialHandler: @Sendable (String) -> Void
+    private let queue = DispatchQueue(label: "opentype.volc-stream")
+
+    private var converter: RealtimeAudioConverter?
+    private var pcmData = Data()
+    private var latestText = ""
+    private var pendingWorkItem: DispatchWorkItem?
+    private var activeTask: Task<String, Error>?
+    private var closed = false
+
+    init(
+        engine: VolcSpeechEngine,
+        language: String?,
+        partialHandler: @escaping @Sendable (String) -> Void
+    ) {
+        self.engine = engine
+        self.language = language
+        self.partialHandler = partialHandler
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        queue.async {
+            guard !self.closed else { return }
+            if self.converter == nil {
+                self.converter = RealtimeAudioConverter(
+                    inputFormat: buffer.format,
+                    outputCommonFormat: .pcmFormatInt16,
+                    interleaved: true
+                )
+            }
+
+            guard let converter = self.converter else { return }
+            guard let chunk = try? converter.convertToPCMData(buffer), !chunk.isEmpty else { return }
+
+            self.pcmData.append(chunk)
+            self.schedulePartialUpdate()
+        }
+    }
+
+    func finish() async throws -> String {
+        let task = queue.sync { () -> Task<String, Error>? in
+            self.closed = true
+            self.pendingWorkItem?.cancel()
+            self.pendingWorkItem = nil
+            return self.activeTask
+        }
+        _ = try? await task?.value
+
+        let snapshot = queue.sync { self.pcmData }
+        return try await engine.transcribePCMData(snapshot, language: language)
+    }
+
+    func cancel() {
+        queue.sync {
+            self.closed = true
+            self.pendingWorkItem?.cancel()
+            self.pendingWorkItem = nil
+            self.activeTask?.cancel()
+            self.activeTask = nil
+        }
+    }
+
+    private func schedulePartialUpdate() {
+        pendingWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.startPartialTaskIfNeeded()
+        }
+        pendingWorkItem = workItem
+        queue.asyncAfter(deadline: .now() + 0.7, execute: workItem)
+    }
+
+    private func startPartialTaskIfNeeded() {
+        guard !closed, activeTask == nil, pcmData.count >= 32_000 else { return }
+        let snapshot = pcmData
+        activeTask = Task(priority: .utility) { [engine, language] in
+            try await engine.transcribePCMData(snapshot, language: language)
+        }
+
+        let task = activeTask
+        Task { [weak self] in
+            let text = (try? await task?.value) ?? ""
+            self?.queue.async {
+                self?.activeTask = nil
+                guard let self, !self.closed, !text.isEmpty, text != self.latestText else { return }
+                self.latestText = text
+                self.partialHandler(text)
+            }
         }
     }
 }

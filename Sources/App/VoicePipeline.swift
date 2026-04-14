@@ -113,18 +113,36 @@ final class VoicePipeline {
         overlay.show(appState: appState)
 
         let micID = appState.settings.microphoneID
-        let micStarted = audioCapture.start(deviceID: micID) { [weak self] level in
-            Task { @MainActor in
-                self?.appState.audioLevel = level
+        let language = appState.settings.inputLanguage.whisperCode
+        let streamingEnabled = appState.settings.enableStreamingRecognitionBeta
+        if streamingEnabled {
+            currentEngine?.startListening(language: language) { [weak self] partialText in
+                Task { @MainActor in
+                    guard let self, self.appState.isRecording else { return }
+                    self.appState.rawTranscription = partialText
+                }
             }
         }
+
+        let micStarted = audioCapture.start(
+            deviceID: micID,
+            levelUpdate: { [weak self] level in
+                Task { @MainActor in
+                    self?.appState.audioLevel = level
+                }
+            },
+            bufferUpdate: { [weak self] buffer in
+                guard streamingEnabled else { return }
+                self?.currentEngine?.appendAudioBuffer(buffer)
+            }
+        )
         guard micStarted else {
+            currentEngine?.cancelListening()
             appState.phase = .error(L("pipeline.mic_failed_permissions"))
             appState.statusMessage = L("pipeline.mic_unavailable")
             overlay.hide()
             return
         }
-        currentEngine?.startListening()
     }
 
     func stop(targetApp: NSRunningApplication? = nil) async {
@@ -165,7 +183,12 @@ final class VoicePipeline {
 
         do {
             let asrStarted = CFAbsoluteTimeGetCurrent()
-            let raw = try await currentEngine?.transcribe(audioURL: audioURL, language: language) ?? ""
+            let raw: String
+            if settings.enableStreamingRecognitionBeta {
+                raw = try await currentEngine?.finishListening(audioURL: audioURL, language: language) ?? ""
+            } else {
+                raw = try await currentEngine?.transcribe(audioURL: audioURL, language: language) ?? ""
+            }
             let asrElapsed = CFAbsoluteTimeGetCurrent() - asrStarted
             Log.info("[VoicePipeline] ASR stage finished in \(String(format: "%.2f", asrElapsed))s")
             appState.rawTranscription = raw
@@ -285,6 +308,7 @@ final class VoicePipeline {
                 showInsertionFailedAlert(text: finalText, reason: reason)
             }
         } catch {
+            currentEngine?.cancelListening()
             if Task.isCancelled {
                 resetToIdle()
                 return
