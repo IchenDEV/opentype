@@ -41,9 +41,18 @@
 "pipeline.transcribing" = "识别中…";
 "pipeline.formatting" = "整理中…";
 "pipeline.inserting" = "输入中…";
+"pipeline.replacing" = "替换中…";
 "pipeline.error_prefix" = "错误: ";
 "pipeline.whisper_unloaded" = "Whisper 已卸载";
 "pipeline.llm_unloaded" = "LLM 已卸载";
+"pipeline.background_formatting" = "已快速插入，后台继续整理…";
+"pipeline.formatted_ready" = "整理版已就绪";
+"pipeline.replacement_not_ready" = "整理版还没生成完";
+"pipeline.replacement_expired" = "替换窗口已过期，你仍然可以复制整理版。";
+"pipeline.replacement_copied_expired" = "替换窗口已过期，已改为复制整理版。";
+"pipeline.replacement_copied_missing_target" = "找不到原来的目标应用，已改为复制整理版。";
+"pipeline.replacement_copied_app_changed" = "你已经切换到别的应用，已改为复制整理版。";
+"pipeline.replacement_copied_failed" = "无法安全替换，已改为复制整理版。";
 "pipeline.preparing_model" = "准备下载语音模型…";
 "pipeline.downloading" = "下载模型";
 "pipeline.compiling" = "编译模型中（首次约需 2-5 分钟）…";
@@ -61,6 +70,7 @@
 "menubar.listening" = "正在聆听…";
 "menubar.hold" = "长按";
 "menubar.toggle" = "切换";
+"menubar.replace_formatted" = "替换";
 
 /* ── Settings ── */
 "settings.activation" = "激活方式";
@@ -73,6 +83,8 @@
 "settings.tap_interval" = "双击间隔";
 "settings.output" = "输出";
 "settings.output_mode" = "输出模式";
+"settings.instant_insert" = "快速插入，后台整理";
+"settings.instant_insert_help" = "仅在智能整理模式生效。先插入本地快速清理后的文本，整理完成后可一键替换。";
 "settings.memory" = "记忆";
 "settings.enable_memory" = "启用输入记忆";
 "settings.memory_window" = "记忆时间窗口";
@@ -124,18 +136,20 @@
 "model.active" = "当前";
 "model.use" = "启用";
 "model.benchmark" = "测速";
+"model.last_formatting" = "最近一次智能整理";
+"model.last_formatting_value" = "%.2f 秒";
 "model.compiling" = "编译中…";
 "model.loading" = "加载中…";
 "model.smallest" = "最小最快 ~335 MB";
 "model.balanced" = "平衡选择 ~1 GB";
 "model.best_quality" = "质量最佳 ~2.3 GB";
-"model.qwen3_fast" = "Qwen3 极速 ~335 MB";
+"model.qwen3_fast" = "极速，整理偏弱 ~335 MB";
 "model.qwen3_balanced" = "Qwen3 均衡 ~1 GB";
 "model.qwen3_quality" = "Qwen3 高质量 ~2.3 GB";
 "model.qwen3_moe" = "Qwen3 MoE 旗舰，推荐 ~5 GB";
 "model.qwen35_tiny" = "Qwen3.5 极速 ~620 MB";
-"model.qwen35_fast" = "Qwen3.5 快速 ~1.5 GB";
-"model.qwen35_quality" = "Qwen3.5 高质量 5-bit ~5.5 GB";
+"model.qwen35_fast" = "智能整理推荐 ~1.5 GB";
+"model.qwen35_quality" = "整理质量最佳 5-bit ~5.5 GB";
 "model.qwen35_moe" = "Qwen3.5 MoE 旗舰 ~6 GB";
 "model.gemma_fast" = "Gemma 3 极速 ~600 MB";
 "model.gemma_balanced" = "Gemma 3 均衡 ~2.5 GB";

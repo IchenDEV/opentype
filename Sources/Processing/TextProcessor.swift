@@ -4,7 +4,7 @@ final class TextProcessor {
     private let llm = LLMEngine()
     private let remoteLLMClient = RemoteLLMClient()
     private let dictionary = PersonalDictionary.shared
-    private struct GenerationOptions {
+    struct GenerationOptions {
         let maxTokens: Int
         let temperature: Double
     }
@@ -36,8 +36,19 @@ final class TextProcessor {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    func preCleanForFormatting(text: String, inputLanguage: InputLanguage) -> String {
+        var result = text
+        result = dictionary.applyReplacements(to: result)
+        result = FormattingHeuristics.preClean(text: result, inputLanguage: inputLanguage)
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     func process(text: String, stylePrompt: String, model: String, screenContext: String = "", memoryContext: String = "") async -> String {
         let settings = AppSettings.shared
+        let preCleanStarted = CFAbsoluteTimeGetCurrent()
+        let cleanedText = preCleanForFormatting(text: text, inputLanguage: settings.inputLanguage)
+        let preCleanElapsed = CFAbsoluteTimeGetCurrent() - preCleanStarted
+        Log.info("[TextProcessor] pre-cleaned \(text.count) chars to \(cleanedText.count) chars in \(String(format: "%.2f", preCleanElapsed))s")
 
         var systemPrompt = PromptBuilder.buildSystemPrompt(
             style: settings.languageStyle,
@@ -49,14 +60,16 @@ final class TextProcessor {
 
         let rulesDesc = dictionary.activeRulesDescription()
         if !rulesDesc.isEmpty {
-            systemPrompt += "\n\n额外编辑规则：\n\(rulesDesc)"
+            let rulesPrefix = settings.inputLanguage == .english ? "Extra edit rules:" : "额外编辑规则："
+            systemPrompt += "\n\n\(rulesPrefix)\n\(rulesDesc)"
         }
 
-        let userPrompt = PromptBuilder.buildUserPrompt(text: text, inputLanguage: settings.inputLanguage)
-        let options = formattingOptions(for: text, style: settings.languageStyle)
+        let userPrompt = PromptBuilder.buildUserPrompt(text: cleanedText, inputLanguage: settings.inputLanguage)
+        let options = formattingOptions(for: cleanedText, style: settings.languageStyle)
 
         do {
             var result: String
+            let llmStarted = CFAbsoluteTimeGetCurrent()
             if settings.useRemoteLLM {
                 result = try await remoteLLMClient.generate(
                     prompt: userPrompt,
@@ -77,13 +90,15 @@ final class TextProcessor {
                     temperature: options.temperature
                 )
             }
+            let llmElapsed = CFAbsoluteTimeGetCurrent() - llmStarted
+            Log.info("[TextProcessor] formatting LLM completed in \(String(format: "%.2f", llmElapsed))s with budget \(options.maxTokens) tokens")
 
             result = stripThinkingTags(result)
             result = dictionary.applyReplacements(to: result)
             return normalizeFormattedOutput(result)
         } catch {
-            Log.error("[TextProcessor] LLM failed, falling back to basicClean: \(error.localizedDescription)")
-            return basicClean(text: text)
+            Log.error("[TextProcessor] LLM failed, falling back to pre-cleaned text: \(error.localizedDescription)")
+            return normalizeFormattedOutput(cleanedText)
         }
     }
 
@@ -168,11 +183,13 @@ final class TextProcessor {
     }
 
     private func normalizeWhitespace(_ text: String) -> String {
-        text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        FormattingHeuristics.normalizeInput(text)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     }
 
     private func normalizeFormattedOutput(_ text: String) -> String {
-        let lines = promoteStructuredBreaks(in: text)
+        let cleaned = stripOutputScaffolding(from: text)
+        let lines = promoteStructuredBreaks(in: cleaned)
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
             .components(separatedBy: "\n")
@@ -197,23 +214,45 @@ final class TextProcessor {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func formattingOptions(for text: String, style: LanguageStyle) -> GenerationOptions {
+    func formattingOptions(for text: String, style: LanguageStyle) -> GenerationOptions {
         let characterCount = text.trimmingCharacters(in: .whitespacesAndNewlines).count
-        let baseBudget = min(1024, max(96, characterCount + 64))
-        let styleBonus: Int
+
+        let maxTokens: Int
+        switch characterCount {
+        case 0...80:
+            maxTokens = 160
+        case 81...220:
+            maxTokens = 256
+        default:
+            maxTokens = 384
+        }
+
+        let temperature: Double
         switch style {
-        case .professional:
-            styleBonus = 160
-        case .custom:
-            styleBonus = 96
         case .casual:
-            styleBonus = 0
+            temperature = 0.08
+        case .professional, .custom:
+            temperature = 0.05
         }
 
         return GenerationOptions(
-            maxTokens: min(1280, baseBudget + styleBonus),
-            temperature: style == .casual ? 0.15 : style == .custom ? 0.12 : 0.1
+            maxTokens: maxTokens,
+            temperature: temperature
         )
+    }
+
+    private func stripOutputScaffolding(from text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let scaffoldingPatterns = [
+            "^(整理后|最终文本|润色后|输出结果)[：:]\\s*",
+            "^(Final text|Rewritten text|Output)[:]\\s*"
+        ]
+
+        for pattern in scaffoldingPatterns {
+            result = result.replacingOccurrences(of: pattern, with: "", options: [.regularExpression, .caseInsensitive])
+        }
+
+        return result
     }
 
     private func promoteStructuredBreaks(in text: String) -> String {

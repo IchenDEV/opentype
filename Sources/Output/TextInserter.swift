@@ -35,6 +35,42 @@ struct TextInserter {
         return .success
     }
 
+    func replaceRecentInsertion(text: String, targetApp: NSRunningApplication? = nil) async -> InsertResult {
+        guard AXIsProcessTrusted() else {
+            Log.error("[TextInserter] no AX trust")
+            return .probablyFailed(reason: "Accessibility permission not granted")
+        }
+
+        await activateTarget(targetApp)
+
+        let front = NSWorkspace.shared.frontmostApplication
+        let targetPID = targetApp?.processIdentifier
+        let activated = targetPID == nil || front?.processIdentifier == targetPID
+        guard activated else {
+            let reason = "Could not activate target application"
+            Log.info("[TextInserter] replacement probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        let undoOK = await simulateCommandShortcut(keyCode: CGKeyCode(kVK_ANSI_Z), scriptKey: "z")
+        guard undoOK else {
+            let reason = "Could not undo the previous insertion"
+            Log.info("[TextInserter] replacement probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        try? await Task.sleep(nanoseconds: 160_000_000)
+
+        let pasted = await insertViaClipboard(text: text)
+        guard pasted else {
+            let reason = "Could not paste replacement text"
+            Log.info("[TextInserter] replacement probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        return .success
+    }
+
     // MARK: - Activate target
 
     private func activateTarget(_ app: NSRunningApplication?) async {
@@ -87,14 +123,17 @@ struct TextInserter {
 
     @discardableResult
     private func simulatePaste() async -> Bool {
+        await simulateCommandShortcut(keyCode: CGKeyCode(kVK_ANSI_V), scriptKey: "v")
+    }
+
+    @discardableResult
+    private func simulateCommandShortcut(keyCode: CGKeyCode, scriptKey: String) async -> Bool {
         guard AXIsProcessTrusted() else { return false }
 
         let source = CGEventSource(stateID: .combinedSessionState)
-        guard let keyDown = CGEvent(keyboardEventSource: source,
-                                     virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source,
-                                   virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false) else {
-            return false
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else {
+            return simulateCommandShortcutViaAppleScript(scriptKey)
         }
 
         keyDown.flags = .maskCommand
@@ -107,8 +146,12 @@ struct TextInserter {
     }
 
     private func pasteViaAppleScript() -> Bool {
+        simulateCommandShortcutViaAppleScript("v")
+    }
+
+    private func simulateCommandShortcutViaAppleScript(_ key: String) -> Bool {
         let script = NSAppleScript(source: """
-        tell application "System Events" to keystroke "v" using command down
+        tell application "System Events" to keystroke "\(key)" using command down
         """)
         var errInfo: NSDictionary?
         script?.executeAndReturnError(&errInfo)

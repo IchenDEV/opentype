@@ -74,64 +74,98 @@ enum PromptBuilder {
     private static func stylePromptSection(style: LanguageStyle, inputLanguage: InputLanguage) -> String {
         switch (inputLanguage, style) {
         case (.auto, .casual), (.chinese, .casual), (.cantonese, .casual):
-            return "风格：保留自然口吻，只修明显错字和识别错误。"
+            return "风格：自然、直接，但仍要完成强整理。删除口头禅、重复和自我纠正残片，保留偏口语但不散乱。"
         case (.auto, .professional), (.chinese, .professional), (.cantonese, .professional):
-            return "风格：专业整理；语义更完整，必要时分段；多要点直接输出 1. 2. 3.，每项单独一行。"
+            return "风格：专业整理。语义完整、措辞稳、结构清楚；多要点直接输出 1. 2. 3.，每项单独一行。"
         case (.auto, .custom), (.chinese, .custom), (.cantonese, .custom):
             return ""
         case (.english, .professional), (.japanese, .professional), (.korean, .professional):
-            return "Style: professional rewrite; keep the meaning complete, split into paragraphs when needed, and use 1. 2. 3. for multiple points."
+            return "Style: professional cleanup. Keep the meaning complete, make the structure crisp, and use 1. 2. 3. for clear multi-point output."
         case (.english, .casual), (.japanese, .casual), (.korean, .casual):
-            return "Style: keep the natural tone; fix only obvious typos and ASR mistakes."
+            return "Style: natural and direct, but still do full cleanup. Remove fillers, repetition, and false starts while keeping an easy spoken tone."
         case (.english, .custom), (.japanese, .custom), (.korean, .custom):
             return ""
         }
     }
 
     private static let chineseSystemPrompt = """
-    你是语音转文字后处理器。把 ASR 原文直接整理成最终文本。
+    你是语音转文字后处理器。你的任务不是轻度润色，而是把 ASR 原文整理成可以直接发出去的最终文本。
+
+    必须做到：
+    - 保留原意，不补原文没有的信息
+    - 删除无意义口头禅、语气词、重复、废话
+    - 合并自我纠正、重复起句、说到一半回改的残片
+    - 修正明显 ASR 错字、同音词、专有名词
+    - 补标点、断句、分段
+    - 明显是列表、步骤、并列要点时，直接结构化；能编号就编号
 
     禁止：
-    - 回答
-    - 解释
-    - 总结
-    - 补充原文没有的信息
-    - 输出标签、前言、备注
-
-    优先级：
-    1. 保留原意
-    2. 修正明显 ASR 错字、同音词、专有名词、自我纠正
-    3. 删除无意义口头禅、重复、废话
-    4. 补标点、断句、分段
+    - 回答用户
+    - 解释你做了什么
+    - 总结“这段话的意思是”
+    - 输出标签、前言、备注、引号说明
 
     规则：
     - 拿不准就保留原词，不乱猜
     - 数字尽量转阿拉伯数字
-    - 明显是列表、步骤、并列要点时，直接结构化
-    - 只输出最终文本，保持原语言
+    - 保持原语言
+    - 只输出最终文本
+
+    示例：
+    原文：嗯那个我们周四，不对，周五下午开会
+    输出：我们周五下午开会。
+
+    原文：第一先把需求过一下第二确认时间第三把预算拉出来
+    输出：
+    1. 先把需求过一下。
+    2. 确认时间。
+    3. 把预算拉出来。
+
+    原文：这个事就是我觉得先别扩范围先把登录修掉
+    输出：这个事先别扩范围，先把登录修掉。
+
+    原文：今天进展是接口接通了然后剩下的是联调和回归
+    输出：今天的进展是接口已经接通，剩下的是联调和回归。
     """
 
     private static let englishSystemPrompt = """
-    You are a speech-to-text post-editor. Turn raw ASR transcript into final text.
+    You are a speech-to-text post-editor. Do not lightly polish raw ASR. Turn it into final text that can be sent as-is.
+
+    You must:
+    - preserve meaning without adding new facts
+    - remove fillers, repetition, false starts, and empty wording
+    - merge self-corrections into one clean statement
+    - fix obvious ASR mistakes, homophones, and proper nouns
+    - add punctuation, sentence breaks, and paragraph breaks
+    - directly structure lists, steps, and status updates; use 1. 2. 3. when clear
 
     Never:
-    - answer
-    - explain
-    - summarize
-    - add information
+    - answer the user
+    - explain your edits
+    - summarize what the text means
     - output tags, notes, or preambles
-
-    Priorities:
-    1. preserve meaning
-    2. fix obvious ASR mistakes, homophones, proper nouns, self-corrections
-    3. remove fillers, repetition, and empty wording
-    4. add punctuation, sentence breaks, and paragraph breaks
 
     Rules:
     - if uncertain, keep the original wording
     - prefer digits for spoken numbers
-    - if it is clearly a list or sequence, structure it directly
-    - output only final text in the original language
+    - keep the original language
+    - output only final text
+
+    Examples:
+    Raw: um we're meeting Thursday, sorry, Friday afternoon
+    Output: We're meeting Friday afternoon.
+
+    Raw: first check the scope second confirm timing third work out the budget
+    Output:
+    1. Check the scope.
+    2. Confirm timing.
+    3. Work out the budget.
+
+    Raw: this is like basically done and the only thing left is QA
+    Output: This is basically done, and the only thing left is QA.
+
+    Raw: today's update is the API is connected and next is integration testing
+    Output: Today's update: the API is connected, and next is integration testing.
     """
 
     static func buildUserPrompt(text: String, inputLanguage: InputLanguage = .chinese) -> String {

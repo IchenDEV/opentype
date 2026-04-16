@@ -4,6 +4,7 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var settings: AppSettings
     let onOpenSettings: () -> Void
+    let onApplyPendingReplacement: () -> Void
     let onQuit: () -> Void
 
     var body: some View {
@@ -54,6 +55,7 @@ struct MenuBarView: View {
 
     private var hasVisibleContent: Bool {
         appState.isRecording || appState.isDownloading || showActiveStatus
+            || appState.pendingReplacement != nil
             || !appState.lastInsertedText.isEmpty
     }
 
@@ -61,11 +63,17 @@ struct MenuBarView: View {
         VStack(spacing: 6) {
             if appState.isRecording {
                 recordingRow
-            } else if appState.isDownloading {
+            }
+            if appState.isDownloading {
                 downloadSection
-            } else if showActiveStatus {
+            }
+            if showActiveStatus {
                 activeStatusRow
-            } else if !appState.lastInsertedText.isEmpty {
+            }
+            if let pendingReplacement = appState.pendingReplacement {
+                pendingReplacementRow(pendingReplacement)
+            }
+            if !appState.lastInsertedText.isEmpty {
                 lastInsertedRow
             }
         }
@@ -122,6 +130,54 @@ struct MenuBarView: View {
         }
     }
 
+    private func pendingReplacementRow(_ replacement: DeferredReplacement) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                if replacement.state == .formatting {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: replacementIcon(for: replacement))
+                        .font(.system(size: 11))
+                        .foregroundStyle(replacementColor(for: replacement))
+                }
+                Text(replacement.message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                Spacer(minLength: 0)
+            }
+
+            if let formattedText = replacement.formattedText {
+                HStack(spacing: 6) {
+                    if replacement.state == .ready {
+                        Button(action: onApplyPendingReplacement) {
+                            Text(L("menubar.replace_formatted"))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+
+                    Button {
+                        TextInserter.copyToClipboard(formattedText)
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 10))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help(L("common.copy_clipboard"))
+
+                    Spacer()
+                }
+            }
+        }
+        .padding(8)
+        .background(.quaternary.opacity(0.45))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
     private var downloadSection: some View {
         VStack(spacing: 3) {
             ProgressView(value: appState.downloadProgress)
@@ -166,6 +222,26 @@ struct MenuBarView: View {
         case .inserting: return .yellow
         case .error: return .red
         default: return .gray
+        }
+    }
+
+    private func replacementIcon(for replacement: DeferredReplacement) -> String {
+        switch replacement.state {
+        case .ready: return "sparkles"
+        case .expired: return "clock.arrow.circlepath"
+        case .copied: return "doc.on.doc"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .formatting: return "ellipsis"
+        }
+    }
+
+    private func replacementColor(for replacement: DeferredReplacement) -> Color {
+        switch replacement.state {
+        case .ready: return .orange
+        case .expired: return .secondary
+        case .copied: return .blue
+        case .failed: return .red
+        case .formatting: return .secondary
         }
     }
 }

@@ -13,7 +13,9 @@ final class VoicePipeline {
     private var appleSpeechEngine: AppleSpeechEngine?
     private var volcSpeechEngine: VolcSpeechEngine?
     private var screenOCRTask: Task<String, Never>?
+    private var screenOCRStartedAt: CFAbsoluteTime?
     private var processingTask: Task<Void, Never>?
+    private var replacementTask: Task<Void, Never>?
     private var hideOverlayTask: Task<Void, Never>?
 
     private var currentEngine: (any SpeechEngine)? {
@@ -75,6 +77,11 @@ final class VoicePipeline {
 
         processingTask?.cancel()
         processingTask = nil
+        replacementTask?.cancel()
+        replacementTask = nil
+        screenOCRTask?.cancel()
+        screenOCRTask = nil
+        screenOCRStartedAt = nil
         hideOverlayTask?.cancel()
         hideOverlayTask = nil
 
@@ -82,19 +89,24 @@ final class VoicePipeline {
         appState.phase = .recording
         appState.statusMessage = L("pipeline.recording")
 
-        let needsScreenContext = (appState.settings.useScreenContext && appState.settings.outputMode == .processed)
-            || appState.settings.outputMode == .command
+        let needsScreenContext = VoicePipelinePolicy.shouldCaptureScreenContext(
+            outputMode: appState.settings.outputMode,
+            useScreenContext: appState.settings.useScreenContext
+        )
         if needsScreenContext {
             if ScreenOCR.hasScreenCapturePermission {
+                screenOCRStartedAt = CFAbsoluteTimeGetCurrent()
                 screenOCRTask = Task.detached(priority: .utility) {
                     await ScreenOCR.captureAndRecognize()
                 }
             } else {
                 Log.info("[VoicePipeline] screen capture permission not granted, skipping OCR")
                 screenOCRTask = nil
+                screenOCRStartedAt = nil
             }
         } else {
             screenOCRTask = nil
+            screenOCRStartedAt = nil
         }
 
         soundPlayer.playStart()
@@ -152,7 +164,10 @@ final class VoicePipeline {
         defer { audioCapture.cleanupLastRecording() }
 
         do {
+            let asrStarted = CFAbsoluteTimeGetCurrent()
             let raw = try await currentEngine?.transcribe(audioURL: audioURL, language: language) ?? ""
+            let asrElapsed = CFAbsoluteTimeGetCurrent() - asrStarted
+            Log.info("[VoicePipeline] ASR stage finished in \(String(format: "%.2f", asrElapsed))s")
             appState.rawTranscription = raw
 
             guard !Task.isCancelled else {
@@ -168,50 +183,76 @@ final class VoicePipeline {
                 return
             }
 
+            if DeferredReplacementPolicy.shouldUseDeferredReplacement(
+                outputMode: settings.outputMode,
+                enableInstantInsert: settings.enableInstantInsert
+            ) {
+                await handleDeferredSmartFormat(raw: raw, settings: settings, targetApp: targetApp)
+                return
+            }
+
             let finalText: String
             switch settings.outputMode {
             case .processed:
                 appState.phase = .processing
                 appState.statusMessage = L("pipeline.formatting")
 
+                let formattingStarted = CFAbsoluteTimeGetCurrent()
                 let screenContext = await screenOCRTask?.value ?? ""
+                if let screenOCRStartedAt {
+                    let ocrElapsed = CFAbsoluteTimeGetCurrent() - screenOCRStartedAt
+                    Log.info("[VoicePipeline] OCR stage finished in \(String(format: "%.2f", ocrElapsed))s")
+                }
                 screenOCRTask = nil
+                screenOCRStartedAt = nil
 
                 guard !Task.isCancelled else {
                     resetToIdle()
                     return
                 }
 
-                let memoryContext = settings.enableMemory ? MemoryStore.recentContext(windowMinutes: settings.memoryWindowMinutes) : ""
                 finalText = await textProcessor.process(
                     text: raw,
                     stylePrompt: settings.customStylePrompt,
                     model: settings.llmModel,
                     screenContext: screenContext,
-                    memoryContext: memoryContext
+                    memoryContext: ""
                 )
+                let formattingElapsed = CFAbsoluteTimeGetCurrent() - formattingStarted
+                appState.lastFormattingDurationSeconds = formattingElapsed
+                Log.info("[VoicePipeline] Smart Format completed in \(String(format: "%.2f", formattingElapsed))s")
             case .command:
                 appState.phase = .processing
                 appState.statusMessage = L("pipeline.formatting")
 
+                let formattingStarted = CFAbsoluteTimeGetCurrent()
                 let screenContext = await screenOCRTask?.value ?? ""
+                if let screenOCRStartedAt {
+                    let ocrElapsed = CFAbsoluteTimeGetCurrent() - screenOCRStartedAt
+                    Log.info("[VoicePipeline] OCR stage finished in \(String(format: "%.2f", ocrElapsed))s")
+                }
                 screenOCRTask = nil
+                screenOCRStartedAt = nil
 
                 guard !Task.isCancelled else {
                     resetToIdle()
                     return
                 }
 
-                let memoryContext = settings.enableMemory ? MemoryStore.recentContext(windowMinutes: settings.memoryWindowMinutes) : ""
+                let memoryContext = VoicePipelinePolicy.memoryContext(for: .command, settings: settings)
                 finalText = await textProcessor.processCommand(
                     text: raw,
                     model: settings.llmModel,
                     screenContext: screenContext,
                     memoryContext: memoryContext
                 )
+                let formattingElapsed = CFAbsoluteTimeGetCurrent() - formattingStarted
+                appState.lastFormattingDurationSeconds = formattingElapsed
+                Log.info("[VoicePipeline] Voice Command formatting completed in \(String(format: "%.2f", formattingElapsed))s")
             case .direct:
                 screenOCRTask?.cancel()
                 screenOCRTask = nil
+                screenOCRStartedAt = nil
                 finalText = textProcessor.basicClean(text: raw)
             }
 
@@ -225,7 +266,10 @@ final class VoicePipeline {
             appState.statusMessage = L("pipeline.inserting")
 
             Log.sensitive("[VoicePipeline] inserting \(finalText.count) chars")
+            let insertStarted = CFAbsoluteTimeGetCurrent()
             let insertResult = await textInserter.insert(text: finalText, targetApp: targetApp)
+            let insertElapsed = CFAbsoluteTimeGetCurrent() - insertStarted
+            Log.info("[VoicePipeline] insert stage finished in \(String(format: "%.2f", insertElapsed))s")
 
             let wasProcessed = settings.outputMode == .processed || settings.outputMode == .command
             InputHistory.shared.addRecord(rawText: raw, processedText: finalText, wasProcessed: wasProcessed)
@@ -265,12 +309,85 @@ final class VoicePipeline {
     func unloadLLM() {
         processingTask?.cancel()
         processingTask = nil
+        replacementTask?.cancel()
+        replacementTask = nil
+        appState.clearPendingReplacement()
         if appState.phase == .processing {
             appState.phase = .idle
             appState.statusMessage = L("status.ready")
         }
         appState.llmModelReady = false
         Task { await textProcessor.unloadLLM() }
+    }
+
+    func refreshPendingReplacement() {
+        guard var replacement = appState.pendingReplacement else { return }
+        guard replacement.state == .ready, Date() >= replacement.expiresAt else { return }
+        replacement.state = .expired
+        replacement.message = L("pipeline.replacement_expired")
+        appState.pendingReplacement = replacement
+    }
+
+    func applyPendingReplacement() async {
+        refreshPendingReplacement()
+
+        guard var replacement = appState.pendingReplacement else { return }
+        let decision = DeferredReplacementPolicy.decision(
+            for: replacement,
+            currentBundleIdentifier: NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        )
+
+        switch decision {
+        case .replace:
+            guard let formattedText = replacement.formattedText else { return }
+            guard let targetApp = replacement.targetApplication else {
+                TextInserter.copyToClipboard(formattedText)
+                replacement.state = .copied
+                replacement.message = replacementCopyMessage(for: .missingTarget)
+                appState.pendingReplacement = replacement
+                return
+            }
+
+            appState.phase = .inserting
+            appState.statusMessage = L("pipeline.replacing")
+
+            let result = await textInserter.replaceRecentInsertion(
+                text: formattedText,
+                targetApp: targetApp
+            )
+
+            if case .probablyFailed = result {
+                TextInserter.copyToClipboard(formattedText)
+                replacement.state = .copied
+                replacement.message = L("pipeline.replacement_copied_failed")
+                appState.pendingReplacement = replacement
+                appState.phase = .done
+                appState.statusMessage = L("status.done")
+                return
+            }
+
+            appState.processedText = formattedText
+            appState.lastInsertedText = formattedText
+            InputHistory.shared.replaceLatestRecord(
+                rawText: replacement.rawText,
+                processedText: formattedText,
+                wasProcessed: true
+            )
+            appState.clearPendingReplacement()
+            appState.phase = .done
+            appState.statusMessage = L("status.done")
+        case .copy(let reason):
+            guard reason != .notReady else {
+                replacement.message = L("pipeline.replacement_not_ready")
+                appState.pendingReplacement = replacement
+                return
+            }
+            guard let formattedText = replacement.formattedText else { return }
+            TextInserter.copyToClipboard(formattedText)
+            replacement.state = .copied
+            replacement.message = replacementCopyMessage(for: reason)
+            appState.pendingReplacement = replacement
+        }
     }
 
     func loadLLM() {
@@ -408,6 +525,117 @@ final class VoicePipeline {
         appState.phase = .idle
         appState.statusMessage = L("status.ready")
         overlay.hide()
+    }
+
+    private func handleDeferredSmartFormat(
+        raw: String,
+        settings: AppSettings,
+        targetApp: NSRunningApplication?
+    ) async {
+        let quickText = immediateInsertText(from: raw, settings: settings)
+        let ocrTask = screenOCRTask
+        let ocrStartedAt = screenOCRStartedAt
+        screenOCRTask = nil
+        screenOCRStartedAt = nil
+
+        appState.processedText = quickText
+        appState.phase = .inserting
+        appState.statusMessage = L("pipeline.inserting")
+
+        Log.sensitive("[VoicePipeline] instant insert \(quickText.count) chars")
+        let insertStarted = CFAbsoluteTimeGetCurrent()
+        let insertResult = await textInserter.insert(text: quickText, targetApp: targetApp)
+        let insertElapsed = CFAbsoluteTimeGetCurrent() - insertStarted
+        Log.info("[VoicePipeline] instant insert stage finished in \(String(format: "%.2f", insertElapsed))s")
+
+        InputHistory.shared.addRecord(rawText: raw, processedText: quickText, wasProcessed: false)
+        appState.lastInsertedText = quickText
+        appState.phase = .done
+        appState.statusMessage = L("status.done")
+        hideOverlayAfterDelay()
+
+        if case .probablyFailed(let reason) = insertResult {
+            Log.info("[VoicePipeline] instant insertion probably failed: \(reason)")
+            TextInserter.copyToClipboard(quickText)
+            showInsertionFailedAlert(text: quickText, reason: reason)
+            return
+        }
+
+        let replacement = DeferredReplacement(
+            rawText: raw,
+            insertedText: quickText,
+            targetApp: targetApp,
+            message: L("pipeline.background_formatting")
+        )
+        appState.pendingReplacement = replacement
+
+        replacementTask?.cancel()
+        replacementTask = Task { @MainActor [weak self] in
+            await self?.finishDeferredSmartFormat(
+                replacementID: replacement.id,
+                raw: raw,
+                settings: settings,
+                ocrTask: ocrTask,
+                ocrStartedAt: ocrStartedAt
+            )
+        }
+    }
+
+    private func finishDeferredSmartFormat(
+        replacementID: UUID,
+        raw: String,
+        settings: AppSettings,
+        ocrTask: Task<String, Never>?,
+        ocrStartedAt: CFAbsoluteTime?
+    ) async {
+        let formattingStarted = CFAbsoluteTimeGetCurrent()
+        let screenContext = await ocrTask?.value ?? ""
+        if let ocrStartedAt {
+            let ocrElapsed = CFAbsoluteTimeGetCurrent() - ocrStartedAt
+            Log.info("[VoicePipeline] OCR stage finished in \(String(format: "%.2f", ocrElapsed))s")
+        }
+
+        guard !Task.isCancelled else { return }
+
+        let formattedText = await textProcessor.process(
+            text: raw,
+            stylePrompt: settings.customStylePrompt,
+            model: settings.llmModel,
+            screenContext: screenContext,
+            memoryContext: ""
+        )
+        let formattingElapsed = CFAbsoluteTimeGetCurrent() - formattingStarted
+        appState.lastFormattingDurationSeconds = formattingElapsed
+        Log.info("[VoicePipeline] Smart Format completed in \(String(format: "%.2f", formattingElapsed))s")
+
+        guard !Task.isCancelled else { return }
+        guard var replacement = appState.pendingReplacement, replacement.id == replacementID else { return }
+
+        replacement.formattedText = formattedText
+        replacement.state = .ready
+        replacement.message = L("pipeline.formatted_ready")
+        appState.pendingReplacement = replacement
+    }
+
+    private func immediateInsertText(from raw: String, settings: AppSettings) -> String {
+        let cleaned = textProcessor.preCleanForFormatting(text: raw, inputLanguage: settings.inputLanguage)
+        let fallback = textProcessor.basicClean(text: raw)
+        if !cleaned.isEmpty { return cleaned }
+        if !fallback.isEmpty { return fallback }
+        return raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func replacementCopyMessage(for reason: DeferredReplacementCopyReason) -> String {
+        switch reason {
+        case .expired:
+            return L("pipeline.replacement_copied_expired")
+        case .missingTarget:
+            return L("pipeline.replacement_copied_missing_target")
+        case .appChanged:
+            return L("pipeline.replacement_copied_app_changed")
+        case .notReady:
+            return L("pipeline.replacement_not_ready")
+        }
     }
 
     private func hideOverlayAfterDelay() {

@@ -222,6 +222,7 @@ final class AppSettings: ObservableObject {
     @Published var playSounds: Bool
     @Published var inputLanguage: InputLanguage
     @Published var useScreenContext: Bool
+    @Published var enableInstantInsert: Bool
     @Published var hasCompletedOnboarding: Bool
     @Published var uiLanguage: UILanguage
     @Published var historyRetention: HistoryRetention
@@ -248,7 +249,7 @@ final class AppSettings: ObservableObject {
     private enum Key: String {
         case hotkeyType, activationMode, tapInterval, speechEngine, whisperModel, llmModel
         case microphoneID, outputMode, languageStyle, customStylePrompt, playSounds
-        case inputLanguage, useScreenContext, hasCompletedOnboarding, uiLanguage, historyRetention
+        case inputLanguage, useScreenContext, enableInstantInsert, hasCompletedOnboarding, uiLanguage, historyRetention
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
@@ -270,7 +271,7 @@ final class AppSettings: ObservableObject {
             ?? (savedEngine.contains("Whisper") || savedEngine.contains("whisper") ? .whisper : nil)
             ?? .apple
         whisperModel = ud.string(forKey: Key.whisperModel.rawValue) ?? "large-v3"
-        llmModel = ud.string(forKey: Key.llmModel.rawValue) ?? "mlx-community/Qwen3-0.6B-4bit"
+        llmModel = ud.string(forKey: Key.llmModel.rawValue) ?? "mlx-community/Qwen3.5-2B-4bit"
         microphoneID = ud.string(forKey: Key.microphoneID.rawValue)
         let savedOutput = ud.string(forKey: Key.outputMode.rawValue) ?? ""
         outputMode = OutputMode(rawValue: savedOutput)
@@ -286,7 +287,8 @@ final class AppSettings: ObservableObject {
         }
         playSounds = ud.object(forKey: Key.playSounds.rawValue) as? Bool ?? true
         inputLanguage = InputLanguage(rawValue: ud.string(forKey: Key.inputLanguage.rawValue) ?? "") ?? .chinese
-        useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? true
+        useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? false
+        enableInstantInsert = ud.object(forKey: Key.enableInstantInsert.rawValue) as? Bool ?? false
         hasCompletedOnboarding = ud.bool(forKey: Key.hasCompletedOnboarding.rawValue)
         uiLanguage = UILanguage(rawValue: ud.string(forKey: Key.uiLanguage.rawValue) ?? "") ?? .chinese
         historyRetention = HistoryRetention(rawValue: ud.string(forKey: Key.historyRetention.rawValue) ?? "") ?? .forever
@@ -324,6 +326,7 @@ final class AppSettings: ObservableObject {
         $playSounds.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.playSounds.rawValue) }.store(in: &cancellables)
         $inputLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.inputLanguage.rawValue) }.store(in: &cancellables)
         $useScreenContext.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useScreenContext.rawValue) }.store(in: &cancellables)
+        $enableInstantInsert.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableInstantInsert.rawValue) }.store(in: &cancellables)
         $hasCompletedOnboarding.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.hasCompletedOnboarding.rawValue) }.store(in: &cancellables)
         $uiLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue) }.store(in: &cancellables)
         $historyRetention.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.historyRetention.rawValue) }.store(in: &cancellables)
