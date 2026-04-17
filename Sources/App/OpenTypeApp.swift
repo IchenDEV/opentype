@@ -51,12 +51,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         let contentView = MenuBarView(
             onOpenSettings: { [weak self] in self?.openSettings() },
+            onApplyPendingReplacement: { [weak self] in
+                Task { @MainActor in
+                    await self?.applyPendingReplacement()
+                }
+            },
             onQuit: { NSApp.terminate(nil) }
         )
         .environmentObject(appState)
         .environmentObject(AppSettings.shared)
 
-        popover.contentSize = NSSize(width: 260, height: 160)
+        popover.contentSize = NSSize(width: 280, height: 220)
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: contentView)
     }
@@ -170,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             popover.performClose(nil)
         } else {
             savePreviousApp()
+            pipeline?.refreshPendingReplacement()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
@@ -189,6 +195,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func stopRecording() {
         Task { await pipeline?.stop(targetApp: previousApp) }
+    }
+
+    private func applyPendingReplacement() async {
+        await pipeline?.applyPendingReplacement()
     }
 
     // MARK: - Onboarding

@@ -62,14 +62,21 @@ final class ConfigurationTests: XCTestCase {
     }
 
     func testLanguageStyleStaticMetadata() {
-        XCTAssertEqual(LanguageStyle.concise.icon, "scissors")
-        XCTAssertEqual(LanguageStyle.formal.icon, "doc.text")
         XCTAssertEqual(LanguageStyle.professional.icon, "list.number")
         XCTAssertEqual(LanguageStyle.casual.icon, "bubble.left")
+        XCTAssertEqual(LanguageStyle.custom.icon, "slider.horizontal.3")
+    }
+
+    func testRecommendedLocalModelRemainsListed() {
+        XCTAssertTrue(ModelCatalog.defaultLLMModels.contains { $0.0 == "mlx-community/Qwen3.5-2B-4bit" })
     }
 
     func testUILanguageDisplayNames() {
         XCTAssertEqual(UILanguage.chinese.displayName, "中文")
         XCTAssertEqual(UILanguage.english.displayName, "English")
+    }
+
+    func testInstantInsertDefaultsOff() {
+        XCTAssertFalse(AppSettings.shared.enableInstantInsert)
     }
 }

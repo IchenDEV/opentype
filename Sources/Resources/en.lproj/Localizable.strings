@@ -41,9 +41,18 @@
 "pipeline.transcribing" = "Transcribing…";
 "pipeline.formatting" = "Formatting…";
 "pipeline.inserting" = "Inserting…";
+"pipeline.replacing" = "Replacing…";
 "pipeline.error_prefix" = "Error: ";
 "pipeline.whisper_unloaded" = "Whisper unloaded";
 "pipeline.llm_unloaded" = "LLM unloaded";
+"pipeline.background_formatting" = "Inserted quickly. Formatting in background…";
+"pipeline.formatted_ready" = "Formatted version ready";
+"pipeline.replacement_not_ready" = "Formatted version is still on the way";
+"pipeline.replacement_expired" = "Replace window expired. You can still copy the formatted text.";
+"pipeline.replacement_copied_expired" = "Replace window expired. The formatted text was copied instead.";
+"pipeline.replacement_copied_missing_target" = "Could not find the original app. The formatted text was copied instead.";
+"pipeline.replacement_copied_app_changed" = "You switched apps. The formatted text was copied instead.";
+"pipeline.replacement_copied_failed" = "Could not safely replace the text. The formatted text was copied instead.";
 "pipeline.preparing_model" = "Preparing speech model…";
 "pipeline.downloading" = "Downloading";
 "pipeline.compiling" = "Compiling model (2-5 min on first run)…";
@@ -61,6 +70,7 @@
 "menubar.listening" = "Listening…";
 "menubar.hold" = "Hold";
 "menubar.toggle" = "Toggle";
+"menubar.replace_formatted" = "Replace";
 
 /* ── Settings ── */
 "settings.activation" = "Activation";
@@ -73,6 +83,8 @@
 "settings.tap_interval" = "Double-tap interval";
 "settings.output" = "Output";
 "settings.output_mode" = "Output mode";
+"settings.instant_insert" = "Insert quickly, format in background";
+"settings.instant_insert_help" = "Only applies to Smart Format. Insert a locally cleaned draft first, then let you replace it with the formatted version.";
 "settings.memory" = "Memory";
 "settings.enable_memory" = "Enable input memory";
 "settings.memory_window" = "Memory window";
@@ -124,18 +136,20 @@
 "model.active" = "Active";
 "model.use" = "Use";
 "model.benchmark" = "Benchmark";
+"model.last_formatting" = "Recent Smart Format";
+"model.last_formatting_value" = "%.2fs";
 "model.compiling" = "Compiling…";
 "model.loading" = "Loading…";
 "model.smallest" = "Smallest, fastest ~335 MB";
 "model.balanced" = "Balanced ~1 GB";
 "model.best_quality" = "Best quality ~2.3 GB";
-"model.qwen3_fast" = "Qwen3, fast ~335 MB";
+"model.qwen3_fast" = "Fastest, weaker cleanup ~335 MB";
 "model.qwen3_balanced" = "Qwen3, balanced ~1 GB";
 "model.qwen3_quality" = "Qwen3, best quality ~2.3 GB";
 "model.qwen3_moe" = "Qwen3 MoE flagship, recommended ~5 GB";
 "model.qwen35_tiny" = "Qwen3.5, fastest ~620 MB";
-"model.qwen35_fast" = "Qwen3.5, fast ~1.5 GB";
-"model.qwen35_quality" = "Qwen3.5, best quality 5-bit ~5.5 GB";
+"model.qwen35_fast" = "Recommended for Smart Format ~1.5 GB";
+"model.qwen35_quality" = "Best quality cleanup 5-bit ~5.5 GB";
 "model.qwen35_moe" = "Qwen3.5 MoE flagship ~6 GB";
 "model.gemma_fast" = "Gemma 3, fast ~600 MB";
 "model.gemma_balanced" = "Gemma 3, balanced ~2.5 GB";

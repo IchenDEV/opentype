@@ -10,8 +10,18 @@ struct InputRecord: Codable, Identifiable {
     let wasProcessed: Bool
 
     init(rawText: String, processedText: String, wasProcessed: Bool) {
-        self.id = UUID()
-        self.date = Date()
+        self.init(
+            id: UUID(),
+            date: Date(),
+            rawText: rawText,
+            processedText: processedText,
+            wasProcessed: wasProcessed
+        )
+    }
+
+    init(id: UUID, date: Date, rawText: String, processedText: String, wasProcessed: Bool) {
+        self.id = id
+        self.date = date
         self.rawText = rawText
         self.processedText = processedText
         self.rawCharCount = rawText.count
@@ -60,6 +70,22 @@ final class InputHistory: ObservableObject {
             records = Array(records.prefix(Self.maxRecords))
         }
         pruneExpired()
+        save()
+    }
+
+    func replaceLatestRecord(rawText: String, processedText: String, wasProcessed: Bool) {
+        guard let latest = records.first, latest.rawText == rawText else {
+            addRecord(rawText: rawText, processedText: processedText, wasProcessed: wasProcessed)
+            return
+        }
+
+        records[0] = InputRecord(
+            id: latest.id,
+            date: latest.date,
+            rawText: rawText,
+            processedText: processedText,
+            wasProcessed: wasProcessed
+        )
         save()
     }
 

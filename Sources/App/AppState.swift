@@ -25,6 +25,8 @@ final class AppState: ObservableObject {
     @Published var downloadSpeedText: String = ""
     @Published var statusMessage: String = L("status.ready")
     @Published var lastInsertedText: String = ""
+    @Published var lastFormattingDurationSeconds: Double = 0
+    @Published var pendingReplacement: DeferredReplacement?
 
     let settings = AppSettings.shared
 
@@ -44,5 +46,10 @@ final class AppState: ObservableObject {
         processedText = ""
         audioLevel = 0
         statusMessage = L("status.ready")
+        pendingReplacement = nil
+    }
+
+    func clearPendingReplacement() {
+        pendingReplacement = nil
     }
 }

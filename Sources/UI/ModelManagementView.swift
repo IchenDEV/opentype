@@ -117,6 +117,16 @@ struct ModelManagementView: View {
             Label(L("model.text_formatting"), systemImage: "brain")
                 .font(.headline)
 
+            if appState.lastFormattingDurationSeconds > 0 {
+                HStack(spacing: 8) {
+                    Text(L("model.last_formatting"))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Text(String(format: L("model.last_formatting_value"), appState.lastFormattingDurationSeconds))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                }
+            }
+
             // Model Family Picker
             VStack(alignment: .leading, spacing: 8) {
                 Text(L("model.family.title"))

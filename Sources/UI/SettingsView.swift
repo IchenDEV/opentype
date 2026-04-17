@@ -54,6 +54,11 @@ struct SettingsView: View {
                 Picker(L("settings.recognition_language"), selection: $settings.inputLanguage) {
                     ForEach(InputLanguage.allCases, id: \.self) { Text($0.rawValue) }
                 }
+                Toggle(isOn: $settings.enableInstantInsert) {
+                    Text(L("settings.instant_insert"))
+                }
+                .help(L("settings.instant_insert_help"))
+                .disabled(settings.outputMode != .processed)
             }
 
             Section(L("settings.audio")) {
