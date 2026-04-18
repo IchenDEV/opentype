@@ -7,6 +7,7 @@ final class AudioCaptureManager {
     private var audioFile: AVAudioFile?
     private(set) var lastRecordingURL: URL?
     private var levelCallback: ((Float) -> Void)?
+    private var bufferCallback: ((AVAudioPCMBuffer) -> Void)?
 
     private var isRunning = false
 
@@ -17,10 +18,15 @@ final class AudioCaptureManager {
     }
 
     @discardableResult
-    func start(deviceID: String?, levelUpdate: @escaping (Float) -> Void) -> Bool {
+    func start(
+        deviceID: String?,
+        levelUpdate: @escaping (Float) -> Void,
+        bufferUpdate: ((AVAudioPCMBuffer) -> Void)? = nil
+    ) -> Bool {
         if isRunning { stop() }
         cleanupLastRecording()
         levelCallback = levelUpdate
+        bufferCallback = bufferUpdate
 
         let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         guard authStatus == .authorized else {
@@ -61,6 +67,14 @@ final class AudioCaptureManager {
 
             let level = self.calculateRMS(buffer: buffer)
             self.levelCallback?(level)
+
+            if let bufferCallback = self.bufferCallback {
+                if let copiedBuffer = buffer.copied() {
+                    bufferCallback(copiedBuffer)
+                } else {
+                    Log.error("[AudioCapture] unsupported format \(buffer.format.commonFormat.rawValue); dropping streaming buffer")
+                }
+            }
         }
 
         engine.prepare()
@@ -82,6 +96,7 @@ final class AudioCaptureManager {
         engine.stop()
         audioFile = nil
         levelCallback = nil
+        bufferCallback = nil
         isRunning = false
     }
 

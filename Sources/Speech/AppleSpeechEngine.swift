@@ -2,12 +2,19 @@ import Foundation
 @preconcurrency import Speech
 import AVFoundation
 
-final class AppleSpeechEngine: SpeechEngine {
+final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
     private var recognizer: SFSpeechRecognizer
     private(set) var isReady = false
+    private var recognitionTask: SFSpeechRecognitionTask?
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var bestSoFar = ""
+    private var finishContinuation: CheckedContinuation<String, Error>?
+    private let stateQueue = DispatchQueue(label: "opentype.apple-speech")
 
     /// Maximum time (seconds) to wait for the recognition task to deliver a final result.
-    private static let timeoutSeconds: TimeInterval = 120
+    /// `SFSpeechRecognizer` on-device buffer recognition enforces its own ~1 min limit,
+    /// so waiting longer than that buys nothing.
+    private static let timeoutSeconds: TimeInterval = 60
 
     init(locale: Locale = Locale(identifier: "zh-CN")) {
         recognizer = SFSpeechRecognizer(locale: locale)
@@ -18,7 +25,7 @@ final class AppleSpeechEngine: SpeechEngine {
         isReady = (status == .authorized)
     }
 
-    func startListening() {}
+    var supportsStreaming: Bool { true }
 
     func requestAccess() {
         guard SFSpeechRecognizer.authorizationStatus() != .authorized else {
@@ -28,6 +35,90 @@ final class AppleSpeechEngine: SpeechEngine {
         SFSpeechRecognizer.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
                 self?.isReady = (status == .authorized)
+            }
+        }
+    }
+
+    func startListening(language: String?, onPartialResult: @escaping @Sendable (String) -> Void) {
+        configureRecognizer(language: language)
+
+        stateQueue.sync {
+            self.teardownLocked()
+
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            request.taskHint = .dictation
+            if #available(macOS 16, *) {
+                request.addsPunctuation = true
+            }
+
+            self.bestSoFar = ""
+            self.recognitionRequest = request
+            self.recognitionTask = self.recognizer.recognitionTask(with: request) { [weak self] result, error in
+                guard let self else { return }
+                self.stateQueue.async {
+                    if let result {
+                        let text = result.bestTranscription.formattedString
+                        self.bestSoFar = text
+                        onPartialResult(text)
+                        if result.isFinal {
+                            self.resolveStreamingContinuationLocked(.success(text))
+                        }
+                    }
+
+                    if let error {
+                        if self.bestSoFar.isEmpty {
+                            self.resolveStreamingContinuationLocked(.failure(error))
+                        } else {
+                            Log.info("[AppleSpeech] task ended with error but has partial: \(error.localizedDescription)")
+                            self.resolveStreamingContinuationLocked(.success(self.bestSoFar))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func appendAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+        stateQueue.async {
+            self.recognitionRequest?.append(buffer)
+        }
+    }
+
+    func finishListening(audioURL: URL?, language: String?) async throws -> String {
+        let hasLiveRequest = stateQueue.sync { self.recognitionRequest != nil }
+        if !hasLiveRequest {
+            return try await transcribe(audioURL: audioURL, language: language)
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            stateQueue.async {
+                self.finishContinuation = continuation
+                self.recognitionRequest?.endAudio()
+            }
+
+            DispatchQueue.global().asyncAfter(deadline: .now() + Self.timeoutSeconds) { [weak self] in
+                guard let self else { return }
+                self.stateQueue.async {
+                    guard self.finishContinuation != nil else { return }
+                    self.recognitionTask?.cancel()
+                    let text = self.bestSoFar
+                    self.resolveStreamingContinuationLocked(.success(text))
+                    Log.info("[AppleSpeech] timeout after \(Self.timeoutSeconds)s, returning partial (\(text.count) chars)")
+                }
+            }
+        }
+    }
+
+    func cancelListening() {
+        stateQueue.sync {
+            self.recognitionRequest?.endAudio()
+            self.recognitionTask?.cancel()
+            if self.finishContinuation != nil {
+                self.resolveStreamingContinuationLocked(.success(self.bestSoFar))
+            } else {
+                self.recognitionTask = nil
+                self.recognitionRequest = nil
             }
         }
     }
@@ -43,19 +134,7 @@ final class AppleSpeechEngine: SpeechEngine {
             guard isReady else { throw AppleSpeechError.notAuthorized }
         }
 
-        if let lang = language {
-            let localeId: String
-            switch lang {
-            case "zh": localeId = "zh-CN"
-            case "ja": localeId = "ja-JP"
-            case "ko": localeId = "ko-KR"
-            case "yue": localeId = "zh-HK"
-            default: localeId = "en-US"
-            }
-            if let newRecognizer = SFSpeechRecognizer(locale: Locale(identifier: localeId)) {
-                recognizer = newRecognizer
-            }
-        }
+        configureRecognizer(language: language)
 
         return try await withCheckedThrowingContinuation { continuation in
             let request = SFSpeechURLRecognitionRequest(url: url)
@@ -99,6 +178,46 @@ final class AppleSpeechEngine: SpeechEngine {
                 continuation.resume(returning: bestSoFar)
             }
         }
+    }
+
+    private func configureRecognizer(language: String?) {
+        guard let language else { return }
+        let localeId: String
+        switch language {
+        case "zh": localeId = "zh-CN"
+        case "ja": localeId = "ja-JP"
+        case "ko": localeId = "ko-KR"
+        case "yue": localeId = "zh-HK"
+        default: localeId = "en-US"
+        }
+
+        if let newRecognizer = SFSpeechRecognizer(locale: Locale(identifier: localeId)) {
+            recognizer = newRecognizer
+        }
+    }
+
+    /// Must be called on `stateQueue`.
+    private func resolveStreamingContinuationLocked(_ result: Result<String, Error>) {
+        let continuation = finishContinuation
+        finishContinuation = nil
+        recognitionTask = nil
+        recognitionRequest = nil
+
+        switch result {
+        case .success(let text):
+            continuation?.resume(returning: text)
+        case .failure(let error):
+            continuation?.resume(throwing: error)
+        }
+    }
+
+    /// Must be called on `stateQueue`. Tears down any in-flight task without
+    /// touching `finishContinuation` — use this before starting a fresh session.
+    private func teardownLocked() {
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
     }
 
 }
