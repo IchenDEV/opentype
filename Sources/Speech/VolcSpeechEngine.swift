@@ -476,6 +476,13 @@ private final class VolcStreamingSession: @unchecked Sendable {
     private let partialHandler: @Sendable (String) -> Void
     private let queue = DispatchQueue(label: "opentype.volc-stream")
 
+    /// int16 PCM at 16 kHz mono → 32_000 bytes per second.
+    /// Cap each partial transcription at the trailing ~15 s so cost per
+    /// update does not scale with total recording length. The final
+    /// transcription on finish() still covers the full buffer.
+    private static let partialWindowBytes = 15 * 16_000 * 2
+    private static let minPartialBytes = 32_000   // at least ~1 s before first partial
+
     private var converter: RealtimeAudioConverter?
     private var pcmData = Data()
     private var latestText = ""
@@ -545,8 +552,13 @@ private final class VolcStreamingSession: @unchecked Sendable {
     }
 
     private func startPartialTaskIfNeeded() {
-        guard !closed, activeTask == nil, pcmData.count >= 32_000 else { return }
-        let snapshot = pcmData
+        guard !closed, activeTask == nil, pcmData.count >= Self.minPartialBytes else { return }
+        let snapshot: Data
+        if pcmData.count > Self.partialWindowBytes {
+            snapshot = Data(pcmData.suffix(Self.partialWindowBytes))
+        } else {
+            snapshot = pcmData
+        }
         activeTask = Task(priority: .utility) { [engine, language] in
             try await engine.transcribePCMData(snapshot, language: language)
         }

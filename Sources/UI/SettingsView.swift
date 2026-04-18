@@ -70,7 +70,6 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .help(L("settings.streaming_beta_help"))
             }
 
             Section(L("settings.audio")) {

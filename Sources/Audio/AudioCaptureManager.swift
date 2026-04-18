@@ -67,8 +67,13 @@ final class AudioCaptureManager {
 
             let level = self.calculateRMS(buffer: buffer)
             self.levelCallback?(level)
-            if let copiedBuffer = buffer.copied() {
-                self.bufferCallback?(copiedBuffer)
+
+            if let bufferCallback = self.bufferCallback {
+                if let copiedBuffer = buffer.copied() {
+                    bufferCallback(copiedBuffer)
+                } else {
+                    Log.error("[AudioCapture] unsupported format \(buffer.format.commonFormat.rawValue); dropping streaming buffer")
+                }
             }
         }
 
