@@ -176,7 +176,6 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         guard let whisperKit, isReady else { return }
         streamingSession = WhisperStreamingSession(
             whisperKit: whisperKit,
-            language: language,
             partialHandler: onPartialResult,
             optionsBuilder: { [weak self] in
                 self?.decodingOptions(language: language) ?? DecodingOptions()
@@ -259,6 +258,12 @@ private final class WhisperStreamingSession: @unchecked Sendable {
     private let optionsBuilder: () -> DecodingOptions
     private let queue = DispatchQueue(label: "opentype.whisper-stream")
 
+    /// Float32 at 16 kHz mono → one sample per ~62.5 µs.
+    /// Cap each partial transcription at the trailing ~15 s so cost per
+    /// update does not scale with total recording length. finish() still
+    /// transcribes the full sample buffer.
+    private static let partialWindowSamples = 15 * 16_000
+
     private var converter: RealtimeAudioConverter?
     private var samples: [Float] = []
     private var latestText = ""
@@ -268,14 +273,12 @@ private final class WhisperStreamingSession: @unchecked Sendable {
 
     init(
         whisperKit: WhisperKit,
-        language: String?,
         partialHandler: @escaping @Sendable (String) -> Void,
         optionsBuilder: @escaping () -> DecodingOptions
     ) {
         self.whisperKit = whisperKit
         self.partialHandler = partialHandler
         self.optionsBuilder = optionsBuilder
-        let _ = language
     }
 
     func append(_ buffer: AVAudioPCMBuffer) {
@@ -340,7 +343,12 @@ private final class WhisperStreamingSession: @unchecked Sendable {
 
     private func startPartialTaskIfNeeded() {
         guard !closed, activeTask == nil, samples.count >= WhisperKit.sampleRate else { return }
-        let snapshot = samples
+        let snapshot: [Float]
+        if samples.count > Self.partialWindowSamples {
+            snapshot = Array(samples.suffix(Self.partialWindowSamples))
+        } else {
+            snapshot = samples
+        }
         activeTask = Task(priority: .utility) { [whisperKit, optionsBuilder] in
             let results = try await whisperKit.transcribe(audioArray: snapshot, decodeOptions: optionsBuilder())
             return results

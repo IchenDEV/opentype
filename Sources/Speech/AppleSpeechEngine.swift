@@ -12,7 +12,9 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
     private let stateQueue = DispatchQueue(label: "opentype.apple-speech")
 
     /// Maximum time (seconds) to wait for the recognition task to deliver a final result.
-    private static let timeoutSeconds: TimeInterval = 120
+    /// `SFSpeechRecognizer` on-device buffer recognition enforces its own ~1 min limit,
+    /// so waiting longer than that buys nothing.
+    private static let timeoutSeconds: TimeInterval = 60
 
     init(locale: Locale = Locale(identifier: "zh-CN")) {
         recognizer = SFSpeechRecognizer(locale: locale)
@@ -39,46 +41,53 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
 
     func startListening(language: String?, onPartialResult: @escaping @Sendable (String) -> Void) {
         configureRecognizer(language: language)
-        cancelListening()
 
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.taskHint = .dictation
-        if #available(macOS 16, *) {
-            request.addsPunctuation = true
-        }
+        stateQueue.sync {
+            self.teardownLocked()
 
-        bestSoFar = ""
-        recognitionRequest = request
-        recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
-            guard let self else { return }
-
-            if let result {
-                let text = result.bestTranscription.formattedString
-                self.bestSoFar = text
-                onPartialResult(text)
-                if result.isFinal {
-                    self.finishStreaming(with: .success(text))
-                }
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            request.taskHint = .dictation
+            if #available(macOS 16, *) {
+                request.addsPunctuation = true
             }
 
-            if let error {
-                if self.bestSoFar.isEmpty {
-                    self.finishStreaming(with: .failure(error))
-                } else {
-                    Log.info("[AppleSpeech] task ended with error but has partial: \(error.localizedDescription)")
-                    self.finishStreaming(with: .success(self.bestSoFar))
+            self.bestSoFar = ""
+            self.recognitionRequest = request
+            self.recognitionTask = self.recognizer.recognitionTask(with: request) { [weak self] result, error in
+                guard let self else { return }
+                self.stateQueue.async {
+                    if let result {
+                        let text = result.bestTranscription.formattedString
+                        self.bestSoFar = text
+                        onPartialResult(text)
+                        if result.isFinal {
+                            self.resolveStreamingContinuationLocked(.success(text))
+                        }
+                    }
+
+                    if let error {
+                        if self.bestSoFar.isEmpty {
+                            self.resolveStreamingContinuationLocked(.failure(error))
+                        } else {
+                            Log.info("[AppleSpeech] task ended with error but has partial: \(error.localizedDescription)")
+                            self.resolveStreamingContinuationLocked(.success(self.bestSoFar))
+                        }
+                    }
                 }
             }
         }
     }
 
     func appendAudioBuffer(_ buffer: AVAudioPCMBuffer) {
-        recognitionRequest?.append(buffer)
+        stateQueue.async {
+            self.recognitionRequest?.append(buffer)
+        }
     }
 
     func finishListening(audioURL: URL?, language: String?) async throws -> String {
-        if recognitionRequest == nil {
+        let hasLiveRequest = stateQueue.sync { self.recognitionRequest != nil }
+        if !hasLiveRequest {
             return try await transcribe(audioURL: audioURL, language: language)
         }
 
@@ -94,7 +103,7 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
                     guard self.finishContinuation != nil else { return }
                     self.recognitionTask?.cancel()
                     let text = self.bestSoFar
-                    self.resolveStreamingContinuation(.success(text))
+                    self.resolveStreamingContinuationLocked(.success(text))
                     Log.info("[AppleSpeech] timeout after \(Self.timeoutSeconds)s, returning partial (\(text.count) chars)")
                 }
             }
@@ -102,14 +111,15 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
     }
 
     func cancelListening() {
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
-        recognitionTask = nil
-        recognitionRequest = nil
-
-        stateQueue.async {
-            guard self.finishContinuation != nil else { return }
-            self.resolveStreamingContinuation(.success(self.bestSoFar))
+        stateQueue.sync {
+            self.recognitionRequest?.endAudio()
+            self.recognitionTask?.cancel()
+            if self.finishContinuation != nil {
+                self.resolveStreamingContinuationLocked(.success(self.bestSoFar))
+            } else {
+                self.recognitionTask = nil
+                self.recognitionRequest = nil
+            }
         }
     }
 
@@ -186,13 +196,8 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
         }
     }
 
-    private func finishStreaming(with result: Result<String, Error>) {
-        stateQueue.async {
-            self.resolveStreamingContinuation(result)
-        }
-    }
-
-    private func resolveStreamingContinuation(_ result: Result<String, Error>) {
+    /// Must be called on `stateQueue`.
+    private func resolveStreamingContinuationLocked(_ result: Result<String, Error>) {
         let continuation = finishContinuation
         finishContinuation = nil
         recognitionTask = nil
@@ -204,6 +209,15 @@ final class AppleSpeechEngine: SpeechEngine, @unchecked Sendable {
         case .failure(let error):
             continuation?.resume(throwing: error)
         }
+    }
+
+    /// Must be called on `stateQueue`. Tears down any in-flight task without
+    /// touching `finishContinuation` — use this before starting a fresh session.
+    private func teardownLocked() {
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
     }
 
 }
