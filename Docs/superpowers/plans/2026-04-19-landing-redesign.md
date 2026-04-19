@@ -22,9 +22,9 @@ Files created or modified by this plan (paths reflect the **post-rename** layout
 - `docs/assets/styles.css` — **new**
 - `docs/assets/demo.js` — **new**
 - `docs/assets/email-mock.svg` — **new**
-- `docs/assets/demos/en-sample.mp3` — **new**
-- `docs/assets/demos/zh-sample.mp3` — **new**
-- `docs/assets/demos/voice-cmd-sample.mp3` — **new**
+- `docs/assets/demos/en-sample.m4a` — **new**
+- `docs/assets/demos/zh-sample.m4a` — **new**
+- `docs/assets/demos/voice-cmd-sample.m4a` — **new**
 - `docs/assets/demos/en-sample.json` — **new**
 - `docs/assets/demos/zh-sample.json` — **new**
 - `docs/assets/demos/voice-cmd-sample.json` — **new**
@@ -591,12 +591,12 @@ git commit -m "Add favicon and email-mock SVG assets"
 
 ### Task 4: Generate demo audio files with `say` + `afconvert`
 
-These are placeholder voices. They are committed to the repo so GitHub Pages can serve them.
+These are placeholder voices encoded as AAC in an MP4 container (`.m4a`). Committed to the repo so GitHub Pages can serve them. GitHub Pages maps `.m4a` to `audio/mp4`, which every modern browser plays via `<audio>`.
 
 **Files:**
-- Create: `docs/assets/demos/en-sample.mp3`
-- Create: `docs/assets/demos/zh-sample.mp3`
-- Create: `docs/assets/demos/voice-cmd-sample.mp3`
+- Create: `docs/assets/demos/en-sample.m4a`
+- Create: `docs/assets/demos/zh-sample.m4a`
+- Create: `docs/assets/demos/voice-cmd-sample.m4a`
 
 - [ ] **Step 1: Generate English sample via `say`**
 
@@ -605,32 +605,28 @@ say -v Samantha -r 170 -o /tmp/en-sample.aiff "hey so um, i wanted to— i wante
 ```
 Expected: `/tmp/en-sample.aiff` exists, ~200KB.
 
-- [ ] **Step 2: Convert to AAC in `.mp4` container (served as `audio/mp4`, small enough)**
-
-We use `afconvert` to get AAC. The file extension `.mp3` is kept so paths match the JSON; browsers identify by content, not extension. If an `.mp3` extension is strictly required by a future CDN, these commands can be replaced with `lame` — but for GitHub Pages, the served `Content-Type` doesn't depend on extension for `<audio src>`.
-
-> **Decision:** keep the `.mp3` filename in the spec/JSON, but the actual bytes are AAC-in-MP4 (what `afconvert` produces easily on macOS). All major browsers play it via `<audio>` regardless of extension. This avoids adding an `lame` dependency.
+- [ ] **Step 2: Convert to AAC-in-MP4 (`.m4a`)**
 
 ```bash
-afconvert -f mp4f -d aac -b 24000 -c 1 /tmp/en-sample.aiff docs/assets/demos/en-sample.mp3
+afconvert -f mp4f -d aac -b 24000 -c 1 /tmp/en-sample.aiff docs/assets/demos/en-sample.m4a
 ```
-Expected: `docs/assets/demos/en-sample.mp3` exists, < 80KB.
+Expected: `docs/assets/demos/en-sample.m4a` exists, < 80KB.
 
 - [ ] **Step 3: Generate Chinese sample**
 
 ```bash
 say -v Tingting -r 180 -o /tmp/zh-sample.aiff "那个，我想问一下，这个接口，呃，是不是周五之前能 review 一下"
-afconvert -f mp4f -d aac -b 24000 -c 1 /tmp/zh-sample.aiff docs/assets/demos/zh-sample.mp3
+afconvert -f mp4f -d aac -b 24000 -c 1 /tmp/zh-sample.aiff docs/assets/demos/zh-sample.m4a
 ```
-Expected: `docs/assets/demos/zh-sample.mp3` exists, < 80KB.
+Expected: `docs/assets/demos/zh-sample.m4a` exists, < 80KB.
 
 - [ ] **Step 4: Generate Voice Command sample**
 
 ```bash
 say -v Tingting -r 180 -o /tmp/voice-cmd-sample.aiff "总结一下屏幕上的内容"
-afconvert -f mp4f -d aac -b 24000 -c 1 /tmp/voice-cmd-sample.aiff docs/assets/demos/voice-cmd-sample.mp3
+afconvert -f mp4f -d aac -b 24000 -c 1 /tmp/voice-cmd-sample.aiff docs/assets/demos/voice-cmd-sample.m4a
 ```
-Expected: `docs/assets/demos/voice-cmd-sample.mp3` exists, < 60KB.
+Expected: `docs/assets/demos/voice-cmd-sample.m4a` exists, < 60KB.
 
 - [ ] **Step 5: Clean up temp files**
 
@@ -641,21 +637,21 @@ rm /tmp/en-sample.aiff /tmp/zh-sample.aiff /tmp/voice-cmd-sample.aiff
 - [ ] **Step 6: Verify total size**
 
 ```bash
-du -k docs/assets/demos/*.mp3
+du -k docs/assets/demos/*.m4a
 ```
 Expected: each < 80KB; total < 220KB.
 
 - [ ] **Step 7: Quick playback check**
 
 ```bash
-afinfo docs/assets/demos/en-sample.mp3 | head -5
+afinfo docs/assets/demos/en-sample.m4a | head -5
 ```
 Expected: "AAC", 1 channel, sample rate stated, duration ~7–9s.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add docs/assets/demos/*.mp3
+git add docs/assets/demos/*.m4a
 git commit -m "Add placeholder demo audio clips (en, zh, voice-cmd)"
 ```
 
@@ -675,7 +671,7 @@ Per-sample timestamp metadata drives the per-word reveal in the demo.
 ```json
 {
   "sampleId": "en",
-  "audio": "en-sample.mp3",
+  "audio": "en-sample.m4a",
   "verbatim": [
     { "w": "hey",    "t": 0.00 },
     { "w": "so",     "t": 0.35 },
@@ -705,7 +701,7 @@ Per-sample timestamp metadata drives the per-word reveal in the demo.
 ```json
 {
   "sampleId": "zh",
-  "audio": "zh-sample.mp3",
+  "audio": "zh-sample.m4a",
   "verbatim": [
     { "w": "那个",     "t": 0.00 },
     { "w": "我",       "t": 0.55 },
@@ -731,7 +727,7 @@ Per-sample timestamp metadata drives the per-word reveal in the demo.
 ```json
 {
   "sampleId": "voice-cmd",
-  "audio": "voice-cmd-sample.mp3",
+  "audio": "voice-cmd-sample.m4a",
   "verbatim": [
     { "w": "总结", "t": 0.30 },
     { "w": "一下", "t": 0.80 },
