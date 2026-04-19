@@ -333,10 +333,11 @@ h1.tagline {
 #install { text-align: center; }
 #install h2 { font-size: 32px; font-weight: 600; margin-bottom: 32px; letter-spacing: -0.02em; }
 .install-code {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 24px;
+  width: fit-content;
+  margin: 24px auto 0;
   padding: 8px 12px;
   background: var(--panel);
   border: 1px solid var(--separator);
