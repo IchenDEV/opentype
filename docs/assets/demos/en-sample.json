@@ -1,0 +1,25 @@
+{
+  "sampleId": "en",
+  "audio": "en-sample.m4a",
+  "verbatim": [
+    { "w": "hey",    "t": 0.00 },
+    { "w": "so",     "t": 0.30 },
+    { "w": "um",     "t": 0.55 },
+    { "w": "i",      "t": 1.00 },
+    { "w": "wanted", "t": 1.20 },
+    { "w": "to—",    "t": 1.55 },
+    { "w": "i",      "t": 1.95 },
+    { "w": "wanted", "t": 2.15 },
+    { "w": "to",     "t": 2.50 },
+    { "w": "follow", "t": 2.75 },
+    { "w": "up",     "t": 3.10 },
+    { "w": "on",     "t": 3.35 },
+    { "w": "the",    "t": 3.55 },
+    { "w": "design", "t": 3.75 },
+    { "w": "doc",    "t": 4.15 },
+    { "w": "we",     "t": 4.45 },
+    { "w": "talked", "t": 4.65 },
+    { "w": "about",  "t": 4.95 }
+  ],
+  "smart": "Hey, I wanted to follow up on the design doc we talked about."
+}
