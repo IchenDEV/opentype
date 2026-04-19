@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenType — Voice input for macOS</title>
+  <meta name="description" content="Speak. Your Mac types. Privacy-first voice input for the macOS menu bar — runs entirely on-device." />
+  <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme: dark)" />
+  <meta property="og:title" content="OpenType — Voice input for macOS" />
+  <meta property="og:description" content="Speak. Your Mac types. Privacy-first voice input that runs entirely on your Mac." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+  <nav class="top">
+    <div class="wrap">
+      <a href="#" class="nav-logo">OpenType</a>
+      <div class="nav-right">
+        <a class="btn" href="https://github.com/IchenDEV/opentype">GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/IchenDEV/opentype/releases/latest">Download</a>
+      </div>
+    </div>
+  </nav>
+
+  <section id="hero">
+    <div class="wrap">
+      <h1 class="tagline">Speak.<br/>Your Mac types.</h1>
+      <p class="sub">Voice input that lives in your menu bar. Hold a key, speak naturally — polished text appears at your cursor, entirely on-device.</p>
+
+      <div class="demo" role="region" aria-label="Live transcript demo">
+        <div class="demo-titlebar">
+          <div class="demo-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="mode-toggle" role="group" aria-label="Output mode">
+            <button type="button" data-mode="verbatim" aria-pressed="false">Verbatim</button>
+            <button type="button" data-mode="smart" aria-pressed="true">Smart Format</button>
+          </div>
+        </div>
+        <div class="demo-body">
+          <div class="waveform" aria-hidden="true">
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
+          </div>
+          <div class="transcript placeholder" aria-live="polite">
+            <span class="verbatim-text">Click play to see it transcribe.</span>
+            <div class="smart-result"></div>
+          </div>
+          <div class="demo-context" id="demo-context">
+            <span class="label">Screen context</span>
+            <img src="assets/email-mock.svg" alt="Fake email thumbnail showing flight confirmation"/>
+          </div>
+        </div>
+        <div class="demo-controls">
+          <button class="demo-play" id="demo-play" type="button">
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path fill="currentColor" d="M1 0v10l8-5z"/></svg>
+            <span id="demo-play-label">Play</span>
+          </button>
+          <div class="demo-samples" role="group" aria-label="Sample">
+            <button type="button" data-sample="en" aria-pressed="true">EN sample</button>
+            <button type="button" data-sample="zh" aria-pressed="false">ZH sample</button>
+            <button type="button" data-sample="voice-cmd" aria-pressed="false">Voice cmd</button>
+          </div>
+        </div>
+        <audio id="demo-audio" preload="auto" aria-hidden="true"></audio>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="three-beat">
+        <div class="beat">
+          <svg class="beat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/>
+          </svg>
+          <h3>Hold <span class="keycap">fn</span></h3>
+          <p>Press and hold your configured key — fn, ⌃, ⇧, or ⌥. Recording starts instantly.</p>
+        </div>
+        <div class="beat">
+          <svg class="beat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 11a7 7 0 0 0 14 0"/>
+            <path d="M12 18v4"/>
+            <path d="M8 22h8"/>
+          </svg>
+          <h3>Speak</h3>
+          <p>Talk like you would to a person. Audio never leaves your Mac.</p>
+        </div>
+        <div class="beat">
+          <svg class="beat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v18"/>
+            <path d="M9 3h6"/>
+            <path d="M9 21h6"/>
+          </svg>
+          <h3>Release</h3>
+          <p>Let go. Polished text appears at your cursor, in any app.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="privacy">
+        <div>
+          <strong>Nothing leaves your Mac.</strong>
+          <p>WhisperKit transcribes locally. MLX-Qwen refines locally. Audio is never uploaded, never stored.</p>
+        </div>
+        <svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="8" y="12" width="44" height="28" rx="3"/>
+          <path d="M4 44h52l-4 6H8z"/>
+          <rect x="24" y="22" width="12" height="10" rx="1"/>
+          <path d="M26 22v-3a4 4 0 0 1 8 0v3" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2 class="section-title">Under the hood</h2>
+      <dl class="tech-dl">
+        <dt>WhisperKit</dt><dd>Offline speech recognition</dd>
+        <dt>MLX-Swift-LM</dt><dd>On-device LLM inference</dd>
+        <dt>Swift 6</dt><dd>Native, no cross-platform wrappers</dd>
+        <dt>ScreenCaptureKit</dt><dd>Screen context via OCR</dd>
+        <dt>AVAudioEngine</dt><dd>Low-latency mic capture</dd>
+        <dt>Vision</dt><dd>On-device OCR for homophone correction</dd>
+      </dl>
+      <p class="requirements">
+        Runs on <strong>macOS 26+</strong> · <strong>Apple Silicon</strong> only · <strong>MIT licensed</strong>
+      </p>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Ready to try?</h2>
+      <a class="btn btn-primary btn-large" href="https://github.com/IchenDEV/opentype/releases/latest">
+        Download for macOS
+      </a>
+      <div class="install-code" id="install-code" role="button" tabindex="0" aria-label="Copy Gatekeeper command">
+        <code>xattr -cr /Applications/OpenType.app</code>
+        <span class="copy-label" id="copy-label">copy</span>
+      </div>
+      <p class="install-caption">Run once if macOS shows a Gatekeeper prompt.</p>
+      <p class="providers-line">
+        Works with OpenAI, Claude, Gemini, OpenRouter, SiliconFlow, Doubao, Bailian, MiniMax — or any OpenAI-compatible endpoint.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a href="https://github.com/IchenDEV/opentype">GitHub</a>
+      <a href="https://github.com/IchenDEV/opentype/releases">Releases</a>
+      <a href="https://github.com/IchenDEV/opentype/issues">Issues</a>
+      <a href="https://github.com/IchenDEV/opentype/blob/main/LICENSE">MIT</a>
+      <span>Built for Apple Silicon</span>
+    </div>
+  </footer>
+
+  <script src="assets/demo.js" defer></script>
+</body>
+</html>

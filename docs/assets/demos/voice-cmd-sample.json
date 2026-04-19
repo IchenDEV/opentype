@@ -1,0 +1,12 @@
+{
+  "sampleId": "voice-cmd",
+  "audio": "voice-cmd-sample.m4a",
+  "verbatim": [
+    { "w": "总结", "t": 0.20 },
+    { "w": "一下", "t": 0.55 },
+    { "w": "屏幕", "t": 0.90 },
+    { "w": "上的", "t": 1.30 },
+    { "w": "内容", "t": 1.70 }
+  ],
+  "smart": "This email is confirming your flight on Tuesday at 9 AM."
+}
