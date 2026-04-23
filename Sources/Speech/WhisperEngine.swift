@@ -190,7 +190,17 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
     func finishListening(audioURL: URL?, language: String?) async throws -> String {
         defer { streamingSession = nil }
         if let streamingSession {
-            return try await streamingSession.finish()
+            let outcome = await streamingSession.finishLivePreview()
+            return try await StreamingTranscriptResolver.resolveFinalTranscript(
+                engineName: "WhisperEngine",
+                audioURL: audioURL,
+                livePreviewText: outcome.livePreviewText,
+                metrics: outcome.metrics,
+                unitLabel: "samples"
+            ) { [weak self] in
+                guard let self else { return "" }
+                return try await self.transcribe(audioURL: audioURL, language: language)
+            }
         }
         return try await transcribe(audioURL: audioURL, language: language)
     }
@@ -249,124 +259,6 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
 
     private func dp(_ fraction: Double, stage: DownloadProgress.Stage) -> DownloadProgress {
         DownloadProgress(fraction: fraction, completedBytes: 0, totalBytes: 0, speedBytesPerSec: 0, stage: stage)
-    }
-}
-
-private final class WhisperStreamingSession: @unchecked Sendable {
-    private let whisperKit: WhisperKit
-    private let partialHandler: @Sendable (String) -> Void
-    private let optionsBuilder: () -> DecodingOptions
-    private let queue = DispatchQueue(label: "opentype.whisper-stream")
-
-    /// Float32 at 16 kHz mono → one sample per ~62.5 µs.
-    /// Cap each partial transcription at the trailing ~15 s so cost per
-    /// update does not scale with total recording length. finish() still
-    /// transcribes the full sample buffer.
-    private static let partialWindowSamples = 15 * 16_000
-
-    private var converter: RealtimeAudioConverter?
-    private var samples: [Float] = []
-    private var latestText = ""
-    private var pendingWorkItem: DispatchWorkItem?
-    private var activeTask: Task<String, Error>?
-    private var closed = false
-
-    init(
-        whisperKit: WhisperKit,
-        partialHandler: @escaping @Sendable (String) -> Void,
-        optionsBuilder: @escaping () -> DecodingOptions
-    ) {
-        self.whisperKit = whisperKit
-        self.partialHandler = partialHandler
-        self.optionsBuilder = optionsBuilder
-    }
-
-    func append(_ buffer: AVAudioPCMBuffer) {
-        queue.async {
-            guard !self.closed else { return }
-            if self.converter == nil {
-                self.converter = RealtimeAudioConverter(
-                    inputFormat: buffer.format,
-                    outputCommonFormat: .pcmFormatFloat32,
-                    interleaved: false
-                )
-            }
-
-            guard let converter = self.converter else { return }
-            guard let chunk = try? converter.convertToFloatArray(buffer), !chunk.isEmpty else { return }
-
-            self.samples.append(contentsOf: chunk)
-            self.schedulePartialUpdate()
-        }
-    }
-
-    func finish() async throws -> String {
-        let task = queue.sync { () -> Task<String, Error>? in
-            self.closed = true
-            self.pendingWorkItem?.cancel()
-            self.pendingWorkItem = nil
-            return self.activeTask
-        }
-        _ = try? await task?.value
-
-        let snapshot = queue.sync { self.samples }
-        guard !snapshot.isEmpty else { return "" }
-
-        let results = try await whisperKit.transcribe(
-            audioArray: snapshot,
-            decodeOptions: optionsBuilder()
-        )
-        return results
-            .compactMap { $0.text }
-            .joined(separator: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    func cancel() {
-        queue.sync {
-            self.closed = true
-            self.pendingWorkItem?.cancel()
-            self.pendingWorkItem = nil
-            self.activeTask?.cancel()
-            self.activeTask = nil
-        }
-    }
-
-    private func schedulePartialUpdate() {
-        pendingWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.startPartialTaskIfNeeded()
-        }
-        pendingWorkItem = workItem
-        queue.asyncAfter(deadline: .now() + 0.7, execute: workItem)
-    }
-
-    private func startPartialTaskIfNeeded() {
-        guard !closed, activeTask == nil, samples.count >= WhisperKit.sampleRate else { return }
-        let snapshot: [Float]
-        if samples.count > Self.partialWindowSamples {
-            snapshot = Array(samples.suffix(Self.partialWindowSamples))
-        } else {
-            snapshot = samples
-        }
-        activeTask = Task(priority: .utility) { [whisperKit, optionsBuilder] in
-            let results = try await whisperKit.transcribe(audioArray: snapshot, decodeOptions: optionsBuilder())
-            return results
-                .compactMap { $0.text }
-                .joined(separator: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        let task = activeTask
-        Task { [weak self] in
-            let text = (try? await task?.value) ?? ""
-            self?.queue.async {
-                self?.activeTask = nil
-                guard let self, !self.closed, !text.isEmpty, text != self.latestText else { return }
-                self.latestText = text
-                self.partialHandler(text)
-            }
-        }
     }
 }
 
