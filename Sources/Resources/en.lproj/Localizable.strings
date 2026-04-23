@@ -187,8 +187,8 @@
 "engine.volc_asr" = "Doubao ASR";
 "style.prompt.concise" = "Minimalist. Keep only core information, remove repetition and filler, break long sentences short.";
 "style.prompt.formal" = "Formal written style. Use proper wording, reduce colloquial tone, keep the text clear and well-formed.";
-"style.prompt.professional" = "Professional cleanup. Keep meaning complete, split when needed, and use numbered lists for multiple points.";
-"style.prompt.casual" = "Casual cleanup. Fix obvious typos and ASR errors, keep the natural tone, do not over-formalize.";
+"style.prompt.professional" = "Professional cleanup. Keep meaning complete and structure clear. Use numbered lists only when the raw text is clearly a list or action items.";
+"style.prompt.casual" = "Natural cleanup. Keep the tone easy, but actively fix obvious typos, homophones, and ASR mistakes without over-formalizing.";
 "style.prompt.custom" = "Format the text with my own rules: preserve meaning, fix obvious ASR mistakes, and add line breaks when useful.";
 
 /* ── Custom System Prompt ── */
