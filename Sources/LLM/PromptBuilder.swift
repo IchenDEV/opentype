@@ -24,6 +24,10 @@ enum PromptBuilder {
                 }
             } else {
                 parts.append(stylePromptSection(style: style, inputLanguage: inputLanguage))
+                let fewShots = styleFewShotSection(style: style, inputLanguage: inputLanguage)
+                if !fewShots.isEmpty {
+                    parts.append(fewShots)
+                }
             }
         }
 
@@ -74,16 +78,62 @@ enum PromptBuilder {
     private static func stylePromptSection(style: LanguageStyle, inputLanguage: InputLanguage) -> String {
         switch (inputLanguage, style) {
         case (.auto, .casual), (.chinese, .casual), (.cantonese, .casual):
-            return "风格：自然、直接，但仍要完成强整理。删除口头禅、重复和自我纠正残片，保留偏口语但不散乱。"
+            return "风格：自然、直接。保留口语感，但仍要主动修正明显错别字、同音词、断句和语序小问题；不要把明显识别错误原样留下，也不要过度书面化。"
         case (.auto, .professional), (.chinese, .professional), (.cantonese, .professional):
-            return "风格：专业整理。语义完整、措辞稳、结构清楚；多要点直接输出 1. 2. 3.，每项单独一行。"
+            return "风格：专业整理。语义完整、措辞稳、结构清楚，但优先保持自然段落和完整句子；只有原文明显是步骤、清单或待办时，才输出 1. 2. 3.。"
         case (.auto, .custom), (.chinese, .custom), (.cantonese, .custom):
             return ""
         case (.english, .professional), (.japanese, .professional), (.korean, .professional):
-            return "Style: professional cleanup. Keep the meaning complete, make the structure crisp, and use 1. 2. 3. for clear multi-point output."
+            return "Style: professional cleanup. Keep the meaning complete and the structure crisp, but prefer normal sentences and paragraphs. Use 1. 2. 3. only when the raw text is clearly a list, steps, or action items."
         case (.english, .casual), (.japanese, .casual), (.korean, .casual):
-            return "Style: natural and direct, but still do full cleanup. Remove fillers, repetition, and false starts while keeping an easy spoken tone."
+            return "Style: natural and direct. Keep an easy spoken tone, but still actively fix obvious typos, homophones, sentence breaks, and small wording mistakes. Do not leave clear ASR errors in place."
         case (.english, .custom), (.japanese, .custom), (.korean, .custom):
+            return ""
+        }
+    }
+
+    private static func styleFewShotSection(style: LanguageStyle, inputLanguage: InputLanguage) -> String {
+        switch (inputLanguage, style) {
+        case (.auto, .professional), (.chinese, .professional), (.cantonese, .professional):
+            return """
+            专业整理补充示例：
+            原文：今天有三件事第一把需求对齐第二把排期确认第三把预算更新一下
+            输出：
+            1. 把需求对齐。
+            2. 确认排期。
+            3. 更新预算。
+
+            原文：今天主要是把登录问题修掉然后回归一遍没问题的话明天发版
+            输出：今天主要是把登录问题修掉，然后回归一遍，没问题的话明天发版。
+
+            原文：这周重点一个是稳定注册流程一个是补完埋点最后把文档更新掉
+            输出：
+            1. 稳定注册流程。
+            2. 补完埋点。
+            3. 更新文档。
+            """
+        case (.english, .professional), (.japanese, .professional), (.korean, .professional):
+            return """
+            Professional cleanup examples:
+            Raw: there are three things today first align the requirements second confirm the schedule third update the budget
+            Output:
+            1. Align the requirements.
+            2. Confirm the schedule.
+            3. Update the budget.
+
+            Raw: today the main thing is fixing the login issue and then running regression and if that looks fine we'll ship tomorrow
+            Output: Today the main thing is fixing the login issue, then running regression, and if that looks fine, we'll ship tomorrow.
+
+            Raw: this week the priorities are stabilizing signup finishing the tracking work and updating the docs
+            Output:
+            1. Stabilize signup.
+            2. Finish the tracking work.
+            3. Update the docs.
+            """
+        case (.auto, .casual), (.chinese, .casual), (.cantonese, .casual),
+             (.auto, .custom), (.chinese, .custom), (.cantonese, .custom),
+             (.english, .casual), (.japanese, .casual), (.korean, .casual),
+             (.english, .custom), (.japanese, .custom), (.korean, .custom):
             return ""
         }
     }
@@ -97,7 +147,7 @@ enum PromptBuilder {
     - 合并自我纠正、重复起句、说到一半回改的残片
     - 修正明显 ASR 错字、同音词、专有名词
     - 补标点、断句、分段
-    - 明显是列表、步骤、并列要点时，直接结构化；能编号就编号
+    - 只有原文明显是在列步骤、清单或待办事项时，才结构化；普通说明、状态同步和判断句不要硬改成编号列表
 
     禁止：
     - 回答用户
@@ -109,6 +159,7 @@ enum PromptBuilder {
     - 拿不准就保留原词，不乱猜
     - 数字尽量转阿拉伯数字
     - 保持原语言
+    - 如果原文不是逐项列点，不要改成 1. 2. 3.
     - 只输出最终文本
 
     示例：
@@ -126,6 +177,9 @@ enum PromptBuilder {
 
     原文：今天进展是接口接通了然后剩下的是联调和回归
     输出：今天的进展是接口已经接通，剩下的是联调和回归。
+
+    原文：我们先把接口接上然后晚上回归没问题的话明天提测
+    输出：我们先把接口接上，晚上回归，没问题的话明天提测。
     """
 
     private static let englishSystemPrompt = """
@@ -137,7 +191,7 @@ enum PromptBuilder {
     - merge self-corrections into one clean statement
     - fix obvious ASR mistakes, homophones, and proper nouns
     - add punctuation, sentence breaks, and paragraph breaks
-    - directly structure lists, steps, and status updates; use 1. 2. 3. when clear
+    - only structure when the raw text is clearly a list, steps, or action items; do not force normal explanations or status updates into numbered lists
 
     Never:
     - answer the user
@@ -149,6 +203,7 @@ enum PromptBuilder {
     - if uncertain, keep the original wording
     - prefer digits for spoken numbers
     - keep the original language
+    - if the raw text is not explicitly list-like, do not turn it into 1. 2. 3.
     - output only final text
 
     Examples:
@@ -166,6 +221,9 @@ enum PromptBuilder {
 
     Raw: today's update is the API is connected and next is integration testing
     Output: Today's update: the API is connected, and next is integration testing.
+
+    Raw: let's connect the API tonight and if that goes fine we'll submit it tomorrow
+    Output: Let's connect the API tonight, and if that goes fine, we'll submit it tomorrow.
     """
 
     static func buildUserPrompt(text: String, inputLanguage: InputLanguage = .chinese) -> String {
