@@ -105,10 +105,30 @@ jobs:
           xcrun stapler staple "$DMG"
 
       # ── Release ─────────────────────────────────────────────────
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: OpenType ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
-            dist/OpenType-*.dmg
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          TAG="${GITHUB_REF_NAME}"
+          TITLE="OpenType ${TAG}"
+          FILES=(dist/OpenType-*.dmg)
+
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "No DMG artifacts found in dist/"
+            exit 1
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, uploading assets..."
+          else
+            echo "Creating release $TAG..."
+            gh release create "$TAG" \
+              --title "$TITLE" \
+              --generate-notes \
+              --verify-tag
+          fi
+
+          gh release upload "$TAG" "${FILES[@]}" --clobber
