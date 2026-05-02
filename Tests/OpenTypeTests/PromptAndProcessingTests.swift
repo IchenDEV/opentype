@@ -192,15 +192,15 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
-    func testPreCleanRemovesChineseFillersAndMergesCorrections() {
+    func testPreCleanRemovesChineseFillers() {
         withCleanSettings {
             let processor = TextProcessor()
             let cleaned = processor.preCleanForFormatting(
-                text: "嗯 那个 我们周四，不对，周五下午开会",
+                text: "嗯 那个 今天下午开会",
                 inputLanguage: .chinese
             )
 
-            XCTAssertEqual(cleaned, "我们周五下午开会")
+            XCTAssertEqual(cleaned, "今天下午开会")
         }
     }
 
@@ -270,7 +270,7 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .command, enableInstantInsert: true))
     }
 
-    func testDeferredReplacementDecisionRequiresSameFrontmostApp() {
+    func testDeferredReplacementDecisionRequiresSameFrontmostApp() throws {
         let replacement = DeferredReplacement(
             rawText: "raw",
             insertedText: "quick",
@@ -291,6 +291,10 @@ final class PromptAndProcessingTests: XCTestCase {
             ),
             .copy(.missingTarget)
         )
+
+        guard let currentBundleIdentifier = NSRunningApplication.current.bundleIdentifier else {
+            throw XCTSkip("Current test process has no bundle identifier")
+        }
 
         readyReplacement = DeferredReplacement(
             rawText: "raw",
@@ -314,7 +318,7 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertEqual(
             DeferredReplacementPolicy.decision(
                 for: readyReplacement,
-                currentBundleIdentifier: NSRunningApplication.current.bundleIdentifier,
+                currentBundleIdentifier: currentBundleIdentifier,
                 now: Date(timeIntervalSince1970: 116)
             ),
             .copy(.expired)

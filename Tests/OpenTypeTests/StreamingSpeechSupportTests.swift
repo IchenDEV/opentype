@@ -3,6 +3,19 @@ import XCTest
 @testable import OpenType
 
 final class StreamingSpeechSupportTests: XCTestCase {
+    func testPartialUpdateSchedulerKeepsExistingTimerWhenBuffersContinueArriving() {
+        var scheduler = StreamingPartialUpdateScheduler()
+
+        XCTAssertTrue(scheduler.requestSchedule())
+        XCTAssertFalse(scheduler.requestSchedule())
+
+        scheduler.markScheduledUpdateFired()
+        XCTAssertTrue(scheduler.requestSchedule())
+
+        scheduler.cancelScheduledUpdate()
+        XCTAssertTrue(scheduler.requestSchedule())
+    }
+
     func testPreviewAccumulatorPreservesEarlierContextAcrossSlidingWindow() {
         let accumulator = StreamingPreviewAccumulator()
 

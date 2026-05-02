@@ -15,6 +15,7 @@ final class WhisperStreamingSession: @unchecked Sendable {
     private var previewAccumulator = StreamingPreviewAccumulator()
     private var latestPreview = ""
     private var pendingWorkItem: DispatchWorkItem?
+    private var updateScheduler = StreamingPartialUpdateScheduler()
     private var activeTask: Task<String, Error>?
     private var closed = false
     private var metrics = StreamingSessionMetrics()
@@ -58,6 +59,7 @@ final class WhisperStreamingSession: @unchecked Sendable {
             self.closed = true
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
+            self.updateScheduler.cancelScheduledUpdate()
             return self.activeTask
         }
         _ = try? await task?.value
@@ -75,18 +77,25 @@ final class WhisperStreamingSession: @unchecked Sendable {
             self.closed = true
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
+            self.updateScheduler.cancelScheduledUpdate()
             self.activeTask?.cancel()
             self.activeTask = nil
         }
     }
 
     private func schedulePartialUpdate() {
-        pendingWorkItem?.cancel()
+        guard updateScheduler.requestSchedule() else { return }
         let workItem = DispatchWorkItem { [weak self] in
-            self?.startPartialTaskIfNeeded()
+            self?.runScheduledPartialUpdate()
         }
         pendingWorkItem = workItem
         queue.asyncAfter(deadline: .now() + 0.7, execute: workItem)
+    }
+
+    private func runScheduledPartialUpdate() {
+        pendingWorkItem = nil
+        updateScheduler.markScheduledUpdateFired()
+        startPartialTaskIfNeeded()
     }
 
     private func startPartialTaskIfNeeded() {
