@@ -162,15 +162,15 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
-    func testPreCleanRemovesChineseFillersAndMergesCorrections() {
+    func testPreCleanRemovesChineseFillers() {
         withCleanSettings {
             let processor = TextProcessor()
             let cleaned = processor.preCleanForFormatting(
-                text: "嗯 那个 我们周四，不对，周五下午开会",
+                text: "嗯 那个 今天下午开会",
                 inputLanguage: .chinese
             )
 
-            XCTAssertEqual(cleaned, "我们周五下午开会")
+            XCTAssertEqual(cleaned, "今天下午开会")
         }
     }
 

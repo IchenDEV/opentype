@@ -87,7 +87,7 @@ enum FormattingHeuristics {
                     .trimmingCharacters(in: CharacterSet(charactersIn: " ，,；;：:"))
                 guard !suffix.isEmpty else { continue }
 
-                candidate = stablePrefixBeforeCorrection(prefix: String(prefix), suffix: String(suffix)) + suffix
+                candidate = String(suffix)
                 break
             }
 
@@ -95,25 +95,6 @@ enum FormattingHeuristics {
         }
 
         return lines.joined(separator: "\n")
-    }
-
-    private static let weekdayCorrectionTokens = [
-        "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日", "星期天",
-        "礼拜一", "礼拜二", "礼拜三", "礼拜四", "礼拜五", "礼拜六", "礼拜日", "礼拜天",
-        "周一", "周二", "周三", "周四", "周五", "周六", "周日", "周天",
-    ]
-
-    private static func stablePrefixBeforeCorrection(prefix: String, suffix: String) -> String {
-        let separators = CharacterSet.whitespaces.union(CharacterSet(charactersIn: "，,；;：:"))
-        let prefixBody = prefix.trimmingCharacters(in: separators)
-        guard
-            let oldToken = weekdayCorrectionTokens.first(where: { prefixBody.hasSuffix($0) }),
-            weekdayCorrectionTokens.contains(where: { suffix.hasPrefix($0) })
-        else {
-            return ""
-        }
-
-        return String(prefixBody.dropLast(oldToken.count))
     }
 
     private static func collapseDuplicateWords(_ text: String) -> String {
