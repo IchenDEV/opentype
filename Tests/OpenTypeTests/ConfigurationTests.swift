@@ -67,6 +67,7 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(LanguageStyle.custom.icon, "slider.horizontal.3")
     }
 
+    @MainActor
     func testRecommendedLocalModelRemainsListed() {
         XCTAssertTrue(ModelCatalog.defaultLLMModels.contains { $0.0 == "mlx-community/Qwen3.5-2B-4bit" })
     }

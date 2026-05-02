@@ -240,7 +240,7 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .command, enableInstantInsert: true))
     }
 
-    func testDeferredReplacementDecisionRequiresSameFrontmostApp() {
+    func testDeferredReplacementDecisionRequiresSameFrontmostApp() throws {
         let replacement = DeferredReplacement(
             rawText: "raw",
             insertedText: "quick",
@@ -261,6 +261,10 @@ final class PromptAndProcessingTests: XCTestCase {
             ),
             .copy(.missingTarget)
         )
+
+        guard let currentBundleIdentifier = NSRunningApplication.current.bundleIdentifier else {
+            throw XCTSkip("Current test process has no bundle identifier")
+        }
 
         readyReplacement = DeferredReplacement(
             rawText: "raw",
@@ -284,7 +288,7 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertEqual(
             DeferredReplacementPolicy.decision(
                 for: readyReplacement,
-                currentBundleIdentifier: NSRunningApplication.current.bundleIdentifier,
+                currentBundleIdentifier: currentBundleIdentifier,
                 now: Date(timeIntervalSince1970: 116)
             ),
             .copy(.expired)
