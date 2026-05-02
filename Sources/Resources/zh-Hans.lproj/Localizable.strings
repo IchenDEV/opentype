@@ -129,6 +129,11 @@
 "remote.minimax_global" = "MiniMax（海外）";
 
 /* ── Model Management ── */
+"model.preload.title" = "启动预加载";
+"model.preload.speech" = "启动时预加载听写模型";
+"model.preload.speech_help" = "仅对 WhisperKit 生效。Apple 语音与豆包语音会在录音开始时按需准备。";
+"model.preload.formatting" = "启动时预加载修稿模型";
+"model.preload.formatting_help" = "仅对本地 MLX 模型生效。远程 LLM 会在整理开始时调用。";
 "model.speech_recognition" = "语音识别";
 "model.text_formatting" = "文本整理 (LLM)";
 "model.family.title" = "模型系列";

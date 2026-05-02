@@ -129,6 +129,11 @@
 "remote.minimax_global" = "MiniMax (Global)";
 
 /* ── Model Management ── */
+"model.preload.title" = "Startup Preload";
+"model.preload.speech" = "Preload dictation model on launch";
+"model.preload.speech_help" = "Applies to WhisperKit. Apple Speech and Doubao ASR are prepared when recording starts.";
+"model.preload.formatting" = "Preload formatting model on launch";
+"model.preload.formatting_help" = "Applies to local MLX models. Remote LLM providers are called when formatting starts.";
 "model.speech_recognition" = "Speech Recognition";
 "model.text_formatting" = "Text Formatting (LLM)";
 "model.family.title" = "Model Family";

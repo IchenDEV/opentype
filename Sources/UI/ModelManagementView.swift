@@ -24,6 +24,8 @@ struct ModelManagementView: View {
             VStack(alignment: .leading, spacing: 20) {
                 storageSection
                 Divider()
+                preloadSection
+                Divider()
                 enginePickerSection
                 if settings.speechEngine == .whisper {
                     whisperSection
@@ -40,8 +42,6 @@ struct ModelManagementView: View {
         }
         .onAppear { catalog.refreshStatus() }
     }
-
-    // MARK: - Engine Picker
 
     private var storageSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -68,6 +68,21 @@ struct ModelManagementView: View {
             .controlSize(.small)
         }
     }
+
+    private var preloadSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(L("model.preload.title"), systemImage: "bolt.circle")
+                .font(.headline)
+
+            Toggle(L("model.preload.speech"), isOn: $settings.preloadSpeechModelOnLaunch)
+                .help(L("model.preload.speech_help"))
+
+            Toggle(L("model.preload.formatting"), isOn: $settings.preloadFormattingModelOnLaunch)
+                .help(L("model.preload.formatting_help"))
+        }
+    }
+
+    // MARK: - Engine Picker
 
     private var enginePickerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
