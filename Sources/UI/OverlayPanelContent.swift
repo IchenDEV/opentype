@@ -93,8 +93,26 @@ struct OverlayContentView: View {
         .padding(.horizontal, layout.horizontalPadding)
         .padding(.bottom, layout.bottomPadding)
         .frame(width: layout.width, height: layout.height, alignment: .top)
-        .background(cardBackground)
+        .background(
+            RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.black.opacity(0.34),
+                            Color.black.opacity(0.18),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous)
+                .stroke(.white.opacity(0.16), lineWidth: 0.7)
+        )
         .clipShape(RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous))
+        .compositingGroup()
         .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 12)
         .onAppear {
             handlePhaseChange(appState.phase)
@@ -180,29 +198,6 @@ struct OverlayContentView: View {
                 }
         }
         .frame(height: 5)
-    }
-
-    private var cardBackground: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous)
-                .fill(.ultraThinMaterial)
-
-            RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.34),
-                            Color.black.opacity(0.18),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous)
-                .stroke(.white.opacity(0.16), lineWidth: 0.7)
-        )
     }
 
     private func handlePhaseChange(_ phase: AppPhase) {
