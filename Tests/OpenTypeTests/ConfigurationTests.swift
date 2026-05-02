@@ -61,12 +61,20 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(MenuBarIcon.bubble.symbolName, "bubble.left.fill")
     }
 
+    func testAppIconAppearanceResourceNames() {
+        XCTAssertEqual(AppIconAppearance.dark.resourceName(systemIsDark: false), "AppIconDark")
+        XCTAssertEqual(AppIconAppearance.light.resourceName(systemIsDark: true), "AppIconLight")
+        XCTAssertEqual(AppIconAppearance.system.resourceName(systemIsDark: true), "AppIconDark")
+        XCTAssertEqual(AppIconAppearance.system.resourceName(systemIsDark: false), "AppIconLight")
+    }
+
     func testLanguageStyleStaticMetadata() {
         XCTAssertEqual(LanguageStyle.professional.icon, "list.number")
         XCTAssertEqual(LanguageStyle.casual.icon, "bubble.left")
         XCTAssertEqual(LanguageStyle.custom.icon, "slider.horizontal.3")
     }
 
+    @MainActor
     func testRecommendedLocalModelRemainsListed() {
         XCTAssertTrue(ModelCatalog.defaultLLMModels.contains { $0.0 == "mlx-community/Qwen3.5-2B-4bit" })
     }

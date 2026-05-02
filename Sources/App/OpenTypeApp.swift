@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         setupHotkey()
         observePhaseForIcon()
         observeMenuBarIconSetting()
+        observeAppIconSetting()
+        observeSystemAppearanceForIcon()
 
         if !AppSettings.shared.hasCompletedOnboarding {
             showOnboarding()
@@ -133,6 +135,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             .sink { [weak self] _ in
                 guard let self, !self.appState.isRecording else { return }
                 self.statusItem?.button?.image = Self.micIcon()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func observeAppIconSetting() {
+        AppSettings.shared.$appIconAppearance
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { _ in AppIcon.install() }
+            .store(in: &cancellables)
+    }
+
+    private func observeSystemAppearanceForIcon() {
+        DistributedNotificationCenter.default()
+            .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
+            .receive(on: RunLoop.main)
+            .sink { _ in
+                guard AppSettings.shared.appIconAppearance == .system else { return }
+                AppIcon.install()
             }
             .store(in: &cancellables)
     }
