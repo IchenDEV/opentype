@@ -53,6 +53,7 @@ enum StreamingTranscriptResolver {
         livePreviewText: String,
         metrics: StreamingSessionMetrics,
         unitLabel: String,
+        preferLivePreview: Bool = false,
         transcribeFromFile: @escaping () async throws -> String
     ) async throws -> String {
         let elapsed = Date().timeIntervalSince(metrics.startedAt)
@@ -73,13 +74,19 @@ enum StreamingTranscriptResolver {
             Log.error("[\(engineName)] streaming session captured 0 \(unitLabel)")
         }
 
+        let trimmedPreview = livePreviewText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if preferLivePreview, !trimmedPreview.isEmpty, metrics.partialUpdateCount > 0 {
+            Log.info("[\(engineName)] using streaming preview as final transcript")
+            return trimmedPreview
+        }
+
         guard audioURL != nil else {
             Log.info("[\(engineName)] no recorded audio file available, using live preview fallback")
-            return livePreviewText
+            return trimmedPreview
         }
 
         let finalText = try await transcribeFromFile()
-        if finalText.isEmpty, !livePreviewText.isEmpty {
+        if finalText.isEmpty, !trimmedPreview.isEmpty {
             Log.info("[\(engineName)] recorded-audio transcription was empty even though live preview had content")
         }
         return finalText

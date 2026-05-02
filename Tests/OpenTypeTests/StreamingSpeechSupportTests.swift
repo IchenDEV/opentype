@@ -63,6 +63,32 @@ final class StreamingSpeechSupportTests: XCTestCase {
         XCTAssertEqual(transcribeCalls, 1)
     }
 
+    func testTranscriptResolverCanPreferLivePreviewForStreamingSpeed() async throws {
+        let metrics = StreamingSessionMetrics(
+            receivedBufferCount: 4,
+            capturedUnitCount: 64_000,
+            partialUpdateCount: 2,
+            startedAt: Date(),
+            lastPartialAt: Date()
+        )
+
+        var transcribeCalls = 0
+        let text = try await StreamingTranscriptResolver.resolveFinalTranscript(
+            engineName: "WhisperEngine",
+            audioURL: URL(fileURLWithPath: "/tmp/opentype-test.wav"),
+            livePreviewText: " preview text ",
+            metrics: metrics,
+            unitLabel: "samples",
+            preferLivePreview: true
+        ) {
+            transcribeCalls += 1
+            return "final text"
+        }
+
+        XCTAssertEqual(text, "preview text")
+        XCTAssertEqual(transcribeCalls, 0)
+    }
+
     func testTranscriptResolverFallsBackToLivePreviewWithoutRecordedAudio() async throws {
         let metrics = StreamingSessionMetrics(
             receivedBufferCount: 2,
