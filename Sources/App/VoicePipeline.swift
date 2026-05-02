@@ -31,27 +31,26 @@ final class VoicePipeline {
     }
 
     func warmUp() async {
-        await ensureEngineLoaded()
+        let settings = appState.settings
+        let shouldLoadSpeech = StartupModelPreloadPolicy.shouldPreloadSpeechModel(
+            enabled: settings.preloadSpeechModelOnLaunch,
+            speechEngine: settings.speechEngine
+        )
+        let shouldLoadFormatting = StartupModelPreloadPolicy.shouldPreloadFormattingModel(
+            enabled: settings.preloadFormattingModelOnLaunch,
+            useRemoteLLM: settings.useRemoteLLM,
+            modelID: settings.llmModel
+        )
 
-        let needsLLM = appState.settings.outputMode == .processed || appState.settings.outputMode == .command
-        guard needsLLM, !appState.settings.useRemoteLLM else {
-            appState.statusMessage = L("status.ready")
-            return
+        if shouldLoadSpeech {
+            await ensureEngineLoaded()
         }
 
-        appState.statusMessage = L("pipeline.loading_llm")
-        let model = appState.settings.llmModel
-
-        await textProcessor.warmUpLLM(model: model)
-        appState.llmModelReady = await textProcessor.isLLMReady
-
-        if appState.llmModelReady {
-            Log.info("[VoicePipeline] LLM model loaded into memory, ready for instant inference")
-        } else {
-            Log.info("[VoicePipeline] LLM warmup failed, will retry on demand")
+        if shouldLoadFormatting {
+            await preloadFormattingModel(showFailureInStatus: false)
         }
 
-        appState.statusMessage = L("status.ready")
+        markReadyIfPossible()
     }
 
     // MARK: - Recording
@@ -415,14 +414,36 @@ final class VoicePipeline {
     }
 
     func loadLLM() {
-        guard !appState.settings.useRemoteLLM else { return }
-        let model = appState.settings.llmModel
-        guard !model.isEmpty else { return }
         Task {
-            appState.statusMessage = L("pipeline.loading_llm")
-            await textProcessor.warmUpLLM(model: model)
-            appState.llmModelReady = await textProcessor.isLLMReady
-            appState.statusMessage = appState.llmModelReady ? L("status.ready") : L("pipeline.model_load_failed")
+            await preloadFormattingModel(showFailureInStatus: true)
+        }
+    }
+
+    private func preloadFormattingModel(showFailureInStatus: Bool) async {
+        guard !appState.settings.useRemoteLLM else {
+            appState.llmModelReady = true
+            return
+        }
+
+        let model = appState.settings.llmModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !model.isEmpty else { return }
+
+        appState.statusMessage = L("pipeline.loading_llm")
+        let catalog = ModelCatalog.shared
+        catalog.updateLLMStatus(model, status: .loading, detail: L("model.loading"))
+
+        let loaded = await textProcessor.warmUpLLM(model: model)
+        let ready = await textProcessor.isLLMReady
+        appState.llmModelReady = loaded && ready
+
+        if appState.llmModelReady {
+            catalog.updateLLMStatus(model, status: .ready)
+            Log.info("[VoicePipeline] LLM model loaded into memory, ready for instant inference")
+            appState.statusMessage = L("status.ready")
+        } else {
+            catalog.updateLLMStatus(model, status: .error(L("pipeline.model_load_failed")))
+            Log.info("[VoicePipeline] LLM warmup failed, will retry on demand")
+            appState.statusMessage = showFailureInStatus ? L("pipeline.model_load_failed") : L("status.ready")
         }
     }
 
@@ -549,6 +570,11 @@ final class VoicePipeline {
         appState.phase = .idle
         appState.statusMessage = L("status.ready")
         overlay.hide()
+    }
+
+    private func markReadyIfPossible() {
+        if case .error = appState.phase { return }
+        appState.statusMessage = L("status.ready")
     }
 
     private func handleDeferredSmartFormat(
