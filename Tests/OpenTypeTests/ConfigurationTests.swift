@@ -61,6 +61,13 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(MenuBarIcon.bubble.symbolName, "bubble.left.fill")
     }
 
+    func testAppIconAppearanceResourceNames() {
+        XCTAssertEqual(AppIconAppearance.dark.resourceName(systemIsDark: false), "AppIconDark")
+        XCTAssertEqual(AppIconAppearance.light.resourceName(systemIsDark: true), "AppIconLight")
+        XCTAssertEqual(AppIconAppearance.system.resourceName(systemIsDark: true), "AppIconDark")
+        XCTAssertEqual(AppIconAppearance.system.resourceName(systemIsDark: false), "AppIconLight")
+    }
+
     func testLanguageStyleStaticMetadata() {
         XCTAssertEqual(LanguageStyle.professional.icon, "list.number")
         XCTAssertEqual(LanguageStyle.casual.icon, "bubble.left")

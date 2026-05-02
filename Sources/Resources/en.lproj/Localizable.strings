@@ -96,6 +96,10 @@
 "settings.screen_context_help" = "Capture on-screen text to help the LLM correct homophones (requires Screen Recording permission, only active in Smart Format mode)";
 "settings.voice_language" = "Voice & Language";
 "settings.ui_language" = "Interface language";
+"settings.app_icon" = "App icon";
+"app_icon.system" = "Follow System";
+"app_icon.dark" = "Black";
+"app_icon.light" = "White";
 "settings.menubar_icon" = "Menu bar icon";
 "icon.mic" = "Microphone";
 "icon.waveform" = "Waveform";
