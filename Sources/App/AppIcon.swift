@@ -44,14 +44,18 @@ enum AppIcon {
 
     private static func bundledIcon(for mode: Mode, size: CGFloat) -> NSImage? {
         let resource = mode == .dark ? "AppIconDark" : "AppIconLight"
-        guard let url = Bundle.main.url(forResource: resource, withExtension: "icns")
-            ?? Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+        guard let url = iconURL(named: resource) ?? iconURL(named: "AppIcon"),
             let image = NSImage(contentsOf: url) else {
             return nil
         }
         image.size = NSSize(width: size, height: size)
         image.isTemplate = false
         return image
+    }
+
+    private static func iconURL(named name: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: "icns")
+            ?? Bundle.module.url(forResource: name, withExtension: "icns")
     }
 
     private static func drawIcon(in rect: CGRect, context: CGContext, mode: Mode) {
