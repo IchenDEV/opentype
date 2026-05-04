@@ -98,8 +98,8 @@
 "settings.ui_language" = "Interface language";
 "settings.app_icon" = "App icon";
 "app_icon.system" = "Follow System";
-"app_icon.dark" = "Black";
-"app_icon.light" = "White";
+"app_icon.dark" = "Dark";
+"app_icon.light" = "Light";
 "settings.menubar_icon" = "Menu bar icon";
 "icon.mic" = "Microphone";
 "icon.waveform" = "Waveform";

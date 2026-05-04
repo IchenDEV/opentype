@@ -98,8 +98,8 @@
 "settings.ui_language" = "界面语言";
 "settings.app_icon" = "应用图标";
 "app_icon.system" = "跟随系统";
-"app_icon.dark" = "黑色";
-"app_icon.light" = "白色";
+"app_icon.dark" = "深色";
+"app_icon.light" = "浅色";
 "settings.menubar_icon" = "菜单栏图标";
 "icon.mic" = "麦克风";
 "icon.waveform" = "波形";

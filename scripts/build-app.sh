@@ -109,11 +109,27 @@ done
 
 done_msg "App bundle assembled"
 
-# ─── Step 3: Generate app icon ──────────────────────────────────────────────────
+# ─── Step 3: Copy app icons ─────────────────────────────────────────────────────
 
-step "Generating AppIcon.icns…"
-swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources"
-done_msg "Icon generated"
+if [ -z "${OPENTYPE_ICON_RENDITION:-}" ]; then
+    if [ "$(defaults read -g AppleInterfaceStyle 2>/dev/null || true)" = "Dark" ]; then
+        OPENTYPE_ICON_RENDITION="Dark"
+    else
+        OPENTYPE_ICON_RENDITION="Light"
+    fi
+fi
+
+ICON_RESOURCE_DIR="${PROJECT_DIR}/Sources/Resources"
+DEFAULT_ICON="AppIconLight.icns"
+if [ "${OPENTYPE_ICON_RENDITION}" = "Dark" ]; then
+    DEFAULT_ICON="AppIconDark.icns"
+fi
+
+step "Copying app icons (${OPENTYPE_ICON_RENDITION})…"
+cp "${ICON_RESOURCE_DIR}/${DEFAULT_ICON}" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+cp "${ICON_RESOURCE_DIR}/AppIconLight.icns" "${APP_BUNDLE}/Contents/Resources/AppIconLight.icns"
+cp "${ICON_RESOURCE_DIR}/AppIconDark.icns" "${APP_BUNDLE}/Contents/Resources/AppIconDark.icns"
+done_msg "Icons copied (${OPENTYPE_ICON_RENDITION})"
 
 # ─── Step 4: Code sign ───────────────────────────────────────────────────────
 

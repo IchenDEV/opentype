@@ -104,6 +104,7 @@ struct SettingsView: View {
                         Text(appearance.label).tag(appearance)
                     }
                 }
+                .pickerStyle(.segmented)
                 HStack {
                     Text(L("settings.menubar_icon"))
                     Spacer()
