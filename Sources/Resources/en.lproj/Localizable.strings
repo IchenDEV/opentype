@@ -75,7 +75,6 @@
 /* ── Settings ── */
 "settings.activation" = "Activation";
 "settings.interface" = "Interface";
-"settings.app_icon" = "App icon";
 "settings.recognition" = "Recognition";
 "settings.audio" = "Audio";
 "settings.speech_engine" = "Speech engine";
@@ -94,12 +93,13 @@
 "settings.memory_window" = "Memory window";
 "settings.memory_minutes_fmt" = "%d minutes";
 "settings.screen_context" = "Screen context assist";
-"icon_appearance.system" = "Follow System";
-"icon_appearance.light" = "Light";
-"icon_appearance.dark" = "Dark";
 "settings.screen_context_help" = "Capture on-screen text to help the LLM correct homophones (requires Screen Recording permission, only active in Smart Format mode)";
 "settings.voice_language" = "Voice & Language";
 "settings.ui_language" = "Interface language";
+"settings.app_icon" = "App icon";
+"app_icon.system" = "Follow System";
+"app_icon.dark" = "Dark";
+"app_icon.light" = "Light";
 "settings.menubar_icon" = "Menu bar icon";
 "icon.mic" = "Microphone";
 "icon.waveform" = "Waveform";
@@ -133,6 +133,11 @@
 "remote.minimax_global" = "MiniMax (Global)";
 
 /* ── Model Management ── */
+"model.preload.title" = "Startup Preload";
+"model.preload.speech" = "Preload dictation model on launch";
+"model.preload.speech_help" = "Applies to WhisperKit. Apple Speech and Doubao ASR are prepared when recording starts.";
+"model.preload.formatting" = "Preload formatting model on launch";
+"model.preload.formatting_help" = "Applies to local MLX models. Remote LLM providers are called when formatting starts.";
 "model.speech_recognition" = "Speech Recognition";
 "model.text_formatting" = "Text Formatting (LLM)";
 "model.family.title" = "Model Family";
@@ -191,8 +196,8 @@
 "engine.volc_asr" = "Doubao ASR";
 "style.prompt.concise" = "Minimalist. Keep only core information, remove repetition and filler, break long sentences short.";
 "style.prompt.formal" = "Formal written style. Use proper wording, reduce colloquial tone, keep the text clear and well-formed.";
-"style.prompt.professional" = "Professional cleanup. Keep meaning complete, split when needed, and use numbered lists for multiple points.";
-"style.prompt.casual" = "Casual cleanup. Fix obvious typos and ASR errors, keep the natural tone, do not over-formalize.";
+"style.prompt.professional" = "Professional cleanup. Keep meaning complete and structure clear. Use numbered lists only when the raw text is clearly a list or action items.";
+"style.prompt.casual" = "Natural cleanup. Keep the tone easy, but actively fix obvious typos, homophones, and ASR mistakes without over-formalizing.";
 "style.prompt.custom" = "Format the text with my own rules: preserve meaning, fix obvious ASR mistakes, and add line breaks when useful.";
 
 /* ── Custom System Prompt ── */

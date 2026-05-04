@@ -178,14 +178,22 @@ enum MenuBarIcon: String, Codable, CaseIterable {
 
 enum AppIconAppearance: String, Codable, CaseIterable {
     case system = "system"
-    case light = "light"
     case dark = "dark"
+    case light = "light"
+
+    func resourceName(systemIsDark: Bool) -> String {
+        switch self {
+        case .system: return systemIsDark ? "AppIconDark" : "AppIconLight"
+        case .dark: return "AppIconDark"
+        case .light: return "AppIconLight"
+        }
+    }
 
     var label: String {
         switch self {
-        case .system: return L("icon_appearance.system")
-        case .light: return L("icon_appearance.light")
-        case .dark: return L("icon_appearance.dark")
+        case .system: return L("app_icon.system")
+        case .dark: return L("app_icon.dark")
+        case .light: return L("app_icon.light")
         }
     }
 }
@@ -255,6 +263,8 @@ final class AppSettings: ObservableObject {
     @Published var volcAppKey: String
     @Published var volcAccessKey: String
     @Published var volcResourceId: String
+    @Published var preloadSpeechModelOnLaunch: Bool
+    @Published var preloadFormattingModelOnLaunch: Bool
     @Published var modelStoragePath: String
     @Published var localWhisperModelPaths: [String: String]
     @Published var localLLMModelPaths: [String: String]
@@ -272,6 +282,7 @@ final class AppSettings: ObservableObject {
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
         case menuBarIcon, appIconAppearance
         case volcAppKey, volcAccessKey, volcResourceId
+        case preloadSpeechModelOnLaunch, preloadFormattingModelOnLaunch
         case modelStoragePath, localWhisperModelPaths, localLLMModelPaths
     }
 
@@ -324,6 +335,8 @@ final class AppSettings: ObservableObject {
         volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
         volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.bigasr.sauc.duration"
+        preloadSpeechModelOnLaunch = ud.object(forKey: Key.preloadSpeechModelOnLaunch.rawValue) as? Bool ?? true
+        preloadFormattingModelOnLaunch = ud.object(forKey: Key.preloadFormattingModelOnLaunch.rawValue) as? Bool ?? true
         modelStoragePath = ud.string(forKey: Key.modelStoragePath.rawValue) ?? ModelStorage.defaultRoot.path
         localWhisperModelPaths = ud.dictionary(forKey: Key.localWhisperModelPaths.rawValue) as? [String: String] ?? [:]
         localLLMModelPaths = ud.dictionary(forKey: Key.localLLMModelPaths.rawValue) as? [String: String] ?? [:]
@@ -364,6 +377,8 @@ final class AppSettings: ObservableObject {
         $volcAppKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAppKey.rawValue) }.store(in: &cancellables)
         $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
         $volcResourceId.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcResourceId.rawValue) }.store(in: &cancellables)
+        $preloadSpeechModelOnLaunch.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.preloadSpeechModelOnLaunch.rawValue) }.store(in: &cancellables)
+        $preloadFormattingModelOnLaunch.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.preloadFormattingModelOnLaunch.rawValue) }.store(in: &cancellables)
         $modelStoragePath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.modelStoragePath.rawValue) }.store(in: &cancellables)
         $localWhisperModelPaths.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localWhisperModelPaths.rawValue) }.store(in: &cancellables)
         $localLLMModelPaths.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localLLMModelPaths.rawValue) }.store(in: &cancellables)

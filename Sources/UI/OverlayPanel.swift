@@ -33,6 +33,9 @@ final class OverlayPanel {
 
             let hostingView = NSHostingView(rootView: AnyView(view))
             hostingView.frame = NSRect(origin: .zero, size: initialLayout.panelSize)
+            hostingView.wantsLayer = true
+            hostingView.layer?.backgroundColor = NSColor.clear.cgColor
+            hostingView.layer?.isOpaque = false
             panel.contentView = hostingView
 
             self.window = panel

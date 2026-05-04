@@ -75,7 +75,6 @@
 /* ── Settings ── */
 "settings.activation" = "激活方式";
 "settings.interface" = "界面";
-"settings.app_icon" = "应用图标";
 "settings.recognition" = "识别引擎";
 "settings.audio" = "音频";
 "settings.speech_engine" = "语音引擎";
@@ -94,12 +93,13 @@
 "settings.memory_window" = "记忆时间窗口";
 "settings.memory_minutes_fmt" = "%d 分钟";
 "settings.screen_context" = "屏幕上下文辅助";
-"icon_appearance.system" = "跟随系统";
-"icon_appearance.light" = "浅色";
-"icon_appearance.dark" = "深色";
 "settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限，仅智能整理模式生效）";
 "settings.voice_language" = "语音与语言";
 "settings.ui_language" = "界面语言";
+"settings.app_icon" = "应用图标";
+"app_icon.system" = "跟随系统";
+"app_icon.dark" = "深色";
+"app_icon.light" = "浅色";
 "settings.menubar_icon" = "菜单栏图标";
 "icon.mic" = "麦克风";
 "icon.waveform" = "波形";
@@ -133,6 +133,11 @@
 "remote.minimax_global" = "MiniMax（海外）";
 
 /* ── Model Management ── */
+"model.preload.title" = "启动预加载";
+"model.preload.speech" = "启动时预加载听写模型";
+"model.preload.speech_help" = "仅对 WhisperKit 生效。Apple 语音与豆包语音会在录音开始时按需准备。";
+"model.preload.formatting" = "启动时预加载修稿模型";
+"model.preload.formatting_help" = "仅对本地 MLX 模型生效。远程 LLM 会在整理开始时调用。";
 "model.speech_recognition" = "语音识别";
 "model.text_formatting" = "文本整理 (LLM)";
 "model.family.title" = "模型系列";
@@ -191,8 +196,8 @@
 "engine.volc_asr" = "豆包语音识别";
 "style.prompt.concise" = "极简。只保留核心信息，删掉修饰、重复和过渡，长句拆短。";
 "style.prompt.formal" = "正式书面。用规范表达，减少口语感，保持句子完整、逻辑顺畅。";
-"style.prompt.professional" = "专业整理。语义完整，必要时分段；多要点用编号列表，每项单独一行。";
-"style.prompt.casual" = "口语整理。只修正明显错别字和识别错误，保留自然口吻，不过度书面化。";
+"style.prompt.professional" = "专业整理。语义完整、结构清楚；只有原文明显是步骤或待办时才用编号，不把普通句子硬改成列表。";
+"style.prompt.casual" = "自然整理。保留口吻，但要主动修正常见错别字、同音词和识别错误，不过度书面化。";
 "style.prompt.custom" = "按以下要求整理：保留原意，修正明显错别字和识别错误，按需要分段换行。";
 
 /* ── Custom System Prompt ── */

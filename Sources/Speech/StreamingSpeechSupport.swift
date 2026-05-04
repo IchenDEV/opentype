@@ -28,6 +28,24 @@ struct StreamingSessionOutcome: Equatable {
     let metrics: StreamingSessionMetrics
 }
 
+struct StreamingPartialUpdateScheduler: Equatable {
+    private var hasScheduledUpdate = false
+
+    mutating func requestSchedule() -> Bool {
+        guard !hasScheduledUpdate else { return false }
+        hasScheduledUpdate = true
+        return true
+    }
+
+    mutating func markScheduledUpdateFired() {
+        hasScheduledUpdate = false
+    }
+
+    mutating func cancelScheduledUpdate() {
+        hasScheduledUpdate = false
+    }
+}
+
 enum StreamingTranscriptResolver {
     static func resolveFinalTranscript(
         engineName: String,

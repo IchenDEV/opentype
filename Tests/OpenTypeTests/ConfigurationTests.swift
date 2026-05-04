@@ -61,14 +61,23 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(MenuBarIcon.bubble.symbolName, "bubble.left.fill")
     }
 
+    func testAppIconAppearanceResourceNames() {
+        XCTAssertEqual(AppIconAppearance.dark.resourceName(systemIsDark: false), "AppIconDark")
+        XCTAssertEqual(AppIconAppearance.light.resourceName(systemIsDark: true), "AppIconLight")
+        XCTAssertEqual(AppIconAppearance.system.resourceName(systemIsDark: true), "AppIconDark")
+        XCTAssertEqual(AppIconAppearance.system.resourceName(systemIsDark: false), "AppIconLight")
+    }
+
     func testLanguageStyleStaticMetadata() {
         XCTAssertEqual(LanguageStyle.professional.icon, "list.number")
         XCTAssertEqual(LanguageStyle.casual.icon, "bubble.left")
         XCTAssertEqual(LanguageStyle.custom.icon, "slider.horizontal.3")
     }
 
+    @MainActor
     func testRecommendedLocalModelRemainsListed() {
-        XCTAssertTrue(ModelCatalog.defaultLLMModels.contains { $0.0 == "mlx-community/Qwen3.5-2B-4bit" })
+        let models = ModelCatalog.defaultLLMModels
+        XCTAssertTrue(models.contains { $0.0 == "mlx-community/Qwen3.5-2B-4bit" })
     }
 
     func testUILanguageDisplayNames() {
@@ -78,5 +87,35 @@ final class ConfigurationTests: XCTestCase {
 
     func testInstantInsertDefaultsOff() {
         XCTAssertFalse(AppSettings.shared.enableInstantInsert)
+    }
+
+    func testStartupPreloadPolicyLoadsOnlyWhisperSpeechModel() {
+        XCTAssertTrue(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .whisper))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .apple))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .volc))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: false, speechEngine: .whisper))
+    }
+
+    func testStartupPreloadPolicyLoadsOnlyLocalFormattingModelWithID() {
+        XCTAssertTrue(StartupModelPreloadPolicy.shouldPreloadFormattingModel(
+            enabled: true,
+            useRemoteLLM: false,
+            modelID: "mlx-community/Qwen3.5-2B-4bit"
+        ))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadFormattingModel(
+            enabled: true,
+            useRemoteLLM: true,
+            modelID: "gpt-4.1-mini"
+        ))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadFormattingModel(
+            enabled: true,
+            useRemoteLLM: false,
+            modelID: "  "
+        ))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadFormattingModel(
+            enabled: false,
+            useRemoteLLM: false,
+            modelID: "mlx-community/Qwen3.5-2B-4bit"
+        ))
     }
 }

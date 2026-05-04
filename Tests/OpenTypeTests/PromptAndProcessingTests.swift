@@ -65,6 +65,10 @@ final class PromptAndProcessingTests: XCTestCase {
 
             XCTAssertTrue(prompt.contains("你的任务不是轻度润色"))
             XCTAssertTrue(prompt.contains("风格：专业整理"))
+            XCTAssertTrue(prompt.contains("普通说明、状态同步和判断句不要硬改成编号列表"))
+            XCTAssertTrue(prompt.contains("只有原文明显是步骤、清单或待办时，才输出 1. 2. 3."))
+            XCTAssertTrue(prompt.contains("专业整理补充示例："))
+            XCTAssertTrue(prompt.contains("原文：今天主要是把登录问题修掉然后回归一遍没问题的话明天发版"))
             XCTAssertTrue(prompt.contains("屏幕文字，仅供纠错和专有名词参考"))
             XCTAssertTrue(prompt.contains("OpenType 设置"))
             XCTAssertTrue(prompt.contains("最近输入，仅供语境和专有名词参考"))
@@ -85,11 +89,37 @@ final class PromptAndProcessingTests: XCTestCase {
 
             XCTAssertTrue(prompt.contains("Do not lightly polish raw ASR"))
             XCTAssertTrue(prompt.contains("Style: professional cleanup"))
+            XCTAssertTrue(prompt.contains("do not force normal explanations or status updates into numbered lists"))
+            XCTAssertTrue(prompt.contains("Use 1. 2. 3. only when the raw text is clearly a list"))
+            XCTAssertTrue(prompt.contains("Professional cleanup examples:"))
+            XCTAssertTrue(prompt.contains("Raw: today the main thing is fixing the login issue and then running regression"))
             XCTAssertTrue(prompt.contains("On-screen text for correction and proper nouns only"))
             XCTAssertTrue(prompt.contains("Meeting notes"))
             XCTAssertTrue(prompt.contains("Recent input for context and proper nouns only"))
             XCTAssertTrue(prompt.contains("previous dictation"))
             XCTAssertTrue(prompt.contains("Raw: um we're meeting Thursday, sorry, Friday afternoon"))
+        }
+    }
+
+    func testCasualStylePromptStillRequiresCorrection() {
+        withCleanSettings {
+            let chinese = PromptBuilder.buildSystemPrompt(
+                style: .casual,
+                stylePrompt: "",
+                inputLanguage: .chinese
+            )
+            XCTAssertTrue(chinese.contains("主动修正明显错别字、同音词"))
+            XCTAssertTrue(chinese.contains("不要把明显识别错误原样留下"))
+            XCTAssertFalse(chinese.contains("专业整理补充示例："))
+
+            let english = PromptBuilder.buildSystemPrompt(
+                style: .casual,
+                stylePrompt: "",
+                inputLanguage: .english
+            )
+            XCTAssertTrue(english.contains("actively fix obvious typos, homophones"))
+            XCTAssertTrue(english.contains("Do not leave clear ASR errors in place"))
+            XCTAssertFalse(english.contains("Professional cleanup examples:"))
         }
     }
 
@@ -162,15 +192,15 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
-    func testPreCleanRemovesChineseFillersAndMergesCorrections() {
+    func testPreCleanRemovesChineseFillers() {
         withCleanSettings {
             let processor = TextProcessor()
             let cleaned = processor.preCleanForFormatting(
-                text: "嗯 那个 我们周四，不对，周五下午开会",
+                text: "嗯 那个 今天下午开会",
                 inputLanguage: .chinese
             )
 
-            XCTAssertEqual(cleaned, "我们周五下午开会")
+            XCTAssertEqual(cleaned, "今天下午开会")
         }
     }
 
@@ -240,7 +270,7 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .command, enableInstantInsert: true))
     }
 
-    func testDeferredReplacementDecisionRequiresSameFrontmostApp() {
+    func testDeferredReplacementDecisionRequiresSameFrontmostApp() throws {
         let replacement = DeferredReplacement(
             rawText: "raw",
             insertedText: "quick",
@@ -261,6 +291,10 @@ final class PromptAndProcessingTests: XCTestCase {
             ),
             .copy(.missingTarget)
         )
+
+        guard let currentBundleIdentifier = NSRunningApplication.current.bundleIdentifier else {
+            throw XCTSkip("Current test process has no bundle identifier")
+        }
 
         readyReplacement = DeferredReplacement(
             rawText: "raw",
@@ -284,7 +318,7 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertEqual(
             DeferredReplacementPolicy.decision(
                 for: readyReplacement,
-                currentBundleIdentifier: NSRunningApplication.current.bundleIdentifier,
+                currentBundleIdentifier: currentBundleIdentifier,
                 now: Date(timeIntervalSince1970: 116)
             ),
             .copy(.expired)

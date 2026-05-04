@@ -34,7 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         setupHotkey()
         observePhaseForIcon()
         observeMenuBarIconSetting()
-        observeAppIconAppearance()
+        observeAppIconSetting()
+        observeSystemAppearanceForIcon()
 
         if !AppSettings.shared.hasCompletedOnboarding {
             showOnboarding()
@@ -138,20 +139,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func observeAppIconAppearance() {
+    private func observeAppIconSetting() {
         AppSettings.shared.$appIconAppearance
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { _ in AppIcon.install() }
             .store(in: &cancellables)
-        DistributedNotificationCenter.default().addObserver(self, selector: #selector(systemAppearanceDidChange(_:)), name: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil)
     }
 
-    @objc private func systemAppearanceDidChange(_ notification: Notification) {
-        guard AppSettings.shared.appIconAppearance == .system else { return }
-        AppIcon.install()
+    private func observeSystemAppearanceForIcon() {
+        DistributedNotificationCenter.default()
+            .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
+            .receive(on: RunLoop.main)
+            .sink { _ in
+                guard AppSettings.shared.appIconAppearance == .system else { return }
+                AppIcon.install()
+            }
+            .store(in: &cancellables)
     }
 
+    /// macOS recording indicator orange (matches the system camera/mic dot).
     private static let recordingOrange = NSColor(red: 1.0, green: 0.624, blue: 0.04, alpha: 1.0)
 
     private static func recordingIcon(level: Float) -> NSImage {
