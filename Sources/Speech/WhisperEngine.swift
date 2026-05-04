@@ -196,7 +196,8 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                 audioURL: audioURL,
                 livePreviewText: outcome.livePreviewText,
                 metrics: outcome.metrics,
-                unitLabel: "samples"
+                unitLabel: "samples",
+                preferLivePreview: true
             ) { [weak self] in
                 guard let self else { return "" }
                 return try await self.transcribe(audioURL: audioURL, language: language)

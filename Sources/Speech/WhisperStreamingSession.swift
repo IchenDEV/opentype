@@ -17,6 +17,7 @@ final class WhisperStreamingSession: @unchecked Sendable {
     private var pendingWorkItem: DispatchWorkItem?
     private var updateScheduler = StreamingPartialUpdateScheduler()
     private var activeTask: Task<String, Error>?
+    private var submittedSampleCount = 0
     private var closed = false
     private var metrics = StreamingSessionMetrics()
 
@@ -60,9 +61,16 @@ final class WhisperStreamingSession: @unchecked Sendable {
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
             self.updateScheduler.cancelScheduledUpdate()
+            self.startFinalPartialTaskIfNeeded()
             return self.activeTask
         }
         _ = try? await task?.value
+
+        let trailingTask = queue.sync { () -> Task<String, Error>? in
+            self.startFinalPartialTaskIfNeeded()
+            return self.activeTask
+        }
+        _ = try? await trailingTask?.value
 
         return queue.sync {
             StreamingSessionOutcome(
@@ -100,6 +108,17 @@ final class WhisperStreamingSession: @unchecked Sendable {
 
     private func startPartialTaskIfNeeded() {
         guard !closed, activeTask == nil, samples.count >= WhisperKit.sampleRate else { return }
+        startPartialTask()
+    }
+
+    private func startFinalPartialTaskIfNeeded() {
+        guard activeTask == nil, samples.count >= WhisperKit.sampleRate else { return }
+        guard samples.count > submittedSampleCount else { return }
+        startPartialTask()
+    }
+
+    private func startPartialTask() {
+        guard activeTask == nil else { return }
 
         let snapshot: [Float]
         if samples.count > Self.partialWindowSamples {
@@ -108,6 +127,7 @@ final class WhisperStreamingSession: @unchecked Sendable {
             snapshot = samples
         }
         let submittedSampleCount = samples.count
+        self.submittedSampleCount = submittedSampleCount
 
         activeTask = Task(priority: .utility) { [weak self, whisperKit, optionsBuilder] in
             let results = try await whisperKit.transcribe(

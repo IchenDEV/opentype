@@ -314,7 +314,7 @@ final class AppSettings: ObservableObject {
             customStylePrompt = LanguageStyle.custom.defaultPrompt
         }
         playSounds = ud.object(forKey: Key.playSounds.rawValue) as? Bool ?? true
-        enableStreamingRecognitionBeta = ud.bool(forKey: Key.enableStreamingRecognitionBeta.rawValue)
+        enableStreamingRecognitionBeta = ud.object(forKey: Key.enableStreamingRecognitionBeta.rawValue) as? Bool ?? true
         inputLanguage = InputLanguage(rawValue: ud.string(forKey: Key.inputLanguage.rawValue) ?? "") ?? .chinese
         useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? false
         enableInstantInsert = ud.object(forKey: Key.enableInstantInsert.rawValue) as? Bool ?? false

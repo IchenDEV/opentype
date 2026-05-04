@@ -17,6 +17,7 @@ final class VolcStreamingSession: @unchecked Sendable {
     private var pendingWorkItem: DispatchWorkItem?
     private var updateScheduler = StreamingPartialUpdateScheduler()
     private var activeTask: Task<String, Error>?
+    private var submittedByteCount = 0
     private var closed = false
     private var metrics = StreamingSessionMetrics()
 
@@ -61,9 +62,16 @@ final class VolcStreamingSession: @unchecked Sendable {
             self.pendingWorkItem?.cancel()
             self.pendingWorkItem = nil
             self.updateScheduler.cancelScheduledUpdate()
+            self.startFinalPartialTaskIfNeeded()
             return self.activeTask
         }
         _ = try? await task?.value
+
+        let trailingTask = queue.sync { () -> Task<String, Error>? in
+            self.startFinalPartialTaskIfNeeded()
+            return self.activeTask
+        }
+        _ = try? await trailingTask?.value
 
         return queue.sync {
             StreamingSessionOutcome(
@@ -101,6 +109,17 @@ final class VolcStreamingSession: @unchecked Sendable {
 
     private func startPartialTaskIfNeeded() {
         guard !closed, activeTask == nil, pcmData.count >= Self.minPartialBytes else { return }
+        startPartialTask()
+    }
+
+    private func startFinalPartialTaskIfNeeded() {
+        guard activeTask == nil, pcmData.count >= Self.minPartialBytes else { return }
+        guard pcmData.count > submittedByteCount else { return }
+        startPartialTask()
+    }
+
+    private func startPartialTask() {
+        guard activeTask == nil else { return }
 
         let snapshot: Data
         if pcmData.count > Self.partialWindowBytes {
@@ -109,6 +128,7 @@ final class VolcStreamingSession: @unchecked Sendable {
             snapshot = pcmData
         }
         let submittedByteCount = pcmData.count
+        self.submittedByteCount = submittedByteCount
 
         activeTask = Task(priority: .utility) { [weak self, engine, language] in
             let text = try await engine.transcribePCMData(snapshot, language: language)

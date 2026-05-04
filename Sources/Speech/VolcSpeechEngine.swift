@@ -45,7 +45,8 @@ final class VolcSpeechEngine: SpeechEngine, @unchecked Sendable {
                 audioURL: audioURL,
                 livePreviewText: outcome.livePreviewText,
                 metrics: outcome.metrics,
-                unitLabel: "bytes"
+                unitLabel: "bytes",
+                preferLivePreview: true
             ) { [weak self] in
                 guard let self else { return "" }
                 return try await self.transcribe(audioURL: audioURL, language: language)

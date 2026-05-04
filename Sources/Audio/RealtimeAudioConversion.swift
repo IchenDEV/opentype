@@ -55,6 +55,7 @@ struct StreamingAudioChunk {
 final class RealtimeAudioConverter {
     private let inputFormat: AVAudioFormat
     private let outputFormat: AVAudioFormat
+    private let converter: AVAudioConverter
 
     init?(
         inputFormat: AVAudioFormat,
@@ -71,8 +72,12 @@ final class RealtimeAudioConverter {
         ) else {
             return nil
         }
+        guard let converter = AVAudioConverter(from: inputFormat, to: outputFormat) else {
+            return nil
+        }
         self.inputFormat = inputFormat
         self.outputFormat = outputFormat
+        self.converter = converter
     }
 
     func convertToPCMData(_ buffer: AVAudioPCMBuffer) throws -> Data {
@@ -90,10 +95,6 @@ final class RealtimeAudioConverter {
     }
 
     func convertBuffer(_ buffer: AVAudioPCMBuffer) throws -> AVAudioPCMBuffer {
-        guard let converter = AVAudioConverter(from: inputFormat, to: outputFormat) else {
-            throw AudioConversionError.converterCreationFailed
-        }
-
         let ratio = outputFormat.sampleRate / buffer.format.sampleRate
         let frameCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 256
         guard let outputBuffer = AVAudioPCMBuffer(
@@ -106,6 +107,7 @@ final class RealtimeAudioConverter {
         var sourceBuffer: AVAudioPCMBuffer? = buffer
         var conversionError: NSError?
 
+        converter.reset()
         _ = converter.convert(to: outputBuffer, error: &conversionError) { _, outStatus in
             guard let currentBuffer = sourceBuffer else {
                 outStatus.pointee = .endOfStream
@@ -126,13 +128,15 @@ final class RealtimeAudioConverter {
     static func pcm16Data(from samples: [Float]) -> Data {
         guard !samples.isEmpty else { return Data() }
 
-        var data = Data(capacity: samples.count * MemoryLayout<Int16>.size)
+        var values: [Int16] = []
+        values.reserveCapacity(samples.count)
         for sample in samples {
             let clamped = max(-1.0, min(1.0, sample))
-            var value = Int16((clamped * Float(Int16.max)).rounded()).littleEndian
-            withUnsafeBytes(of: &value) { data.append(contentsOf: $0) }
+            values.append(Int16((clamped * Float(Int16.max)).rounded()).littleEndian)
         }
-        return data
+        return values.withUnsafeBufferPointer { buffer in
+            Data(buffer: buffer)
+        }
     }
 }
 
