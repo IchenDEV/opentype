@@ -111,9 +111,19 @@ done_msg "App bundle assembled"
 
 # ─── Step 3: Generate app icon ──────────────────────────────────────────────────
 
-step "Generating AppIcon.icns…"
-swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources"
-done_msg "Icon generated"
+if [ -z "${OPENTYPE_ICON_RENDITION:-}" ]; then
+    if [ "$(defaults read -g AppleInterfaceStyle 2>/dev/null || true)" = "Dark" ]; then
+        OPENTYPE_ICON_RENDITION="Dark"
+    else
+        OPENTYPE_ICON_RENDITION="Light"
+    fi
+fi
+
+step "Generating AppIcon.icns (${OPENTYPE_ICON_RENDITION})…"
+OPENTYPE_ICON_RENDITION="${OPENTYPE_ICON_RENDITION}" swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources"
+OPENTYPE_ICON_RENDITION="Light" OPENTYPE_ICON_OUTPUT_NAME="AppIconLight.icns" swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources" >/dev/null
+OPENTYPE_ICON_RENDITION="Dark" OPENTYPE_ICON_OUTPUT_NAME="AppIconDark.icns" swift "${SCRIPT_DIR}/generate-icon.swift" "${APP_BUNDLE}/Contents/Resources" >/dev/null
+done_msg "Icon generated (${OPENTYPE_ICON_RENDITION})"
 
 # ─── Step 4: Code sign ───────────────────────────────────────────────────────
 

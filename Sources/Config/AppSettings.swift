@@ -176,6 +176,20 @@ enum MenuBarIcon: String, Codable, CaseIterable {
     }
 }
 
+enum AppIconAppearance: String, Codable, CaseIterable {
+    case system = "system"
+    case light = "light"
+    case dark = "dark"
+
+    var label: String {
+        switch self {
+        case .system: return L("icon_appearance.system")
+        case .light: return L("icon_appearance.light")
+        case .dark: return L("icon_appearance.dark")
+        }
+    }
+}
+
 enum InputLanguage: String, Codable, CaseIterable {
     case auto = "Auto"
     case chinese = "中文"
@@ -237,6 +251,7 @@ final class AppSettings: ObservableObject {
     @Published var remoteBaseURL: String
     @Published var remoteModel: String
     @Published var menuBarIcon: MenuBarIcon
+    @Published var appIconAppearance: AppIconAppearance
     @Published var volcAppKey: String
     @Published var volcAccessKey: String
     @Published var volcResourceId: String
@@ -255,7 +270,7 @@ final class AppSettings: ObservableObject {
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
-        case menuBarIcon
+        case menuBarIcon, appIconAppearance
         case volcAppKey, volcAccessKey, volcResourceId
         case modelStoragePath, localWhisperModelPaths, localLLMModelPaths
     }
@@ -305,6 +320,7 @@ final class AppSettings: ObservableObject {
         remoteBaseURL = ud.string(forKey: Key.remoteBaseURL.rawValue) ?? ""
         remoteModel = ud.string(forKey: Key.remoteModel.rawValue) ?? ""
         menuBarIcon = MenuBarIcon(rawValue: ud.string(forKey: Key.menuBarIcon.rawValue) ?? "") ?? .mic
+        appIconAppearance = AppIconAppearance(rawValue: ud.string(forKey: Key.appIconAppearance.rawValue) ?? "") ?? .system
         volcAppKey = ud.string(forKey: Key.volcAppKey.rawValue) ?? ""
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
         volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.bigasr.sauc.duration"
@@ -344,6 +360,7 @@ final class AppSettings: ObservableObject {
         $remoteBaseURL.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteBaseURL.rawValue) }.store(in: &cancellables)
         $remoteModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.remoteModel.rawValue) }.store(in: &cancellables)
         $menuBarIcon.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.menuBarIcon.rawValue) }.store(in: &cancellables)
+        $appIconAppearance.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.appIconAppearance.rawValue) }.store(in: &cancellables)
         $volcAppKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAppKey.rawValue) }.store(in: &cancellables)
         $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
         $volcResourceId.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcResourceId.rawValue) }.store(in: &cancellables)

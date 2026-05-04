@@ -75,6 +75,7 @@
 /* ── Settings ── */
 "settings.activation" = "激活方式";
 "settings.interface" = "界面";
+"settings.app_icon" = "应用图标";
 "settings.recognition" = "识别引擎";
 "settings.audio" = "音频";
 "settings.speech_engine" = "语音引擎";
@@ -93,6 +94,9 @@
 "settings.memory_window" = "记忆时间窗口";
 "settings.memory_minutes_fmt" = "%d 分钟";
 "settings.screen_context" = "屏幕上下文辅助";
+"icon_appearance.system" = "跟随系统";
+"icon_appearance.light" = "浅色";
+"icon_appearance.dark" = "深色";
 "settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限，仅智能整理模式生效）";
 "settings.voice_language" = "语音与语言";
 "settings.ui_language" = "界面语言";

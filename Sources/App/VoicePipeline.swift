@@ -31,7 +31,7 @@ final class VoicePipeline {
     }
 
     func warmUp() async {
-        await ensureEngineLoaded()
+        await ensureEngineLoaded(requestPermission: false)
 
         let needsLLM = appState.settings.outputMode == .processed || appState.settings.outputMode == .command
         guard needsLLM, !appState.settings.useRemoteLLM else {
@@ -66,7 +66,7 @@ final class VoicePipeline {
         if appState.isDownloading { return }
 
         if !(currentEngine?.isReady ?? false) {
-            await ensureEngineLoaded()
+            await ensureEngineLoaded(requestPermission: true)
         }
 
         guard currentEngine?.isReady ?? false else {
@@ -428,7 +428,7 @@ final class VoicePipeline {
 
     // MARK: - Engine loading
 
-    private func ensureEngineLoaded() async {
+    private func ensureEngineLoaded(requestPermission: Bool = true) async {
         switch appState.settings.speechEngine {
         case .whisper: await ensureWhisperLoaded()
         case .apple:
@@ -436,7 +436,7 @@ final class VoicePipeline {
                 let locale = Locale(identifier: appState.settings.inputLanguage.localeIdentifier)
                 appleSpeechEngine = AppleSpeechEngine(locale: locale)
             }
-            if !(appleSpeechEngine?.isReady ?? false) {
+            if requestPermission, !(appleSpeechEngine?.isReady ?? false) {
                 appleSpeechEngine?.requestAccess()
                 try? await Task.sleep(nanoseconds: 500_000_000)
             }

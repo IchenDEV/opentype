@@ -75,6 +75,7 @@
 /* ── Settings ── */
 "settings.activation" = "Activation";
 "settings.interface" = "Interface";
+"settings.app_icon" = "App icon";
 "settings.recognition" = "Recognition";
 "settings.audio" = "Audio";
 "settings.speech_engine" = "Speech engine";
@@ -93,6 +94,9 @@
 "settings.memory_window" = "Memory window";
 "settings.memory_minutes_fmt" = "%d minutes";
 "settings.screen_context" = "Screen context assist";
+"icon_appearance.system" = "Follow System";
+"icon_appearance.light" = "Light";
+"icon_appearance.dark" = "Dark";
 "settings.screen_context_help" = "Capture on-screen text to help the LLM correct homophones (requires Screen Recording permission, only active in Smart Format mode)";
 "settings.voice_language" = "Voice & Language";
 "settings.ui_language" = "Interface language";
