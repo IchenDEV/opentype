@@ -9,6 +9,7 @@ struct ModelManagementView: View {
     var onUnloadWhisper: (() -> Void)?
     var onUnloadLLM: (() -> Void)?
     var onLoadLLM: (() -> Void)?
+    var onUnloadLocalASR: (() -> Void)?
 
     @State private var customLLMInput = ""
     @State private var showImportError = false
@@ -33,6 +34,12 @@ struct ModelManagementView: View {
                 if settings.speechEngine == .volc {
                     volcSection
                 }
+                if settings.speechEngine == .qwen3 {
+                    qwenASRSection
+                }
+                if settings.speechEngine == .mimo {
+                    mimoASRSection
+                }
                 Divider()
                 llmSection
                 Divider()
@@ -41,6 +48,10 @@ struct ModelManagementView: View {
             .padding(20)
         }
         .onAppear { catalog.refreshStatus() }
+        .onChange(of: settings.localASRPythonPath) { _, _ in onUnloadLocalASR?() }
+        .onChange(of: settings.mimoASRRepoPath) { _, _ in onUnloadLocalASR?() }
+        .onChange(of: settings.qwenASRModel) { _, _ in onUnloadLocalASR?() }
+        .onChange(of: settings.mimoASRModel) { _, _ in onUnloadLocalASR?() }
     }
 
     private var storageSection: some View {
@@ -92,7 +103,7 @@ struct ModelManagementView: View {
             Picker(L("settings.speech_engine"), selection: $settings.speechEngine) {
                 ForEach(SpeechEngineType.allCases, id: \.self) { Text($0.label) }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
         }
     }
 
@@ -122,6 +133,42 @@ struct ModelManagementView: View {
                 .textFieldStyle(.roundedBorder)
             TextField(L("volc.resource_id"), text: $settings.volcResourceId)
                 .textFieldStyle(.roundedBorder)
+        }
+    }
+
+    // MARK: - Local ASR
+
+    private var qwenASRSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("qwen_asr.config_hint"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            TextField(L("local_asr.python"), text: $settings.localASRPythonPath)
+                .textFieldStyle(.roundedBorder)
+            modelList(
+                catalog.asrModels(for: .qwen3),
+                activeID: settings.qwenASRModel,
+                type: .asr
+            )
+        }
+    }
+
+    private var mimoASRSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("mimo_asr.config_hint"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            TextField(L("local_asr.python"), text: $settings.localASRPythonPath)
+                .textFieldStyle(.roundedBorder)
+            TextField(L("local_asr.repo_path"), text: $settings.mimoASRRepoPath)
+                .textFieldStyle(.roundedBorder)
+            modelList(
+                catalog.asrModels(for: .mimo),
+                activeID: settings.mimoASRModel,
+                type: .asr
+            )
         }
     }
 
@@ -246,6 +293,7 @@ struct ModelManagementView: View {
     private func updateModelStoragePath(_ path: String) {
         onUnloadWhisper?()
         onUnloadLLM?()
+        onUnloadLocalASR?()
         settings.modelStoragePath = path
         catalog.refreshStatus(recheckingErrors: true)
     }
@@ -382,7 +430,7 @@ struct ModelManagementView: View {
 
     // MARK: - Shared List
 
-    private enum ModelType { case whisper, llm }
+    private enum ModelType { case whisper, llm, asr }
 
     private func qwenSeries(from displayName: String) -> String {
         displayName.components(separatedBy: " ").first ?? displayName
@@ -504,6 +552,7 @@ struct ModelManagementView: View {
                     switch type {
                     case .whisper: await catalog.downloadWhisper(model.id)
                     case .llm: await catalog.downloadLLM(model.id)
+                    case .asr: await catalog.downloadASR(model.id)
                     }
                 }
             }
@@ -520,6 +569,13 @@ struct ModelManagementView: View {
                     onUnloadLLM?()
                     settings.llmModel = model.id
                     onLoadLLM?()
+                case .asr:
+                    onUnloadLocalASR?()
+                    switch catalog.asrProvider(for: model.id) {
+                    case .qwen3: settings.qwenASRModel = model.id
+                    case .mimo: settings.mimoASRModel = model.id
+                    case nil: break
+                    }
                 }
             }
             .controlSize(.mini)
@@ -548,11 +604,13 @@ struct ModelManagementView: View {
                     switch type {
                     case .whisper: onUnloadWhisper?()
                     case .llm: onUnloadLLM?()
+                    case .asr: onUnloadLocalASR?()
                     }
                 }
                 switch type {
                 case .whisper: catalog.deleteWhisper(model.id)
                 case .llm: catalog.deleteLLM(model.id)
+                case .asr: catalog.deleteASR(model.id)
                 }
             } label: {
                 Image(systemName: "trash")

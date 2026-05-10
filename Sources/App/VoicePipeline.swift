@@ -12,6 +12,8 @@ final class VoicePipeline {
     private var whisperEngine: WhisperEngine?
     private var appleSpeechEngine: AppleSpeechEngine?
     private var volcSpeechEngine: VolcSpeechEngine?
+    private var qwenSpeechEngine: LocalASREngine?
+    private var mimoSpeechEngine: LocalASREngine?
     private var screenOCRTask: Task<String, Never>?
     private var screenOCRStartedAt: CFAbsoluteTime?
     private var processingTask: Task<Void, Never>?
@@ -23,6 +25,8 @@ final class VoicePipeline {
         case .whisper: return whisperEngine
         case .apple: return appleSpeechEngine
         case .volc: return volcSpeechEngine
+        case .qwen3: return qwenSpeechEngine
+        case .mimo: return mimoSpeechEngine
         }
     }
 
@@ -343,6 +347,11 @@ final class VoicePipeline {
         Task { await textProcessor.unloadLLM() }
     }
 
+    func unloadLocalASR() {
+        qwenSpeechEngine = nil
+        mimoSpeechEngine = nil
+    }
+
     func refreshPendingReplacement() {
         guard var replacement = appState.pendingReplacement else { return }
         guard replacement.state == .ready, Date() >= replacement.expiresAt else { return }
@@ -468,6 +477,26 @@ final class VoicePipeline {
                 accessKey: s.volcAccessKey,
                 resourceId: s.volcResourceId
             )
+        case .qwen3:
+            let s = appState.settings
+            let catalog = ModelCatalog.shared
+            qwenSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
+                provider: .qwen3,
+                pythonPath: s.localASRPythonPath,
+                modelPath: catalog.asrModelPath(for: s.qwenASRModel),
+                tokenizerPath: "",
+                repoPath: ""
+            ))
+        case .mimo:
+            let s = appState.settings
+            let catalog = ModelCatalog.shared
+            mimoSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
+                provider: .mimo,
+                pythonPath: s.localASRPythonPath,
+                modelPath: catalog.asrModelPath(for: s.mimoASRModel),
+                tokenizerPath: catalog.mimoTokenizerPath(),
+                repoPath: s.mimoASRRepoPath
+            ))
         }
     }
 

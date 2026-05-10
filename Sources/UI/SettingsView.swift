@@ -7,12 +7,18 @@ struct SettingsView: View {
     var onUnloadWhisper: (() -> Void)?
     var onUnloadLLM: (() -> Void)?
     var onLoadLLM: (() -> Void)?
+    var onUnloadLocalASR: (() -> Void)?
 
     var body: some View {
         TabView {
             generalTab
                 .tabItem { Label(L("tab.general"), systemImage: "gear") }
-            ModelManagementView(onUnloadWhisper: onUnloadWhisper, onUnloadLLM: onUnloadLLM, onLoadLLM: onLoadLLM)
+            ModelManagementView(
+                onUnloadWhisper: onUnloadWhisper,
+                onUnloadLLM: onUnloadLLM,
+                onLoadLLM: onLoadLLM,
+                onUnloadLocalASR: onUnloadLocalASR
+            )
                 .tabItem { Label(L("tab.models"), systemImage: "cpu") }
             DictionaryStyleView()
                 .tabItem { Label(L("tab.style"), systemImage: "text.book.closed") }

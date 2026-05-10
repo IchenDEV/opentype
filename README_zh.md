@@ -38,7 +38,7 @@
 
 | 功能 | 说明 |
 |---|---|
-| **三语音引擎** | Apple 语音识别（内置）、WhisperKit（离线 Whisper 模型）或豆包语音识别（火山引擎云端） |
+| **多语音引擎** | Apple 语音识别、WhisperKit、豆包语音识别、Qwen3-ASR 或 MiMo-V2.5-ASR |
 | **智能文字处理** | 本地 MLX Qwen2.5/Qwen3 或远程 LLM — 上下文感知的语气词清理、自动纠正、列表格式化 |
 | **远程 LLM** | 支持 OpenAI、Claude（Anthropic 格式）、Gemini、OpenRouter、硅基流动、豆包、百炼、MiniMax（国内/海外） |
 | **全局快捷键** | 可配置按键（Fn/Ctrl/Shift/Option），支持长按、双击、单击三种触发模式 |
@@ -100,7 +100,7 @@ open Package.swift
 | 辅助功能 | 全局快捷键 + 文本注入（模拟粘贴） | 是 |
 | 语音识别 | Apple 语音识别引擎 | 使用 Apple Speech 时需要 |
 | 屏幕录制 | OCR 屏幕文字辅助纠错 + 语音指令模式 | 可选 |
-| 网络 | 下载模型；远程 LLM API 调用 | 首次运行 / 远程模式 |
+| 网络 | 下载模型；远程 LLM API 调用 | 首次运行 / 远程 LLM 模式 |
 
 ## 远程 LLM 服务商
 
@@ -118,6 +118,15 @@ OpenType 同时支持 **OpenAI 兼容** 和 **Anthropic** 两种 API 格式：
 | MiniMax（国内） | OpenAI | `https://api.minimax.chat/v1` |
 | MiniMax（海外） | OpenAI | `https://api.minimaxi.chat/v1` |
 
+## 本地语音识别服务商
+
+| 服务商 | 本地运行方式 | 默认模型 |
+|---|---|---|
+| Qwen3-ASR | `qwen3-asr-mlx` + Apple Silicon MLX | `mlx-community/Qwen3-ASR-1.7B-bf16` |
+| MiMo-V2.5-ASR | 小米本地 Python 仓库 + 本地模型目录 | `XiaomiMiMo/MiMo-V2.5-ASR` + `XiaomiMiMo/MiMo-Audio-Tokenizer` |
+
+这两个引擎不会调用托管 ASR API。App 会把选中的模型下载到 WhisperKit/MLX 使用的同一个模型存储位置，再用配置好的 Python 可执行文件运行内置本地脚本，并从 stdout 读取识别结果。
+
 ## 项目结构
 
 ```
@@ -130,7 +139,7 @@ Sources/
 ├── Output/       # 文本注入（Accessibility API + 剪贴板粘贴）
 ├── Processing/   # 文本处理器、输入历史、记忆系统、个人词库
 ├── Screen/       # 屏幕 OCR（ScreenCaptureKit + Vision）
-├── Speech/       # 语音识别协议、WhisperKit 引擎、Apple Speech 引擎、豆包语音识别引擎
+├── Speech/       # 语音识别协议、WhisperKit 引擎、Apple Speech 引擎、豆包语音识别引擎、本地语音识别引擎
 ├── UI/           # SwiftUI：菜单栏、设置面板、新手引导、浮动 HUD、历史、模型管理
 └── Resources/    # 本地化字符串（中/英）、音效、应用图标
 scripts/

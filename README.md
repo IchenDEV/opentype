@@ -38,7 +38,7 @@ Three output modes are available:
 
 | Feature | Description |
 |---|---|
-| **Triple Speech Engines** | Apple Speech (built-in), WhisperKit (offline Whisper), or Doubao ASR (Volcengine cloud) |
+| **Multiple Speech Engines** | Apple Speech, WhisperKit, Doubao ASR, Qwen3-ASR, or MiMo-V2.5-ASR |
 | **Smart Text Processing** | Local MLX Qwen2.5/Qwen3 or remote LLM — contextual cleanup, self-correction handling, structured list formatting |
 | **Remote LLM Support** | OpenAI, Claude (Anthropic format), Gemini, OpenRouter, SiliconFlow, Doubao, Bailian, MiniMax (CN & Global) |
 | **Global Hotkey** | Configurable key (Fn/Ctrl/Shift/Option) with long-press, double-tap, or single-tap activation |
@@ -100,7 +100,7 @@ open Package.swift
 | Accessibility | Global hotkey + text injection (simulated paste) | Yes |
 | Speech Recognition | Apple on-device ASR engine | Only if using Apple Speech |
 | Screen Recording | OCR for screen context and Voice Command mode | Optional |
-| Network | Model downloads; remote LLM API calls | First run / remote mode |
+| Network | Model downloads; remote LLM API calls | First run / remote LLM mode |
 
 ## Remote LLM Providers
 
@@ -118,6 +118,15 @@ OpenType supports both **OpenAI-compatible** and **Anthropic** API formats:
 | MiniMax (China) | OpenAI | `https://api.minimax.chat/v1` |
 | MiniMax (Global) | OpenAI | `https://api.minimaxi.chat/v1` |
 
+## Local ASR Providers
+
+| Provider | Local runtime | Default model |
+|---|---|---|
+| Qwen3-ASR | `qwen3-asr-mlx` + MLX on Apple Silicon | `mlx-community/Qwen3-ASR-1.7B-bf16` |
+| MiMo-V2.5-ASR | Xiaomi's local Python repo + local model folders | `XiaomiMiMo/MiMo-V2.5-ASR` + `XiaomiMiMo/MiMo-Audio-Tokenizer` |
+
+These engines do not call hosted ASR APIs. The app downloads the selected model into the same model storage used by WhisperKit/MLX, invokes the bundled local runner script with the configured Python executable, then reads the transcript from stdout.
+
 ## Project Structure
 
 ```
@@ -130,7 +139,7 @@ Sources/
 ├── Output/       # Text injection (Accessibility API + clipboard paste)
 ├── Processing/   # TextProcessor, InputHistory, MemoryStore, PersonalDictionary
 ├── Screen/       # Screen OCR (ScreenCaptureKit + Vision)
-├── Speech/       # SpeechEngine protocol, WhisperKit, Apple Speech, Doubao ASR engines
+├── Speech/       # SpeechEngine protocol, WhisperKit, Apple Speech, Doubao ASR, local ASR engines
 ├── UI/           # SwiftUI: MenuBar, Settings, Onboarding, Overlay, History, Models
 └── Resources/    # Localization strings (en/zh-Hans), sounds, app icon
 scripts/
