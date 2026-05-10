@@ -12,6 +12,8 @@ final class VoicePipeline {
     private var whisperEngine: WhisperEngine?
     private var appleSpeechEngine: AppleSpeechEngine?
     private var volcSpeechEngine: VolcSpeechEngine?
+    private var qwenSpeechEngine: LocalASREngine?
+    private var mimoSpeechEngine: LocalASREngine?
     private var screenOCRTask: Task<String, Never>?
     private var screenOCRStartedAt: CFAbsoluteTime?
     private var processingTask: Task<Void, Never>?
@@ -23,6 +25,8 @@ final class VoicePipeline {
         case .whisper: return whisperEngine
         case .apple: return appleSpeechEngine
         case .volc: return volcSpeechEngine
+        case .qwen3: return qwenSpeechEngine
+        case .mimo: return mimoSpeechEngine
         }
     }
 
@@ -468,6 +472,24 @@ final class VoicePipeline {
                 accessKey: s.volcAccessKey,
                 resourceId: s.volcResourceId
             )
+        case .qwen3:
+            let s = appState.settings
+            qwenSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
+                provider: .qwen3,
+                pythonPath: s.localASRPythonPath,
+                modelPath: s.qwenASRModelPath,
+                tokenizerPath: "",
+                repoPath: ""
+            ))
+        case .mimo:
+            let s = appState.settings
+            mimoSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
+                provider: .mimo,
+                pythonPath: s.localASRPythonPath,
+                modelPath: s.mimoASRModelPath,
+                tokenizerPath: s.mimoASRTokenizerPath,
+                repoPath: s.mimoASRRepoPath
+            ))
         }
     }
 

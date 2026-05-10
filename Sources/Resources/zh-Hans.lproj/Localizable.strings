@@ -194,6 +194,8 @@
 "style.custom" = "自定义";
 "engine.apple_speech" = "Apple 语音识别";
 "engine.volc_asr" = "豆包语音识别";
+"engine.qwen3_asr" = "Qwen3-ASR（本地）";
+"engine.mimo_asr" = "MiMo-V2.5-ASR（本地）";
 "style.prompt.concise" = "极简。只保留核心信息，删掉修饰、重复和过渡，长句拆短。";
 "style.prompt.formal" = "正式书面。用规范表达，减少口语感，保持句子完整、逻辑顺畅。";
 "style.prompt.professional" = "专业整理。语义完整、结构清楚；只有原文明显是步骤或待办时才用编号，不把普通句子硬改成列表。";
@@ -294,9 +296,21 @@
 "error.volc_audio_conversion" = "音频转换为 PCM 16kHz 失败";
 "error.volc_timeout" = "语音识别请求超时";
 "error.volc_handshake_rejected" = "豆包语音识别连接被服务端拒绝。请检查 App Key、Access Token、Resource ID，以及账号是否已开通流式语音识别。";
+"error.local_asr_not_configured" = "本地语音识别未配置 — 请在 设置 → 模型 中填写模型路径";
+"error.local_asr_runner_missing" = "本地语音识别脚本未包含在应用包中";
+"error.local_asr_process_failed" = "本地语音识别失败：%@";
+"error.local_asr_invalid_response" = "本地语音识别返回结果格式异常";
 
 /* ── 豆包语音识别 ── */
 "volc.config_hint" = "填写火山引擎豆包语音识别凭据，可从火山引擎控制台获取。";
 "volc.app_key" = "App Key（应用 ID）";
 "volc.access_key" = "Access Token";
 "volc.resource_id" = "Resource ID（资源 ID）";
+
+/* ── 本地语音识别 ── */
+"local_asr.python" = "Python 可执行文件";
+"local_asr.model_path" = "模型路径或 Hugging Face ID";
+"local_asr.repo_path" = "MiMo 仓库路径";
+"local_asr.tokenizer_path" = "音频 tokenizer 路径";
+"qwen_asr.config_hint" = "通过 qwen3-asr-mlx 和 MLX 在本机运行。请先在所选 Python 环境安装该包；模型可填写本地目录或 Hugging Face ID。";
+"mimo_asr.config_hint" = "通过小米 MiMo-V2.5-ASR 本地 Python 仓库运行。请填写克隆后的仓库路径，以及本地 MiMo-V2.5-ASR 和 MiMo-Audio-Tokenizer 目录。";

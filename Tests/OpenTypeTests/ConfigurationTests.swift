@@ -48,6 +48,24 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(InputLanguage.cantonese.localeIdentifier, "zh-HK")
     }
 
+    func testSpeechEngineCasesIncludeLocalASRProviders() {
+        XCTAssertEqual(SpeechEngineType.allCases.map(\.rawValue), [
+            "whisper", "apple", "volc", "qwen3", "mimo",
+        ])
+    }
+
+    func testLocalASRDefaultsMatchOnDeviceRunner() {
+        XCTAssertEqual(LocalASRConfiguration.defaultPythonPath, "python3")
+        XCTAssertEqual(LocalASRConfiguration.qwen3DefaultModel, "mlx-community/Qwen3-ASR-1.7B-bf16")
+    }
+
+    func testLocalASRRunnerOutputParsing() throws {
+        let jsonText = try LocalASREngine.parseRunnerOutput(#"{"text":" 你好，OpenType。 "}"#)
+        XCTAssertEqual(jsonText, "你好，OpenType。")
+        let plainText = try LocalASREngine.parseRunnerOutput("Good morning.")
+        XCTAssertEqual(plainText, "Good morning.")
+    }
+
     func testHistoryRetentionIntervals() {
         XCTAssertNil(HistoryRetention.forever.timeInterval)
         XCTAssertEqual(HistoryRetention.threeDays.timeInterval, TimeInterval(3 * 24 * 3600))
@@ -93,6 +111,8 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertTrue(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .whisper))
         XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .apple))
         XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .volc))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .qwen3))
+        XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .mimo))
         XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: false, speechEngine: .whisper))
     }
 

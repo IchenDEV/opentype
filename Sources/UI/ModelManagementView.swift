@@ -33,6 +33,12 @@ struct ModelManagementView: View {
                 if settings.speechEngine == .volc {
                     volcSection
                 }
+                if settings.speechEngine == .qwen3 {
+                    qwenASRSection
+                }
+                if settings.speechEngine == .mimo {
+                    mimoASRSection
+                }
                 Divider()
                 llmSection
                 Divider()
@@ -92,7 +98,7 @@ struct ModelManagementView: View {
             Picker(L("settings.speech_engine"), selection: $settings.speechEngine) {
                 ForEach(SpeechEngineType.allCases, id: \.self) { Text($0.label) }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
         }
     }
 
@@ -121,6 +127,38 @@ struct ModelManagementView: View {
             SecureField(L("volc.access_key"), text: $settings.volcAccessKey)
                 .textFieldStyle(.roundedBorder)
             TextField(L("volc.resource_id"), text: $settings.volcResourceId)
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+
+    // MARK: - Local ASR
+
+    private var qwenASRSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("qwen_asr.config_hint"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            TextField(L("local_asr.python"), text: $settings.localASRPythonPath)
+                .textFieldStyle(.roundedBorder)
+            TextField(L("local_asr.model_path"), text: $settings.qwenASRModelPath)
+                .textFieldStyle(.roundedBorder)
+        }
+    }
+
+    private var mimoASRSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("mimo_asr.config_hint"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+
+            TextField(L("local_asr.python"), text: $settings.localASRPythonPath)
+                .textFieldStyle(.roundedBorder)
+            TextField(L("local_asr.repo_path"), text: $settings.mimoASRRepoPath)
+                .textFieldStyle(.roundedBorder)
+            TextField(L("local_asr.model_path"), text: $settings.mimoASRModelPath)
+                .textFieldStyle(.roundedBorder)
+            TextField(L("local_asr.tokenizer_path"), text: $settings.mimoASRTokenizerPath)
                 .textFieldStyle(.roundedBorder)
         }
     }
