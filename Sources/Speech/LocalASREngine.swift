@@ -9,6 +9,8 @@ struct LocalASRConfiguration: Equatable {
 
     static let defaultPythonPath = "python3"
     static let qwen3DefaultModel = "mlx-community/Qwen3-ASR-1.7B-bf16"
+    static let mimoDefaultModel = "XiaomiMiMo/MiMo-V2.5-ASR"
+    static let mimoTokenizerModel = "XiaomiMiMo/MiMo-Audio-Tokenizer"
 
     let provider: Provider
     let pythonPath: String
@@ -18,13 +20,18 @@ struct LocalASRConfiguration: Equatable {
 
     var isReady: Bool {
         let hasPython = !pythonPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let hasModel = !modelPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasModel = Self.pathExists(modelPath)
         switch provider {
         case .qwen3:
             return hasPython && hasModel
         case .mimo:
-            return hasPython && hasModel && !tokenizerPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return hasPython && hasModel && Self.pathExists(tokenizerPath)
         }
+    }
+
+    private static func pathExists(_ path: String) -> Bool {
+        let normalized = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !normalized.isEmpty && FileManager.default.fileExists(atPath: normalized)
     }
 
     var logName: String {

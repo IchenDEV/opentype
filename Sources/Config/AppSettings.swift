@@ -268,10 +268,9 @@ final class AppSettings: ObservableObject {
     @Published var volcAccessKey: String
     @Published var volcResourceId: String
     @Published var localASRPythonPath: String
-    @Published var qwenASRModelPath: String
+    @Published var qwenASRModel: String
     @Published var mimoASRRepoPath: String
-    @Published var mimoASRModelPath: String
-    @Published var mimoASRTokenizerPath: String
+    @Published var mimoASRModel: String
     @Published var preloadSpeechModelOnLaunch: Bool
     @Published var preloadFormattingModelOnLaunch: Bool
     @Published var modelStoragePath: String
@@ -292,8 +291,8 @@ final class AppSettings: ObservableObject {
         case menuBarIcon, appIconAppearance
         case volcAppKey, volcAccessKey, volcResourceId
         case localASRPythonPath
-        case qwenASRModelPath
-        case mimoASRRepoPath, mimoASRModelPath, mimoASRTokenizerPath
+        case qwenASRModel, qwenASRModelPath
+        case mimoASRRepoPath, mimoASRModel, mimoASRModelPath, mimoASRTokenizerPath
         case preloadSpeechModelOnLaunch, preloadFormattingModelOnLaunch
         case modelStoragePath, localWhisperModelPaths, localLLMModelPaths
     }
@@ -348,10 +347,13 @@ final class AppSettings: ObservableObject {
         volcAccessKey = ud.string(forKey: Key.volcAccessKey.rawValue) ?? ""
         volcResourceId = ud.string(forKey: Key.volcResourceId.rawValue) ?? "volc.bigasr.sauc.duration"
         localASRPythonPath = ud.string(forKey: Key.localASRPythonPath.rawValue) ?? LocalASRConfiguration.defaultPythonPath
-        qwenASRModelPath = ud.string(forKey: Key.qwenASRModelPath.rawValue) ?? LocalASRConfiguration.qwen3DefaultModel
+        qwenASRModel = ud.string(forKey: Key.qwenASRModel.rawValue)
+            ?? ud.string(forKey: Key.qwenASRModelPath.rawValue)
+            ?? LocalASRConfiguration.qwen3DefaultModel
         mimoASRRepoPath = ud.string(forKey: Key.mimoASRRepoPath.rawValue) ?? ""
-        mimoASRModelPath = ud.string(forKey: Key.mimoASRModelPath.rawValue) ?? ""
-        mimoASRTokenizerPath = ud.string(forKey: Key.mimoASRTokenizerPath.rawValue) ?? ""
+        mimoASRModel = ud.string(forKey: Key.mimoASRModel.rawValue)
+            ?? ud.string(forKey: Key.mimoASRModelPath.rawValue)
+            ?? LocalASRConfiguration.mimoDefaultModel
         preloadSpeechModelOnLaunch = ud.object(forKey: Key.preloadSpeechModelOnLaunch.rawValue) as? Bool ?? true
         preloadFormattingModelOnLaunch = ud.object(forKey: Key.preloadFormattingModelOnLaunch.rawValue) as? Bool ?? true
         modelStoragePath = ud.string(forKey: Key.modelStoragePath.rawValue) ?? ModelStorage.defaultRoot.path
@@ -395,10 +397,9 @@ final class AppSettings: ObservableObject {
         $volcAccessKey.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcAccessKey.rawValue) }.store(in: &cancellables)
         $volcResourceId.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.volcResourceId.rawValue) }.store(in: &cancellables)
         $localASRPythonPath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localASRPythonPath.rawValue) }.store(in: &cancellables)
-        $qwenASRModelPath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.qwenASRModelPath.rawValue) }.store(in: &cancellables)
+        $qwenASRModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.qwenASRModel.rawValue) }.store(in: &cancellables)
         $mimoASRRepoPath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.mimoASRRepoPath.rawValue) }.store(in: &cancellables)
-        $mimoASRModelPath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.mimoASRModelPath.rawValue) }.store(in: &cancellables)
-        $mimoASRTokenizerPath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.mimoASRTokenizerPath.rawValue) }.store(in: &cancellables)
+        $mimoASRModel.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.mimoASRModel.rawValue) }.store(in: &cancellables)
         $preloadSpeechModelOnLaunch.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.preloadSpeechModelOnLaunch.rawValue) }.store(in: &cancellables)
         $preloadFormattingModelOnLaunch.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.preloadFormattingModelOnLaunch.rawValue) }.store(in: &cancellables)
         $modelStoragePath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.modelStoragePath.rawValue) }.store(in: &cancellables)

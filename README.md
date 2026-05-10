@@ -123,9 +123,9 @@ OpenType supports both **OpenAI-compatible** and **Anthropic** API formats:
 | Provider | Local runtime | Default model |
 |---|---|---|
 | Qwen3-ASR | `qwen3-asr-mlx` + MLX on Apple Silicon | `mlx-community/Qwen3-ASR-1.7B-bf16` |
-| MiMo-V2.5-ASR | Xiaomi's local Python repo + local model folders | User-selected local paths |
+| MiMo-V2.5-ASR | Xiaomi's local Python repo + local model folders | `XiaomiMiMo/MiMo-V2.5-ASR` + `XiaomiMiMo/MiMo-Audio-Tokenizer` |
 
-These engines do not call hosted ASR APIs. The app invokes the bundled local runner script with the configured Python executable and model paths, then reads the transcript from stdout.
+These engines do not call hosted ASR APIs. The app downloads the selected model into the same model storage used by WhisperKit/MLX, invokes the bundled local runner script with the configured Python executable, then reads the transcript from stdout.
 
 ## Project Structure
 

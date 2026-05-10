@@ -296,7 +296,7 @@
 "error.volc_audio_conversion" = "Audio conversion to PCM 16kHz failed";
 "error.volc_timeout" = "ASR request timed out";
 "error.volc_handshake_rejected" = "Doubao ASR connection was rejected by the server. Check App Key, Access Token, Resource ID, and whether streaming ASR is enabled for this account.";
-"error.local_asr_not_configured" = "Local ASR is not configured — enter model paths in Settings → Models";
+"error.local_asr_not_configured" = "Local ASR is not configured — download the model in Settings → Models";
 "error.local_asr_runner_missing" = "Local ASR runner script is missing from the app bundle";
 "error.local_asr_process_failed" = "Local ASR failed: %@";
 "error.local_asr_invalid_response" = "Local ASR returned an invalid response";
@@ -312,5 +312,8 @@
 "local_asr.model_path" = "Model path or Hugging Face ID";
 "local_asr.repo_path" = "MiMo repo path";
 "local_asr.tokenizer_path" = "Audio tokenizer path";
-"qwen_asr.config_hint" = "Runs on this Mac through qwen3-asr-mlx and MLX. Install the package in the selected Python environment; the model can be a local folder or a Hugging Face ID.";
-"mimo_asr.config_hint" = "Runs through Xiaomi's local MiMo-V2.5-ASR Python repo. Set the cloned repo path plus local MiMo-V2.5-ASR and MiMo-Audio-Tokenizer folders.";
+"qwen_asr.config_hint" = "Runs on this Mac through qwen3-asr-mlx and MLX. Install the package in the selected Python environment, then download the model below.";
+"mimo_asr.config_hint" = "Runs through Xiaomi's local MiMo-V2.5-ASR Python repo. Set the cloned repo path, then download MiMo-V2.5-ASR below; the audio tokenizer is downloaded with it.";
+"model.qwen3_asr_quality" = "Local ASR through MLX, ~4 GB";
+"model.mimo_asr_quality" = "Local ASR model plus audio tokenizer";
+"model.asr_incomplete" = "Download incomplete";

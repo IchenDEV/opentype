@@ -39,6 +39,11 @@ final class UtilityTests: XCTestCase {
         XCTAssertEqual(ModelStorage.directorySize(at: root.appendingPathComponent("missing")), 0)
     }
 
+    func testModelStorageUsesHubRepoPathForASR() {
+        let suffix = ModelStorage.hubRepoCacheDir("XiaomiMiMo/MiMo-V2.5-ASR").path
+        XCTAssertTrue(suffix.hasSuffix("/models/XiaomiMiMo/MiMo-V2.5-ASR"))
+    }
+
     func testGzipRoundTripForTextAndBinaryData() throws {
         let text = Data("OpenType voice input. 你好，世界。".utf8)
         let compressedText = try XCTUnwrap(Gzip.compress(text))

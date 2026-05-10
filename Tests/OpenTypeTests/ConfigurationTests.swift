@@ -57,6 +57,8 @@ final class ConfigurationTests: XCTestCase {
     func testLocalASRDefaultsMatchOnDeviceRunner() {
         XCTAssertEqual(LocalASRConfiguration.defaultPythonPath, "python3")
         XCTAssertEqual(LocalASRConfiguration.qwen3DefaultModel, "mlx-community/Qwen3-ASR-1.7B-bf16")
+        XCTAssertEqual(LocalASRConfiguration.mimoDefaultModel, "XiaomiMiMo/MiMo-V2.5-ASR")
+        XCTAssertEqual(LocalASRConfiguration.mimoTokenizerModel, "XiaomiMiMo/MiMo-Audio-Tokenizer")
     }
 
     func testLocalASRRunnerOutputParsing() throws {
@@ -96,6 +98,13 @@ final class ConfigurationTests: XCTestCase {
     func testRecommendedLocalModelRemainsListed() {
         let models = ModelCatalog.defaultLLMModels
         XCTAssertTrue(models.contains { $0.0 == "mlx-community/Qwen3.5-2B-4bit" })
+    }
+
+    @MainActor
+    func testLocalASRModelsRemainListed() {
+        let models = ModelCatalog.defaultASRModels
+        XCTAssertTrue(models.contains { $0.id == LocalASRConfiguration.qwen3DefaultModel && $0.provider == .qwen3 })
+        XCTAssertTrue(models.contains { $0.id == LocalASRConfiguration.mimoDefaultModel && $0.provider == .mimo })
     }
 
     func testUILanguageDisplayNames() {

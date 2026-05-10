@@ -50,10 +50,13 @@ def transcribe_mimo(args):
     try:
         from src.mimo_audio.mimo_audio import MimoAudio
     except ImportError as exc:
-        raise RuntimeError(
-            "Missing Xiaomi MiMo-V2.5-ASR repo. Set the repo path to the cloned "
-            "XiaomiMiMo/MiMo-V2.5-ASR directory and install its requirements."
-        ) from exc
+        try:
+            from mimo_audio.mimo_audio import MimoAudio
+        except ImportError:
+            raise RuntimeError(
+                "Missing Xiaomi MiMo-V2.5-ASR repo. Set the repo path to the cloned "
+                "XiaomiMiMo/MiMo-V2.5-ASR directory and install its requirements."
+            ) from exc
 
     model = MimoAudio(model_path=args.model, tokenizer_path=args.tokenizer)
     tag = mimo_tag(args.language)

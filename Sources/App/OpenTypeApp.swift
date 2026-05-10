@@ -267,7 +267,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         let settingsView = SettingsView(
             onUnloadWhisper: { [weak self] in self?.pipeline?.unloadWhisper() },
             onUnloadLLM: { [weak self] in self?.pipeline?.unloadLLM() },
-            onLoadLLM: { [weak self] in self?.pipeline?.loadLLM() }
+            onLoadLLM: { [weak self] in self?.pipeline?.loadLLM() },
+            onUnloadLocalASR: { [weak self] in self?.pipeline?.unloadLocalASR() }
         )
         .environmentObject(appState)
         .environmentObject(AppSettings.shared)

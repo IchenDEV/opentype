@@ -347,6 +347,11 @@ final class VoicePipeline {
         Task { await textProcessor.unloadLLM() }
     }
 
+    func unloadLocalASR() {
+        qwenSpeechEngine = nil
+        mimoSpeechEngine = nil
+    }
+
     func refreshPendingReplacement() {
         guard var replacement = appState.pendingReplacement else { return }
         guard replacement.state == .ready, Date() >= replacement.expiresAt else { return }
@@ -474,20 +479,22 @@ final class VoicePipeline {
             )
         case .qwen3:
             let s = appState.settings
+            let catalog = ModelCatalog.shared
             qwenSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
                 provider: .qwen3,
                 pythonPath: s.localASRPythonPath,
-                modelPath: s.qwenASRModelPath,
+                modelPath: catalog.asrModelPath(for: s.qwenASRModel),
                 tokenizerPath: "",
                 repoPath: ""
             ))
         case .mimo:
             let s = appState.settings
+            let catalog = ModelCatalog.shared
             mimoSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
                 provider: .mimo,
                 pythonPath: s.localASRPythonPath,
-                modelPath: s.mimoASRModelPath,
-                tokenizerPath: s.mimoASRTokenizerPath,
+                modelPath: catalog.asrModelPath(for: s.mimoASRModel),
+                tokenizerPath: catalog.mimoTokenizerPath(),
                 repoPath: s.mimoASRRepoPath
             ))
         }
