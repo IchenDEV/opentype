@@ -2,6 +2,8 @@ import Foundation
 import Hub
 
 extension ModelCatalog {
+    static var asrDownloadBase: URL { whisperDownloadBase }
+
     static var defaultASRModels: [
         (id: String, displayName: String, hint: String, provider: LocalASRConfiguration.Provider)
     ] {
@@ -67,9 +69,9 @@ extension ModelCatalog {
 
         do {
             let repos = asrRequiredRepoIDs(for: id)
-            let api = HubApi(downloadBase: ModelStorage.huggingFaceBase)
+            let api = HubApi(downloadBase: Self.asrDownloadBase)
             for (repoIndex, repoID) in repos.enumerated() {
-                _ = try await api.snapshot(from: repoID) { [weak self] progress in
+                _ = try await api.snapshot(from: ModelStorage.hubModelRepo(repoID)) { [weak self] progress in
                     Task { @MainActor in
                         guard let self,
                               let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }
@@ -102,7 +104,7 @@ extension ModelCatalog {
         guard let idx = asrModels.firstIndex(where: { $0.id == id }) else { return }
         let provider = asrProvider(for: id)
         for repoID in asrRequiredRepoIDs(for: id) {
-            try? FileManager.default.removeItem(at: ModelStorage.hubRepoCacheDir(repoID))
+            try? FileManager.default.removeItem(at: ModelStorage.hubModelRepoDir(repoID))
         }
         asrModels[idx].status = .notDownloaded
         asrModels[idx].cacheSize = 0

@@ -40,7 +40,7 @@ final class UtilityTests: XCTestCase {
     }
 
     func testModelStorageUsesHubRepoPathForASR() {
-        let suffix = ModelStorage.hubRepoCacheDir("XiaomiMiMo/MiMo-V2.5-ASR").path
+        let suffix = ModelStorage.hubModelRepoDir("XiaomiMiMo/MiMo-V2.5-ASR").path
         XCTAssertTrue(suffix.hasSuffix("/models/XiaomiMiMo/MiMo-V2.5-ASR"))
     }
 

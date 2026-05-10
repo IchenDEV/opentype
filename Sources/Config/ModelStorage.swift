@@ -1,4 +1,5 @@
 import Foundation
+import Hub
 
 enum ModelStorage {
     static var defaultRoot: URL {
@@ -27,18 +28,22 @@ enum ModelStorage {
             .appendingPathComponent(variant)
     }
 
-    static func hubRepoCacheDir(_ modelID: String) -> URL {
-        hubModelsBase.appendingPathComponent(modelID)
+    static func hubModelRepo(_ modelID: String) -> Hub.Repo {
+        Hub.Repo(id: modelID, type: .models)
+    }
+
+    static func hubModelRepoDir(_ modelID: String) -> URL {
+        HubApi(downloadBase: huggingFaceBase).localRepoLocation(hubModelRepo(modelID))
     }
 
     static func llmRepoDir(_ modelID: String) -> URL? {
         if let local = localLLMURL(modelID) { return local }
-        let dir = hubRepoCacheDir(modelID)
+        let dir = hubModelRepoDir(modelID)
         return FileManager.default.fileExists(atPath: dir.path) ? dir : nil
     }
 
     static func asrRepoDir(_ modelID: String) -> URL? {
-        let dir = hubRepoCacheDir(modelID)
+        let dir = hubModelRepoDir(modelID)
         return FileManager.default.fileExists(atPath: dir.path) ? dir : nil
     }
 
