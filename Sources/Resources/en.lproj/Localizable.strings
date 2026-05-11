@@ -116,8 +116,6 @@
 "retention.one_month" = "1 Month";
 
 /* ── Remote LLM ── */
-"remote.title" = "Remote LLM";
-"remote.use_remote" = "Use remote LLM";
 "remote.provider" = "Provider";
 "remote.api_key" = "API Key";
 "remote.base_url" = "Base URL";
@@ -140,10 +138,11 @@
 "model.preload.formatting_help" = "Applies to local MLX models. Remote LLM providers are called when formatting starts.";
 "model.speech_recognition" = "Speech Recognition";
 "model.text_formatting" = "Text Formatting (LLM)";
-"model.family.title" = "Model Family";
+"model.family.title" = "Model Type";
 "model.family.qwen" = "Alibaba Qwen - Multilingual";
 "model.family.gemma" = "Google Gemma - Lightweight";
 "model.family.llama" = "Meta Llama - General Purpose";
+"model.family.remote" = "Remote";
 "model.custom_id_placeholder" = "Custom model ID (e.g. mlx-community/…)";
 "model.active" = "Active";
 "model.use" = "Use";
