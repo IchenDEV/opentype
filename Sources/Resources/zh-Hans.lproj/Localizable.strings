@@ -116,8 +116,6 @@
 "retention.one_month" = "保留 1 个月";
 
 /* ── Remote LLM ── */
-"remote.title" = "远程 LLM";
-"remote.use_remote" = "使用远程 LLM";
 "remote.provider" = "服务商";
 "remote.api_key" = "API Key";
 "remote.base_url" = "接口地址";
@@ -140,10 +138,11 @@
 "model.preload.formatting_help" = "仅对本地 MLX 模型生效。远程 LLM 会在整理开始时调用。";
 "model.speech_recognition" = "语音识别";
 "model.text_formatting" = "文本整理 (LLM)";
-"model.family.title" = "模型系列";
+"model.family.title" = "模型类型";
 "model.family.qwen" = "阿里通义千问 - 多语言";
 "model.family.gemma" = "Google Gemma - 轻量";
 "model.family.llama" = "Meta Llama - 通用";
+"model.family.remote" = "远程";
 "model.custom_id_placeholder" = "自定义模型 ID（如 mlx-community/…）";
 "model.active" = "当前";
 "model.use" = "启用";
