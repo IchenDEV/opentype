@@ -4,6 +4,8 @@ import Speech
 
 struct AboutView: View {
     @State private var showPermissions = false
+    @ObservedObject private var settings = AppSettings.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView {
@@ -24,9 +26,7 @@ struct AboutView: View {
 
     private var appInfo: some View {
         VStack(spacing: 6) {
-            Image(systemName: "waveform.circle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.tint)
+            appIcon
 
             Text("OpenType")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -46,6 +46,26 @@ struct AboutView: View {
             .font(.caption)
             .padding(.top, 8)
         }
+    }
+
+    private var appIcon: some View {
+        Group {
+            if let image = AppIcon.image(
+                for: settings.appIconAppearance,
+                systemIsDark: colorScheme == .dark
+            ) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: "waveform.circle.fill")
+                    .resizable()
+                    .foregroundStyle(.tint)
+            }
+        }
+        .frame(width: 64, height: 64)
+        .accessibilityHidden(true)
     }
 
     // MARK: - Permissions
