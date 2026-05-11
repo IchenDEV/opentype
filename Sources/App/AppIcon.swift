@@ -4,14 +4,31 @@ enum AppIcon {
 
     @MainActor
     static func install() {
-        let resource = AppSettings.shared.appIconAppearance.resourceName(systemIsDark: systemIsDark)
-        guard let url = Bundle.module.url(forResource: resource, withExtension: "png")
-                ?? Bundle.module.url(forResource: "AppIcon", withExtension: "png"),
-              let image = NSImage(contentsOf: url) else {
+        guard let image = image(
+            for: AppSettings.shared.appIconAppearance,
+            systemIsDark: systemIsDark,
+            size: 512
+        ) else {
             return
         }
-        image.size = NSSize(width: 512, height: 512)
         NSApp.applicationIconImage = image
+    }
+
+    static func image(for appearance: AppIconAppearance, systemIsDark: Bool, size: CGFloat? = nil) -> NSImage? {
+        let resource = appearance.resourceName(systemIsDark: systemIsDark)
+        return image(named: resource, size: size)
+            ?? image(named: "AppIcon", size: size)
+    }
+
+    private static func image(named resource: String, size: CGFloat?) -> NSImage? {
+        guard let url = Bundle.module.url(forResource: resource, withExtension: "png"),
+              let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+        if let size {
+            image.size = NSSize(width: size, height: size)
+        }
+        return image
     }
 
     @MainActor
