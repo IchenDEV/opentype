@@ -20,6 +20,17 @@ struct ModelManagementView: View {
     @State private var selectedModelFamily: ModelCatalog.ModelFamily? = .qwen
     private let benchmarkEngine = LLMEngine()
 
+    private var selectedASRAutoDownloadKey: String {
+        switch settings.speechEngine {
+        case .qwen3:
+            return "qwen3:\(settings.qwenASRModel)"
+        case .mimo:
+            return "mimo:\(settings.mimoASRModel)"
+        default:
+            return "none"
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -48,10 +59,28 @@ struct ModelManagementView: View {
             .padding(20)
         }
         .onAppear { catalog.refreshStatus() }
-        .onChange(of: settings.localASRPythonPath) { _, _ in onUnloadLocalASR?() }
-        .onChange(of: settings.mimoASRRepoPath) { _, _ in onUnloadLocalASR?() }
         .onChange(of: settings.qwenASRModel) { _, _ in onUnloadLocalASR?() }
         .onChange(of: settings.mimoASRModel) { _, _ in onUnloadLocalASR?() }
+        .task(id: selectedASRAutoDownloadKey) {
+            await autoDownloadSelectedASRIfNeeded()
+        }
+    }
+
+    @MainActor
+    private func autoDownloadSelectedASRIfNeeded() async {
+        let id: String
+        switch settings.speechEngine {
+        case .qwen3:
+            id = settings.qwenASRModel
+        case .mimo:
+            id = settings.mimoASRModel
+        default:
+            return
+        }
+
+        guard let model = catalog.asrModels.first(where: { $0.id == id }),
+              model.status == .notDownloaded || model.status.isError else { return }
+        await catalog.downloadASR(id)
     }
 
     private var storageSection: some View {
@@ -144,8 +173,6 @@ struct ModelManagementView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
 
-            TextField(L("local_asr.python"), text: $settings.localASRPythonPath)
-                .textFieldStyle(.roundedBorder)
             modelList(
                 catalog.asrModels(for: .qwen3),
                 activeID: settings.qwenASRModel,
@@ -160,10 +187,6 @@ struct ModelManagementView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
 
-            TextField(L("local_asr.python"), text: $settings.localASRPythonPath)
-                .textFieldStyle(.roundedBorder)
-            TextField(L("local_asr.repo_path"), text: $settings.mimoASRRepoPath)
-                .textFieldStyle(.roundedBorder)
             modelList(
                 catalog.asrModels(for: .mimo),
                 activeID: settings.mimoASRModel,

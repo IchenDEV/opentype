@@ -27,8 +27,7 @@ def transcribe_qwen(args):
         from qwen3_asr_mlx import Qwen3ASR
     except ImportError as exc:
         raise RuntimeError(
-            "Missing qwen3-asr-mlx. Install it in this Python environment: "
-            "pip install qwen3-asr-mlx"
+            "Missing qwen3-asr-mlx in the detected Python environment."
         ) from exc
 
     model = Qwen3ASR.from_pretrained(args.model)
@@ -54,9 +53,8 @@ def transcribe_mimo(args):
             from mimo_audio.mimo_audio import MimoAudio
         except ImportError as fallback_exc:
             raise RuntimeError(
-                "Missing Xiaomi MiMo-V2.5-ASR repo or Python dependencies. Set the repo "
-                "path to the cloned XiaomiMiMo/MiMo-V2.5-ASR directory and install its "
-                f"requirements. Import errors: {exc}; {fallback_exc}"
+                "Missing Xiaomi MiMo-V2.5-ASR Python dependencies in the detected "
+                f"Python environment. Import errors: {exc}; {fallback_exc}"
             ) from fallback_exc
 
     model = MimoAudio(model_path=args.model, mimo_audio_tokenizer_path=args.tokenizer)

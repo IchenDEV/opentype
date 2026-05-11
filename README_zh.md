@@ -123,9 +123,9 @@ OpenType 同时支持 **OpenAI 兼容** 和 **Anthropic** 两种 API 格式：
 | 服务商 | 本地运行方式 | 默认模型 |
 |---|---|---|
 | Qwen3-ASR | `qwen3-asr-mlx` + Apple Silicon MLX | `mlx-community/Qwen3-ASR-1.7B-bf16` |
-| MiMo-V2.5-ASR | 小米本地 Python 仓库 + 本地模型目录 | `XiaomiMiMo/MiMo-V2.5-ASR` + `XiaomiMiMo/MiMo-Audio-Tokenizer` |
+| MiMo-V2.5-ASR | 小米本地 Python 运行文件 + 本地模型目录 | `XiaomiMiMo/MiMo-V2.5-ASR` + `XiaomiMiMo/MiMo-Audio-Tokenizer` |
 
-这两个引擎不会调用托管 ASR API。App 会把选中的模型下载到 WhisperKit/MLX 使用的同一个模型存储位置，再用配置好的 Python 可执行文件运行内置本地脚本，并从 stdout 读取识别结果。
+这两个引擎不会调用托管 ASR API。App 会把选中的模型下载到 WhisperKit/MLX 使用的同一个模型存储位置，在应用管理的虚拟环境里准备 Qwen Python 运行环境，按需下载 MiMo 运行文件，自动寻找可用的 Python 3，再运行内置本地脚本。
 
 ## 项目结构
 

@@ -32,11 +32,17 @@ extension ModelCatalog {
     }
 
     func asrModelPath(for id: String) -> String {
-        ModelStorage.asrRepoDir(id)?.path ?? ""
+        asrSingleRepoIsComplete(id) ? ModelStorage.asrRepoDir(id)?.path ?? "" : ""
     }
 
     func mimoTokenizerPath() -> String {
-        ModelStorage.asrRepoDir(LocalASRConfiguration.mimoTokenizerModel)?.path ?? ""
+        let id = LocalASRConfiguration.mimoTokenizerModel
+        return asrSingleRepoIsComplete(id) ? ModelStorage.asrRepoDir(id)?.path ?? "" : ""
+    }
+
+    func mimoRepositoryPath() -> String {
+        let dir = ModelStorage.mimoASRRepositoryDir()
+        return Self.mimoRepositoryIsReady(at: dir) ? dir.path : ""
     }
 
     func refreshASRStatus(recheckingErrors: Bool = false) {
@@ -47,7 +53,7 @@ extension ModelCatalog {
             if recheckingErrors || (asrModels[i].status != .ready && !asrModels[i].status.isError) {
                 asrModels[i].status = asrRepoIsComplete(id)
                     ? .downloaded
-                    : (size > 0 ? .error(L("model.asr_incomplete")) : .notDownloaded)
+                    : asrMissingStatus(for: id, size: size)
             }
         }
     }
@@ -70,25 +76,40 @@ extension ModelCatalog {
         do {
             let repos = asrRequiredRepoIDs(for: id)
             let api = HubApi(downloadBase: Self.asrDownloadBase)
-            for (repoIndex, repoID) in repos.enumerated() {
-                _ = try await api.snapshot(from: ModelStorage.hubModelRepo(repoID)) { [weak self] progress in
-                    Task { @MainActor in
-                        guard let self,
-                              let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }
-                        let fraction = (Double(repoIndex) + progress.fractionCompleted) / Double(repos.count)
-                        self.asrModels[i].downloadProgress = fraction
-                        self.asrModels[i].downloadDetail = "\(Int(fraction * 100))%"
+            if asrProvider(for: id) == .mimo {
+                asrModels[idx].downloadDetail = L("model.asr_preparing_runtime")
+                try await ensureMimoRepository()
+            }
+            if !asrModelFilesAreComplete(id) {
+                for (repoIndex, repoID) in repos.enumerated() {
+                    _ = try await api.snapshot(from: ModelStorage.hubModelRepo(repoID)) { [weak self] progress in
+                        Task { @MainActor in
+                            guard let self,
+                                  let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }
+                            let fraction = (Double(repoIndex) + progress.fractionCompleted) / Double(repos.count)
+                            self.asrModels[i].downloadProgress = fraction
+                            self.asrModels[i].downloadDetail = "\(Int(fraction * 100))%"
+                        }
                     }
                 }
             }
+            if asrProvider(for: id) == .qwen3 {
+                asrModels[idx].downloadDetail = L("model.asr_installing_runtime")
+                _ = try await LocalASRRuntime.ensurePythonPath(
+                    for: .qwen3,
+                    preferredPath: AppSettings.shared.localASRPythonPath
+                )
+            }
             if let i = asrModels.firstIndex(where: { $0.id == id }) {
-                asrModels[i].status = .downloaded
+                asrModels[i].status = asrRepoIsComplete(id) ? .downloaded : .error(L("model.asr_incomplete"))
                 asrModels[i].cacheSize = asrRepoSize(id)
                 asrModels[i].downloadDetail = ""
             }
         } catch is CancellationError {
             if let i = asrModels.firstIndex(where: { $0.id == id }) {
-                asrModels[i].status = asrRepoIsComplete(id) ? .downloaded : .notDownloaded
+                asrModels[i].status = asrRepoIsComplete(id)
+                    ? .downloaded
+                    : asrMissingStatus(for: id, size: asrRepoSize(id))
                 asrModels[i].downloadDetail = ""
             }
         } catch {
@@ -105,6 +126,9 @@ extension ModelCatalog {
         let provider = asrProvider(for: id)
         for repoID in asrRequiredRepoIDs(for: id) {
             try? FileManager.default.removeItem(at: ModelStorage.hubModelRepoDir(repoID))
+        }
+        if provider == .mimo {
+            try? FileManager.default.removeItem(at: ModelStorage.mimoASRRepositoryDir())
         }
         asrModels[idx].status = .notDownloaded
         asrModels[idx].cacheSize = 0
@@ -135,15 +159,138 @@ extension ModelCatalog {
     }
 
     private func asrRepoIsComplete(_ id: String) -> Bool {
-        asrRequiredRepoIDs(for: id).allSatisfy { asrSingleRepoSize($0) > 0 }
+        let hasFiles = asrModelFilesAreComplete(id)
+        switch asrProvider(for: id) {
+        case .qwen3:
+            return hasFiles && LocalASRRuntime.isReady(for: .qwen3)
+        case .mimo:
+            return hasFiles && Self.mimoRepositoryIsReady(at: ModelStorage.mimoASRRepositoryDir())
+        case nil:
+            return hasFiles
+        }
+    }
+
+    private func asrModelFilesAreComplete(_ id: String) -> Bool {
+        asrRequiredRepoIDs(for: id).allSatisfy { asrSingleRepoIsComplete($0) }
+    }
+
+    private func asrMissingStatus(for id: String, size: Int64) -> ModelStatus {
+        guard size > 0 else { return .notDownloaded }
+        if asrModelFilesAreComplete(id), asrProvider(for: id) == .qwen3 {
+            return .error(L("model.asr_runtime_missing"))
+        }
+        return .error(L("model.asr_incomplete"))
     }
 
     private func asrRepoSize(_ id: String) -> Int64 {
-        asrRequiredRepoIDs(for: id).reduce(Int64(0)) { $0 + asrSingleRepoSize($1) }
+        let modelSize = asrRequiredRepoIDs(for: id).reduce(Int64(0)) { $0 + asrSingleRepoSize($1) }
+        guard asrProvider(for: id) == .mimo else { return modelSize }
+        return modelSize + ModelStorage.directorySize(at: ModelStorage.mimoASRRepositoryDir())
+    }
+
+    private func asrSingleRepoIsComplete(_ id: String) -> Bool {
+        Self.asrRepoContainsRequiredFiles(id, at: ModelStorage.asrRepoDir(id))
     }
 
     private func asrSingleRepoSize(_ id: String) -> Int64 {
         guard let dir = ModelStorage.asrRepoDir(id) else { return 0 }
         return ModelStorage.directorySize(at: dir)
+    }
+
+    static func asrRepoContainsRequiredFiles(_ id: String, at dir: URL?) -> Bool {
+        guard let dir else { return false }
+        return asrRequiredFiles(for: id).allSatisfy { relativePath in
+            let file = dir.appendingPathComponent(relativePath)
+            var isDirectory = ObjCBool(false)
+            guard FileManager.default.fileExists(atPath: file.path, isDirectory: &isDirectory),
+                  !isDirectory.boolValue else { return false }
+            let attributes = try? FileManager.default.attributesOfItem(atPath: file.path)
+            return (attributes?[.size] as? NSNumber)?.int64Value ?? 0 > 0
+        }
+    }
+
+    static func asrRequiredFiles(for id: String) -> [String] {
+        switch id {
+        case LocalASRConfiguration.qwen3DefaultModel:
+            return [
+                "config.json",
+                "model.safetensors",
+                "model.safetensors.index.json",
+                "preprocessor_config.json",
+                "tokenizer_config.json",
+                "vocab.json",
+            ]
+        case LocalASRConfiguration.mimoDefaultModel:
+            return [
+                "config.json",
+                "model.safetensors.index.json",
+                "tokenizer.json",
+                "model-00001-of-00007.safetensors",
+                "model-00002-of-00007.safetensors",
+                "model-00003-of-00007.safetensors",
+                "model-00004-of-00007.safetensors",
+                "model-00005-of-00007.safetensors",
+                "model-00006-of-00007.safetensors",
+                "model-00007-of-00007.safetensors",
+            ]
+        case LocalASRConfiguration.mimoTokenizerModel:
+            return ["config.json", "model.safetensors"]
+        default:
+            return ["config.json"]
+        }
+    }
+
+    static func mimoRepositoryIsReady(at dir: URL) -> Bool {
+        FileManager.default.fileExists(
+            atPath: dir.appendingPathComponent("src/mimo_audio/mimo_audio.py").path
+        )
+    }
+
+    private func ensureMimoRepository() async throws {
+        let dir = ModelStorage.mimoASRRepositoryDir()
+        if Self.mimoRepositoryIsReady(at: dir) { return }
+
+        let parent = dir.deletingLastPathComponent()
+        let temp = parent.appendingPathComponent(".MiMo-V2.5-ASR.download")
+        try? FileManager.default.removeItem(at: temp)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+
+        try await runProcess(
+            executable: "/usr/bin/env",
+            arguments: [
+                "git", "clone", "--quiet", "--depth", "1",
+                LocalASRConfiguration.mimoRepositoryURL,
+                temp.path,
+            ]
+        )
+
+        try? FileManager.default.removeItem(at: dir)
+        try FileManager.default.moveItem(at: temp, to: dir)
+        guard Self.mimoRepositoryIsReady(at: dir) else { throw ASRDownloadError.incompleteRuntime }
+    }
+
+    private func runProcess(executable: String, arguments: [String]) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let process = Process()
+            let stderr = Pipe()
+            process.executableURL = URL(fileURLWithPath: executable)
+            process.arguments = arguments
+            process.standardError = stderr
+            process.terminationHandler = { process in
+                let data = stderr.fileHandleForReading.readDataToEndOfFile()
+                let message = String(data: data, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard process.terminationStatus == 0 else {
+                    continuation.resume(throwing: ASRDownloadError.processFailed(message ?? ""))
+                    return
+                }
+                continuation.resume(returning: ())
+            }
+            do {
+                try process.run()
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
 }

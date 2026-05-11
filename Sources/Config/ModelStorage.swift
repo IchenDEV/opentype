@@ -22,6 +22,22 @@ enum ModelStorage {
         huggingFaceBase.appendingPathComponent("models")
     }
 
+    static var asrRepositoryBase: URL {
+        root.appendingPathComponent("repositories")
+    }
+
+    static func mimoASRRepositoryDir() -> URL {
+        asrRepositoryBase.appendingPathComponent("XiaomiMiMo/MiMo-V2.5-ASR")
+    }
+
+    static var asrRuntimeBase: URL {
+        root.appendingPathComponent("runtimes")
+    }
+
+    static func qwenASRRuntimeDir() -> URL {
+        asrRuntimeBase.appendingPathComponent("qwen3-asr")
+    }
+
     static func whisperVariantDir(_ variant: String) -> URL {
         hubModelsBase
             .appendingPathComponent("argmaxinc/whisperkit-coreml")
