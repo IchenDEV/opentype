@@ -14,9 +14,6 @@ struct ModelManagementView: View {
     @State private var customLLMInput = ""
     @State private var showImportError = false
     @State private var importErrorMessage = ""
-    @State private var remoteTestMessage: String?
-    @State private var remoteTestSuccess: Bool?
-    @State private var isTestingRemote = false
     @State private var selectedModelFamily: ModelCatalog.ModelFamily? = .qwen
     private let benchmarkEngine = LLMEngine()
 
@@ -42,12 +39,14 @@ struct ModelManagementView: View {
                 }
                 Divider()
                 llmSection
-                Divider()
-                remoteSection
             }
             .padding(20)
         }
-        .onAppear { catalog.refreshStatus() }
+        .onAppear {
+            catalog.refreshStatus()
+            syncSelectedFamilyFromActiveModel()
+        }
+        .onChange(of: settings.llmModel) { _, _ in syncSelectedFamilyFromActiveModel() }
         .onChange(of: settings.localASRPythonPath) { _, _ in onUnloadLocalASR?() }
         .onChange(of: settings.mimoASRRepoPath) { _, _ in onUnloadLocalASR?() }
         .onChange(of: settings.qwenASRModel) { _, _ in onUnloadLocalASR?() }
@@ -189,7 +188,6 @@ struct ModelManagementView: View {
                 }
             }
 
-            // Model Family Picker
             VStack(alignment: .leading, spacing: 8) {
                 Text(L("model.family.title"))
                     .font(.system(size: 11))
@@ -198,39 +196,11 @@ struct ModelManagementView: View {
                 familyPicker
             }
 
-            // Models list for selected family
-            if let family = selectedModelFamily {
-                let familyModels = catalog.llmModels.filter { $0.family == family }
-                if family == .qwen {
-                    groupedQwenModelList(familyModels, activeID: settings.llmModel)
-                } else {
-                    modelList(familyModels, activeID: settings.llmModel, type: .llm)
-                }
+            if settings.useRemoteLLM {
+                RemoteLLMConfigView()
+            } else {
+                localLLMModelsSection
             }
-            let customModels = catalog.llmModels.filter { $0.family == nil }
-            if !customModels.isEmpty {
-                Text(L("model.custom_local"))
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 2)
-                modelList(customModels, activeID: settings.llmModel, type: .llm)
-            }
-
-            HStack(spacing: 8) {
-                TextField(L("model.custom_id_placeholder"), text: $customLLMInput)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 11))
-                Button(L("common.add")) {
-                    catalog.addCustomLLM(customLLMInput)
-                    customLLMInput = ""
-                }
-                .controlSize(.small)
-                .disabled(customLLMInput.isEmpty)
-            }
-            Button(L("model.import_local")) {
-                importLocalLLM()
-            }
-            .controlSize(.small)
         }
         .alert(importErrorMessage.isEmpty ? L("model.import_invalid") : L("model.import_failed"), isPresented: $showImportError) {
             Button(L("common.ok")) { }
@@ -239,11 +209,55 @@ struct ModelManagementView: View {
         }
     }
 
+    @ViewBuilder
+    private var localLLMModelsSection: some View {
+        if let family = selectedModelFamily {
+            let familyModels = catalog.llmModels.filter { $0.family == family }
+            if family == .qwen {
+                groupedQwenModelList(familyModels, activeID: settings.llmModel)
+            } else {
+                modelList(familyModels, activeID: settings.llmModel, type: .llm)
+            }
+        }
+        let customModels = catalog.llmModels.filter { $0.family == nil }
+        if !customModels.isEmpty {
+            Text(L("model.custom_local"))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 2)
+            modelList(customModels, activeID: settings.llmModel, type: .llm)
+        }
+
+        HStack(spacing: 8) {
+            TextField(L("model.custom_id_placeholder"), text: $customLLMInput)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 11))
+            Button(L("common.add")) {
+                catalog.addCustomLLM(customLLMInput)
+                customLLMInput = ""
+            }
+            .controlSize(.small)
+            .disabled(customLLMInput.isEmpty)
+        }
+        Button(L("model.import_local")) {
+            importLocalLLM()
+        }
+        .controlSize(.small)
+    }
+
+    private func syncSelectedFamilyFromActiveModel() {
+        guard !settings.useRemoteLLM else { return }
+        if let family = catalog.llmModels.first(where: { $0.id == settings.llmModel })?.family {
+            selectedModelFamily = family
+        }
+    }
+
     private var familyPicker: some View {
         HStack(spacing: 0) {
             ForEach(ModelCatalog.ModelFamily.allCases, id: \.self) { family in
                 familyButton(family)
             }
+            remoteFamilyButton
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -254,27 +268,70 @@ struct ModelManagementView: View {
     }
 
     private func familyButton(_ family: ModelCatalog.ModelFamily) -> some View {
-        Button(action: { selectedModelFamily = family }) {
+        let isSelected = !settings.useRemoteLLM && selectedModelFamily == family
+
+        return Button(action: { selectLocalFamily(family) }) {
             VStack(spacing: 2) {
                 Image(systemName: family.icon)
                     .font(.system(size: 14))
                 Text(family.rawValue)
-                    .font(.system(size: 10, weight: selectedModelFamily == family ? .semibold : .medium))
+                    .font(.system(size: 10, weight: isSelected ? .semibold : .medium))
             }
             .frame(maxWidth: .infinity, minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
-            selectedModelFamily == family
+            isSelected
                 ? Color.accentColor.opacity(0.15)
                 : Color.clear
         )
         .foregroundStyle(
-            selectedModelFamily == family
+            isSelected
                 ? Color.accentColor
                 : Color.primary
         )
+    }
+
+    private var remoteFamilyButton: some View {
+        Button(action: selectRemoteLLM) {
+            VStack(spacing: 2) {
+                Image(systemName: "cloud.fill")
+                    .font(.system(size: 14))
+                Text(L("model.family.remote"))
+                    .font(.system(size: 10, weight: settings.useRemoteLLM ? .semibold : .medium))
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(
+            settings.useRemoteLLM
+                ? Color.accentColor.opacity(0.15)
+                : Color.clear
+        )
+        .foregroundStyle(
+            settings.useRemoteLLM
+                ? Color.accentColor
+                : Color.primary
+        )
+    }
+
+    private func selectLocalFamily(_ family: ModelCatalog.ModelFamily) {
+        selectedModelFamily = family
+        if settings.useRemoteLLM {
+            settings.useRemoteLLM = false
+            if catalog.llmModels.first(where: { $0.id == settings.llmModel })?.family == family {
+                onLoadLLM?()
+            }
+        }
+    }
+
+    private func selectRemoteLLM() {
+        if !settings.useRemoteLLM {
+            onUnloadLLM?()
+            settings.useRemoteLLM = true
+        }
     }
 
     private func chooseModelStorageLocation() {
@@ -338,93 +395,6 @@ struct ModelManagementView: View {
         ["MelSpectrogram", "AudioEncoder", "TextDecoder"].allSatisfy { name in
             FileManager.default.fileExists(atPath: url.appendingPathComponent("\(name).mlmodelc").path) ||
                 FileManager.default.fileExists(atPath: url.appendingPathComponent("\(name).mlpackage").path)
-        }
-    }
-
-    // MARK: - Remote LLM
-
-    private var remoteSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label(L("remote.title"), systemImage: "cloud")
-                .font(.headline)
-
-            Toggle(L("remote.use_remote"), isOn: $settings.useRemoteLLM)
-
-            if settings.useRemoteLLM {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Picker(L("remote.provider"), selection: $settings.remoteProvider) {
-                            ForEach(RemoteProvider.allCases) { provider in
-                                Text(provider.displayName).tag(provider)
-                            }
-                        }
-                        .pickerStyle(.menu)
-
-                        Text(settings.remoteProvider.apiFormat == .anthropic ? "Anthropic API" : "OpenAI API")
-                            .font(.system(size: 9))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.secondary.opacity(0.1))
-                            .clipShape(Capsule())
-                            .foregroundStyle(.secondary)
-                    }
-                    .onChange(of: settings.remoteProvider) { _, newProvider in
-                        settings.remoteBaseURL = newProvider.defaultBaseURL
-                        settings.remoteModel = newProvider.defaultModel
-                    }
-
-                    SecureField(L("remote.api_key"), text: $settings.remoteAPIKey)
-                        .textFieldStyle(.roundedBorder)
-                    TextField(L("remote.base_url"), text: $settings.remoteBaseURL)
-                        .textFieldStyle(.roundedBorder)
-                    TextField(L("remote.model"), text: $settings.remoteModel)
-                        .textFieldStyle(.roundedBorder)
-
-                    HStack(spacing: 8) {
-                        Button(L("remote.test")) {
-                            Task { await testRemoteConnection() }
-                        }
-                        .controlSize(.small)
-                        .disabled(isTestingRemote || settings.remoteAPIKey.isEmpty || settings.remoteBaseURL.isEmpty || settings.remoteModel.isEmpty)
-
-                        if isTestingRemote {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                        if let msg = remoteTestMessage {
-                            Text(msg)
-                                .font(.system(size: 10))
-                                .foregroundStyle((remoteTestSuccess ?? false) ? .green : .red)
-                        }
-                    }
-                }
-                .padding(.leading, 4)
-            }
-        }
-    }
-
-    private func testRemoteConnection() async {
-        remoteTestMessage = nil
-        remoteTestSuccess = nil
-        isTestingRemote = true
-        defer { isTestingRemote = false }
-
-        let client = RemoteLLMClient()
-        do {
-            _ = try await client.generate(
-                prompt: "Hi",
-                systemPrompt: nil,
-                baseURL: settings.remoteBaseURL,
-                apiKey: settings.remoteAPIKey,
-                model: settings.remoteModel,
-                provider: settings.remoteProvider,
-                maxTokens: 10
-            )
-            remoteTestMessage = L("remote.test_success")
-            remoteTestSuccess = true
-        } catch {
-            remoteTestMessage = "\(L("remote.test_failed")): \(error.localizedDescription)"
-            remoteTestSuccess = false
         }
     }
 
@@ -567,7 +537,11 @@ struct ModelManagementView: View {
                     settings.whisperModel = model.id
                 case .llm:
                     onUnloadLLM?()
+                    settings.useRemoteLLM = false
                     settings.llmModel = model.id
+                    if let family = model.family {
+                        selectedModelFamily = family
+                    }
                     onLoadLLM?()
                 case .asr:
                     onUnloadLocalASR?()
