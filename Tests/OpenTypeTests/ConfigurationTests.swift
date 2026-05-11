@@ -68,6 +68,32 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(plainText, "Good morning.")
     }
 
+    @MainActor
+    func testASRCompletenessRequiresWeightFiles() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try writeTestFiles(["config.json", "tokenizer_config.json", "vocab.json"], under: dir)
+        XCTAssertFalse(ModelCatalog.asrRepoContainsRequiredFiles(LocalASRConfiguration.qwen3DefaultModel, at: dir))
+
+        try writeTestFiles(ModelCatalog.asrRequiredFiles(for: LocalASRConfiguration.qwen3DefaultModel), under: dir)
+        XCTAssertTrue(ModelCatalog.asrRepoContainsRequiredFiles(LocalASRConfiguration.qwen3DefaultModel, at: dir))
+    }
+
+    @MainActor
+    func testMiMoRepositoryReadinessRequiresRunnerSource() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        XCTAssertFalse(ModelCatalog.mimoRepositoryIsReady(at: dir))
+        let runner = dir.appendingPathComponent("src/mimo_audio/mimo_audio.py")
+        try FileManager.default.createDirectory(at: runner.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data("x".utf8).write(to: runner)
+        XCTAssertTrue(ModelCatalog.mimoRepositoryIsReady(at: dir))
+    }
+
     func testHistoryRetentionIntervals() {
         XCTAssertNil(HistoryRetention.forever.timeInterval)
         XCTAssertEqual(HistoryRetention.threeDays.timeInterval, TimeInterval(3 * 24 * 3600))
@@ -146,5 +172,16 @@ final class ConfigurationTests: XCTestCase {
             useRemoteLLM: false,
             modelID: "mlx-community/Qwen3.5-2B-4bit"
         ))
+    }
+}
+
+private func writeTestFiles(_ paths: [String], under dir: URL) throws {
+    for path in paths {
+        let file = dir.appendingPathComponent(path)
+        try FileManager.default.createDirectory(
+            at: file.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("x".utf8).write(to: file)
     }
 }

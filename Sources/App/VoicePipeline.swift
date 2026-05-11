@@ -480,6 +480,7 @@ final class VoicePipeline {
         case .qwen3:
             let s = appState.settings
             let catalog = ModelCatalog.shared
+            await ensureLocalASRAvailable(modelID: s.qwenASRModel)
             qwenSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
                 provider: .qwen3,
                 pythonPath: s.localASRPythonPath,
@@ -495,9 +496,30 @@ final class VoicePipeline {
                 pythonPath: s.localASRPythonPath,
                 modelPath: catalog.asrModelPath(for: s.mimoASRModel),
                 tokenizerPath: catalog.mimoTokenizerPath(),
-                repoPath: s.mimoASRRepoPath
+                repoPath: catalog.mimoRepositoryPath()
             ))
         }
+    }
+
+    private func ensureLocalASRAvailable(modelID: String) async {
+        let catalog = ModelCatalog.shared
+        catalog.refreshASRStatus(recheckingErrors: true)
+        guard !localASRIsAvailable(modelID) else { return }
+
+        appState.phase = .downloading
+        appState.statusMessage = L("pipeline.preparing_model")
+        appState.downloadProgress = 0
+        await catalog.downloadASR(modelID)
+        appState.downloadProgress = 0
+        appState.phase = .idle
+        appState.statusMessage = localASRIsAvailable(modelID) ? L("status.ready") : L("pipeline.model_load_failed")
+    }
+
+    private func localASRIsAvailable(_ modelID: String) -> Bool {
+        guard let status = ModelCatalog.shared.asrModels.first(where: { $0.id == modelID })?.status else {
+            return false
+        }
+        return status == .downloaded || status == .ready
     }
 
     private func ensureWhisperLoaded() async {
