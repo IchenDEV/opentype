@@ -58,7 +58,7 @@
   function resetTranscript() {
     $trans.classList.remove('show-smart');
     $trans.classList.add('placeholder');
-    $verb.textContent  = 'Click play to see it transcribe.';
+    $verb.textContent  = 'Press play to see it transcribe.';
     $smart.textContent = '';
   }
 
@@ -189,7 +189,12 @@
       setTimeout(() => { $label.textContent = 'copy'; }, 1800);
     };
     $code.addEventListener('click', copy);
-    $code.addEventListener('keydown', (e) => { if (e.key === 'Enter') copy(); });
+    $code.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        copy();
+      }
+    });
   }
 
   setSample('en');
