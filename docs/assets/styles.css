@@ -147,13 +147,17 @@ footer a:hover { color: var(--text); }
 
 @media (max-width: 1320px) and (min-width: 1101px) {
   .wrap { padding: 0 40px; }
-  .hero { padding-top: 70px; }
-  .hero-grid { grid-template-columns: minmax(0,.95fr) minmax(360px,.85fr); gap: 44px; }
-  .hero h1 { max-width: 560px; font-size: 68px; }
-  .hero-sub { max-width: 500px; font-size: 19px; }
+  .hero { padding-top: 56px; }
+  .hero-grid { grid-template-columns: minmax(0,520px) minmax(400px,500px); gap: 52px; }
+  .product-mark { margin-bottom: 18px; }
+  .hero h1 { max-width: 520px; font-size: 58px; line-height: 1; }
+  .hero-sub { max-width: 480px; margin-top: 20px; font-size: 18px; }
+  .hero-actions { margin-top: 28px; }
+  .hero-note { margin-top: 14px; }
   .demo { max-width: 500px; }
-  .demo-body { min-height: 260px; padding: 28px; }
-  .cursor-strip { right: 12px; }
+  .demo-body { min-height: 240px; padding: 26px; }
+  .capability-rail { margin-top: 36px; }
+  .cursor-strip { top: -42px; right: 12px; }
 }
 
 @media (max-width: 1100px) {
