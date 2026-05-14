@@ -218,12 +218,21 @@ final class LocalASREngine: SpeechEngine, @unchecked Sendable {
         if let data = trimmed.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let text = json["text"] as? String {
-            let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !normalized.isEmpty else { throw LocalASRError.invalidResponse }
-            return normalized
+            return normalizeTranscriptText(text)
         }
 
-        return trimmed
+        return normalizeTranscriptText(trimmed)
+    }
+
+    private static func normalizeTranscriptText(_ text: String) -> String {
+        let normalized = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let compact = normalized.replacingOccurrences(
+            of: "\\s+",
+            with: "",
+            options: .regularExpression
+        )
+        let noSpeechPlaceholders: Set<String> = ["（无）", "(无)", "【无】", "[无]"]
+        return noSpeechPlaceholders.contains(compact) ? "" : normalized
     }
 }
 

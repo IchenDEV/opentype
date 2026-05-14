@@ -94,6 +94,25 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertTrue(ModelCatalog.mimoRepositoryIsReady(at: dir))
     }
 
+    func testLocalASRRunnerOutputParsingTreatsNoSpeechPlaceholderAsEmpty() throws {
+        XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
+        XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")
+    }
+
+    func testAudioCaptureActivityDetectsSilence() {
+        var activity = AudioCaptureActivity()
+        activity.record(rms: 0, frameCount: 16_000)
+
+        XCTAssertFalse(activity.hasMeaningfulAudio)
+    }
+
+    func testAudioCaptureActivityAcceptsAudibleInput() {
+        var activity = AudioCaptureActivity()
+        activity.record(rms: 0.02, frameCount: 4_096)
+
+        XCTAssertTrue(activity.hasMeaningfulAudio)
+    }
+
     func testHistoryRetentionIntervals() {
         XCTAssertNil(HistoryRetention.forever.timeInterval)
         XCTAssertEqual(HistoryRetention.threeDays.timeInterval, TimeInterval(3 * 24 * 3600))

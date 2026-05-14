@@ -2,10 +2,40 @@ import AVFoundation
 import CoreAudio
 import AudioToolbox
 
+struct AudioCaptureActivity: Equatable {
+    private static let minimumAverageRMS: Float = 0.0015
+    private static let minimumPeakRMS: Float = 0.005
+
+    private(set) var bufferCount = 0
+    private(set) var frameCount = 0
+    private(set) var maxRMS: Float = 0
+    private var weightedRMSSum: Double = 0
+
+    var averageRMS: Float {
+        guard frameCount > 0 else { return 0 }
+        return Float(weightedRMSSum / Double(frameCount))
+    }
+
+    var hasMeaningfulAudio: Bool {
+        guard frameCount > 0 else { return false }
+        return averageRMS >= Self.minimumAverageRMS || maxRMS >= Self.minimumPeakRMS
+    }
+
+    mutating func record(rms: Float, frameCount: Int) {
+        guard frameCount > 0 else { return }
+        let normalizedRMS = max(0, rms)
+        bufferCount += 1
+        self.frameCount += frameCount
+        maxRMS = max(maxRMS, normalizedRMS)
+        weightedRMSSum += Double(normalizedRMS) * Double(frameCount)
+    }
+}
+
 final class AudioCaptureManager {
     private let engine = AVAudioEngine()
     private var audioFile: AVAudioFile?
     private(set) var lastRecordingURL: URL?
+    private(set) var lastActivity = AudioCaptureActivity()
     private var levelCallback: ((Float) -> Void)?
     private var bufferCallback: ((AVAudioPCMBuffer) -> Void)?
 
@@ -25,6 +55,7 @@ final class AudioCaptureManager {
     ) -> Bool {
         if isRunning { stop() }
         cleanupLastRecording()
+        lastActivity = AudioCaptureActivity()
         levelCallback = levelUpdate
         bufferCallback = bufferUpdate
 
@@ -65,7 +96,10 @@ final class AudioCaptureManager {
             guard let self else { return }
             try? self.audioFile?.write(from: buffer)
 
-            let level = self.calculateRMS(buffer: buffer)
+            let rms = Self.calculateRMS(buffer: buffer)
+            self.lastActivity.record(rms: rms, frameCount: Int(buffer.frameLength))
+
+            let level = Self.visualLevel(fromRMS: rms)
             self.levelCallback?(level)
 
             if let bufferCallback = self.bufferCallback {
@@ -100,13 +134,37 @@ final class AudioCaptureManager {
         isRunning = false
     }
 
-    private func calculateRMS(buffer: AVAudioPCMBuffer) -> Float {
-        guard let data = buffer.floatChannelData?[0] else { return 0 }
+    private static func calculateRMS(buffer: AVAudioPCMBuffer) -> Float {
         let count = Int(buffer.frameLength)
+        guard count > 0 else { return 0 }
+
         var sum: Float = 0
-        for i in 0..<count { sum += data[i] * data[i] }
-        let rms = sqrt(sum / Float(max(count, 1)))
-        // Logarithmic scaling: amplifies quiet sounds, compresses loud ones
+
+        if let channels = buffer.floatChannelData {
+            let channelCount = Int(buffer.format.channelCount)
+            for channel in 0..<channelCount {
+                let data = channels[channel]
+                for i in 0..<count { sum += data[i] * data[i] }
+            }
+            return sqrt(sum / Float(max(count * channelCount, 1)))
+        }
+
+        if let channels = buffer.int16ChannelData {
+            let channelCount = Int(buffer.format.channelCount)
+            for channel in 0..<channelCount {
+                let data = channels[channel]
+                for i in 0..<count {
+                    let sample = Float(data[i]) / Float(Int16.max)
+                    sum += sample * sample
+                }
+            }
+            return sqrt(sum / Float(max(count * channelCount, 1)))
+        }
+
+        return 0
+    }
+
+    private static func visualLevel(fromRMS rms: Float) -> Float {
         let db = 20 * log10(max(rms, 1e-6))
         let normalized = (db + 50) / 50   // map -50dB..0dB → 0..1
         return max(min(normalized, 1.0), 0.0)
