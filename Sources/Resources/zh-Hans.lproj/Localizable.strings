@@ -191,6 +191,11 @@
 "style.professional" = "专业";
 "style.casual" = "口语";
 "style.custom" = "自定义";
+"engine.whisper_short" = "Whisper";
+"engine.apple_short" = "Apple";
+"engine.volc_short" = "豆包";
+"engine.qwen3_short" = "Qwen";
+"engine.mimo_short" = "MiMo";
 "engine.apple_speech" = "Apple 语音识别";
 "engine.volc_asr" = "豆包语音识别";
 "engine.qwen3_asr" = "Qwen3-ASR（本地）";

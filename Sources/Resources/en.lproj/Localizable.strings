@@ -191,6 +191,11 @@
 "style.professional" = "Professional";
 "style.casual" = "Casual";
 "style.custom" = "Custom";
+"engine.whisper_short" = "Whisper";
+"engine.apple_short" = "Apple";
+"engine.volc_short" = "Doubao";
+"engine.qwen3_short" = "Qwen";
+"engine.mimo_short" = "MiMo";
 "engine.apple_speech" = "Apple Speech";
 "engine.volc_asr" = "Doubao ASR";
 "engine.qwen3_asr" = "Qwen3-ASR (Local)";
