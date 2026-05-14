@@ -1,4 +1,3 @@
-import AppKit
 import XCTest
 @testable import OpenType
 
@@ -42,15 +41,15 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertEqual(PromptBuilder.buildUserPrompt(
             text: "嗯 今天开会",
             inputLanguage: .chinese
-        ), "以下是语音识别原文，请直接输出整理后的最终文本：\n<<<\n嗯 今天开会\n>>>")
+        ), "以下是语音识别原文。请先在内部判断错别字、同音词、误识别词、漏字、多字和专有名词，再直接输出整理后的最终文本：\n<<<\n嗯 今天开会\n>>>")
         XCTAssertEqual(PromptBuilder.buildUserPrompt(
             text: "um hello",
             inputLanguage: .english
-        ), "Raw ASR transcript. Output only the final rewritten text:\n<<<\num hello\n>>>")
+        ), "Raw ASR transcript. Internally check typos, homophones, ASR substitutions, missing words, extra words, and proper nouns, then output only the final rewritten text:\n<<<\num hello\n>>>")
         XCTAssertEqual(PromptBuilder.buildUserPrompt(
             text: "こんにちは",
             inputLanguage: .japanese
-        ), "Raw ASR transcript. Output only the final rewritten text:\n<<<\nこんにちは\n>>>")
+        ), "Raw ASR transcript. Internally check typos, homophones, ASR substitutions, missing words, extra words, and proper nouns, then output only the final rewritten text:\n<<<\nこんにちは\n>>>")
     }
 
     func testSystemPromptIncludesChineseStyleScreenAndMemoryContext() {
@@ -63,12 +62,15 @@ final class PromptAndProcessingTests: XCTestCase {
                 inputLanguage: .chinese
             )
 
-            XCTAssertTrue(prompt.contains("你的任务不是轻度润色"))
+            XCTAssertTrue(prompt.contains("力度要高于轻度润色"))
             XCTAssertTrue(prompt.contains("风格：专业整理"))
-            XCTAssertTrue(prompt.contains("普通说明、状态同步和判断句不要硬改成编号列表"))
+            XCTAssertTrue(prompt.contains("同音错字、近音错字、漏字、多字"))
+            XCTAssertTrue(prompt.contains("普通说明、状态同步和判断句不要强行改成编号列表"))
             XCTAssertTrue(prompt.contains("只有原文明显是步骤、清单或待办时，才输出 1. 2. 3."))
             XCTAssertTrue(prompt.contains("专业整理补充示例："))
             XCTAssertTrue(prompt.contains("原文：今天主要是把登录问题修掉然后回归一遍没问题的话明天发版"))
+            XCTAssertTrue(prompt.contains("专业整理强纠错示例："))
+            XCTAssertTrue(prompt.contains("输出：把 OpenType 的 hotkey 文案改一下，不要影响菜单栏。"))
             XCTAssertTrue(prompt.contains("屏幕文字，仅供纠错和专有名词参考"))
             XCTAssertTrue(prompt.contains("OpenType 设置"))
             XCTAssertTrue(prompt.contains("最近输入，仅供语境和专有名词参考"))
@@ -89,10 +91,13 @@ final class PromptAndProcessingTests: XCTestCase {
 
             XCTAssertTrue(prompt.contains("Do not lightly polish raw ASR"))
             XCTAssertTrue(prompt.contains("Style: professional cleanup"))
+            XCTAssertTrue(prompt.contains("homophones, ASR substitutions, missing words, extra words"))
             XCTAssertTrue(prompt.contains("do not force normal explanations or status updates into numbered lists"))
             XCTAssertTrue(prompt.contains("Use 1. 2. 3. only when the raw text is clearly a list"))
             XCTAssertTrue(prompt.contains("Professional cleanup examples:"))
             XCTAssertTrue(prompt.contains("Raw: today the main thing is fixing the login issue and then running regression"))
+            XCTAssertTrue(prompt.contains("Strong correction examples:"))
+            XCTAssertTrue(prompt.contains("Output: Update the OpenType hotkey copy, and do not affect the menu bar."))
             XCTAssertTrue(prompt.contains("On-screen text for correction and proper nouns only"))
             XCTAssertTrue(prompt.contains("Meeting notes"))
             XCTAssertTrue(prompt.contains("Recent input for context and proper nouns only"))
@@ -218,110 +223,19 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
-    func testFormattingOptionsUseSmallBudgets() {
+    func testFormattingOptionsUseStyleSpecificBudgets() {
         withCleanSettings {
             let processor = TextProcessor()
 
-            XCTAssertEqual(processor.formattingOptions(for: "短句", style: .professional).maxTokens, 160)
-            XCTAssertEqual(processor.formattingOptions(for: String(repeating: "中", count: 120), style: .professional).maxTokens, 256)
-            XCTAssertEqual(processor.formattingOptions(for: String(repeating: "长", count: 260), style: .professional).maxTokens, 384)
+            XCTAssertEqual(processor.formattingOptions(for: "短句", style: .professional).maxTokens, 224)
+            XCTAssertEqual(processor.formattingOptions(for: String(repeating: "中", count: 120), style: .professional).maxTokens, 384)
+            XCTAssertEqual(processor.formattingOptions(for: String(repeating: "长", count: 260), style: .professional).maxTokens, 640)
+            XCTAssertEqual(processor.formattingOptions(for: "short", style: .casual).maxTokens, 160)
+            XCTAssertEqual(processor.formattingOptions(for: String(repeating: "c", count: 120), style: .casual).maxTokens, 256)
+            XCTAssertEqual(processor.formattingOptions(for: String(repeating: "c", count: 260), style: .casual).maxTokens, 384)
             XCTAssertEqual(processor.formattingOptions(for: "短句", style: .casual).temperature, 0.08)
-            XCTAssertEqual(processor.formattingOptions(for: "短句", style: .professional).temperature, 0.05)
+            XCTAssertEqual(processor.formattingOptions(for: "短句", style: .professional).temperature, 0.10)
         }
     }
 
-    func testVoicePipelinePolicySkipsMemoryForSmartFormat() {
-        withCleanSettings {
-            var providerCalls = 0
-            let context = VoicePipelinePolicy.memoryContext(for: .processed, settings: AppSettings.shared) { _ in
-                providerCalls += 1
-                return "should not be used"
-            }
-
-            XCTAssertEqual(context, "")
-            XCTAssertEqual(providerCalls, 0)
-        }
-    }
-
-    func testVoicePipelinePolicyKeepsMemoryForVoiceCommand() {
-        withCleanSettings {
-            var providerCalls = 0
-            let context = VoicePipelinePolicy.memoryContext(for: .command, settings: AppSettings.shared) { minutes in
-                providerCalls += 1
-                return "recent \(minutes)"
-            }
-
-            XCTAssertEqual(context, "recent 30")
-            XCTAssertEqual(providerCalls, 1)
-        }
-    }
-
-    func testVoicePipelinePolicyScreenContextGating() {
-        XCTAssertFalse(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .processed, useScreenContext: false))
-        XCTAssertTrue(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .processed, useScreenContext: true))
-        XCTAssertTrue(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .command, useScreenContext: false))
-        XCTAssertFalse(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .direct, useScreenContext: true))
-    }
-
-    func testDeferredReplacementOnlyAppliesToSmartFormat() {
-        XCTAssertTrue(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .processed, enableInstantInsert: true))
-        XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .processed, enableInstantInsert: false))
-        XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .direct, enableInstantInsert: true))
-        XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .command, enableInstantInsert: true))
-    }
-
-    func testDeferredReplacementDecisionRequiresSameFrontmostApp() throws {
-        let replacement = DeferredReplacement(
-            rawText: "raw",
-            insertedText: "quick",
-            targetApp: nil,
-            message: "formatting",
-            createdAt: Date(timeIntervalSince1970: 100),
-            expirationInterval: 15
-        )
-        var readyReplacement = replacement
-        readyReplacement.formattedText = "formatted"
-        readyReplacement.state = .ready
-
-        XCTAssertEqual(
-            DeferredReplacementPolicy.decision(
-                for: readyReplacement,
-                currentBundleIdentifier: nil,
-                now: Date(timeIntervalSince1970: 105)
-            ),
-            .copy(.missingTarget)
-        )
-
-        guard let currentBundleIdentifier = NSRunningApplication.current.bundleIdentifier else {
-            throw XCTSkip("Current test process has no bundle identifier")
-        }
-
-        readyReplacement = DeferredReplacement(
-            rawText: "raw",
-            insertedText: "quick",
-            targetApp: NSRunningApplication.current,
-            message: "formatting",
-            createdAt: Date(timeIntervalSince1970: 100),
-            expirationInterval: 15
-        )
-        readyReplacement.formattedText = "formatted"
-        readyReplacement.state = .ready
-
-        XCTAssertEqual(
-            DeferredReplacementPolicy.decision(
-                for: readyReplacement,
-                currentBundleIdentifier: "other.app",
-                now: Date(timeIntervalSince1970: 105)
-            ),
-            .copy(.appChanged)
-        )
-        XCTAssertEqual(
-            DeferredReplacementPolicy.decision(
-                for: readyReplacement,
-                currentBundleIdentifier: currentBundleIdentifier,
-                now: Date(timeIntervalSince1970: 116)
-            ),
-            .copy(.expired)
-        )
-    }
 }

@@ -221,12 +221,18 @@ final class TextProcessor {
         let characterCount = text.trimmingCharacters(in: .whitespacesAndNewlines).count
 
         let maxTokens: Int
-        switch characterCount {
-        case 0...80:
+        switch (style, characterCount) {
+        case (.professional, 0...80), (.custom, 0...80):
+            maxTokens = 224
+        case (.professional, 81...220), (.custom, 81...220):
+            maxTokens = 384
+        case (.professional, _), (.custom, _):
+            maxTokens = 640
+        case (.casual, 0...80):
             maxTokens = 160
-        case 81...220:
+        case (.casual, 81...220):
             maxTokens = 256
-        default:
+        case (.casual, _):
             maxTokens = 384
         }
 
@@ -235,7 +241,7 @@ final class TextProcessor {
         case .casual:
             temperature = 0.08
         case .professional, .custom:
-            temperature = 0.05
+            temperature = 0.10
         }
 
         return GenerationOptions(
