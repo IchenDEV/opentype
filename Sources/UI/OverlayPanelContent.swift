@@ -28,9 +28,18 @@ struct OverlayLayout: Equatable {
             topPadding = 18
             bottomPadding = 16
             stackSpacing = 12
+        case .recording:
+            width = 324
+            height = 64
+            outerCornerRadius = 24
+            innerCornerRadius = 18
+            horizontalPadding = 18
+            topPadding = 16
+            bottomPadding = 16
+            stackSpacing = 10
         case .transcribing, .processing, .inserting:
             width = 348
-            height = 88
+            height = 76
             outerCornerRadius = 24
             innerCornerRadius = 18
             horizontalPadding = 18
@@ -39,7 +48,7 @@ struct OverlayLayout: Equatable {
             stackSpacing = 10
         default:
             width = 324
-            height = 72
+            height = 60
             outerCornerRadius = 24
             innerCornerRadius = 18
             horizontalPadding = 18
@@ -92,7 +101,7 @@ struct OverlayContentView: View {
         }
         .padding(.horizontal, layout.horizontalPadding)
         .padding(.bottom, layout.bottomPadding)
-        .frame(width: layout.width, height: layout.height, alignment: .top)
+        .frame(width: layout.width, height: layout.height, alignment: .center)
         .background(
             RoundedRectangle(cornerRadius: layout.outerCornerRadius, style: .continuous)
                 .fill(
