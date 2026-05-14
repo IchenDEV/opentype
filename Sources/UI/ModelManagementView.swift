@@ -123,20 +123,6 @@ struct ModelManagementView: View {
         }
     }
 
-    // MARK: - Engine Picker
-
-    private var enginePickerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(L("model.speech_recognition"), systemImage: "waveform")
-                .font(.headline)
-
-            Picker(L("settings.speech_engine"), selection: $settings.speechEngine) {
-                ForEach(SpeechEngineType.allCases, id: \.self) { Text($0.label) }
-            }
-            .pickerStyle(.menu)
-        }
-    }
-
     // MARK: - Whisper
 
     private var whisperSection: some View {
