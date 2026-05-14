@@ -162,12 +162,14 @@ final class VoicePipeline {
 
         let language = appState.settings.inputLanguage.whisperCode
         let audioURL = audioCapture.lastRecordingURL
+        let hasMeaningfulAudio = audioCapture.lastActivity.hasMeaningfulAudio
         let settings = appState.settings
 
         processingTask = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.processRecording(
                 audioURL: audioURL,
+                hasMeaningfulAudio: hasMeaningfulAudio,
                 language: language,
                 settings: settings,
                 targetApp: targetApp
@@ -178,6 +180,7 @@ final class VoicePipeline {
     /// Runs transcription → LLM → text insertion. Separated from stop() so it can be cancelled.
     private func processRecording(
         audioURL: URL?,
+        hasMeaningfulAudio: Bool,
         language: String?,
         settings: AppSettings,
         targetApp: NSRunningApplication?
@@ -185,6 +188,11 @@ final class VoicePipeline {
         defer { audioCapture.cleanupLastRecording() }
 
         do {
+            guard hasMeaningfulAudio else {
+                showNoSpeechDetected(reason: "recorded audio energy below threshold")
+                return
+            }
+
             let asrStarted = CFAbsoluteTimeGetCurrent()
             let raw: String
             if settings.enableStreamingRecognitionBeta {
@@ -202,10 +210,7 @@ final class VoicePipeline {
             }
 
             if raw.isEmpty {
-                Log.info("[VoicePipeline] empty transcription, no speech detected")
-                appState.phase = .idle
-                appState.statusMessage = L("status.no_speech_detected")
-                hideOverlayAfterDelay()
+                showNoSpeechDetected(reason: "empty transcription")
                 return
             }
 
@@ -322,6 +327,16 @@ final class VoicePipeline {
             appState.statusMessage = L("pipeline.error_prefix") + message
             hideOverlayAfterDelay()
         }
+    }
+
+    private func showNoSpeechDetected(reason: String) {
+        Log.info("[VoicePipeline] no speech detected: \(reason)")
+        screenOCRTask?.cancel()
+        screenOCRTask = nil
+        screenOCRStartedAt = nil
+        appState.phase = .idle
+        appState.statusMessage = L("status.no_speech_detected")
+        hideOverlayAfterDelay()
     }
 
     // MARK: - Model management
