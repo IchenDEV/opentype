@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var settingsWindow: NSWindow?
     private var settingsWindowDelegate: SettingsWindowDelegate?
     private var onboardingWindow: NSWindow?
+    private let popoverOutsideClickMonitor = PopoverOutsideClickMonitor()
     private var cancellables = Set<AnyCancellable>()
     private var iconTimer: Timer?
     private var previousApp: NSRunningApplication?
@@ -65,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         popover.contentSize = NSSize(width: 280, height: 220)
         popover.behavior = .transient
+        popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: contentView)
     }
 
@@ -193,11 +195,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     @objc private func togglePopover() {
         guard let button = statusItem?.button else { return }
         if popover.isShown {
-            popover.performClose(nil)
+            closePopover()
         } else {
             savePreviousApp()
             pipeline?.refreshPendingReplacement()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popoverOutsideClickMonitor.start { [weak self] in
+                self?.closePopover()
+            }
         }
     }
 
@@ -210,7 +215,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
     private func startRecording() {
         savePreviousApp()
-        if popover.isShown { popover.performClose(nil) }
+        if popover.isShown { closePopover() }
         Task { await pipeline?.start() }
     }
 
@@ -254,7 +259,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     // MARK: - Settings
 
     private func openSettings() {
-        if popover.isShown { popover.performClose(nil) }
+        if popover.isShown { closePopover() }
 
         if let existing = settingsWindow, existing.isVisible {
             NSApp.setActivationPolicy(.regular)
@@ -296,6 +301,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         AppIcon.install()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func closePopover() {
+        popoverOutsideClickMonitor.stop()
+        if popover.isShown {
+            popover.performClose(nil)
+        }
+    }
+}
+
+extension AppDelegate: NSPopoverDelegate {
+    func popoverDidClose(_ notification: Notification) {
+        popoverOutsideClickMonitor.stop()
     }
 }
 
