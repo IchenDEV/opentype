@@ -20,6 +20,12 @@ final class VoicePipelinePolicyTests: XCTestCase {
         try body()
     }
 
+    private func audioActivity(rms: Float, frames: Int = 16_000) -> AudioCaptureActivity {
+        var activity = AudioCaptureActivity()
+        activity.record(rms: rms, frameCount: frames)
+        return activity
+    }
+
     func testVoicePipelinePolicySkipsMemoryForSmartFormat() {
         withCleanSettings {
             var providerCalls = 0
@@ -51,6 +57,50 @@ final class VoicePipelinePolicyTests: XCTestCase {
         XCTAssertTrue(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .processed, useScreenContext: true))
         XCTAssertTrue(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .command, useScreenContext: false))
         XCTAssertFalse(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .direct, useScreenContext: true))
+    }
+
+    func testTranscriptionSanitizerRejectsEmptyAndPunctuation() {
+        XCTAssertNil(TranscriptionSanitizer.prepare(""))
+        XCTAssertNil(TranscriptionSanitizer.prepare("   "))
+        XCTAssertNil(TranscriptionSanitizer.prepare("。。。"))
+        XCTAssertNil(TranscriptionSanitizer.prepare("...!?"))
+        XCTAssertNil(TranscriptionSanitizer.prepare("  -- ,, "))
+    }
+
+    func testTranscriptionSanitizerRejectsLowContentWhenAudioEvidenceIsWeak() {
+        let weakActivity = audioActivity(rms: 0.002)
+
+        XCTAssertNil(TranscriptionSanitizer.prepare("嗯", audioActivity: weakActivity))
+        XCTAssertNil(TranscriptionSanitizer.prepare("Um.", audioActivity: weakActivity))
+        XCTAssertNil(TranscriptionSanitizer.prepare(" OK ", audioActivity: weakActivity))
+        XCTAssertEqual(TranscriptionSanitizer.prepare("OK", audioActivity: audioActivity(rms: 0.03)), "OK")
+    }
+
+    func testTranscriptionSanitizerRejectsCommonArtifacts() {
+        XCTAssertNil(TranscriptionSanitizer.prepare("字幕志愿者:某某某"))
+        XCTAssertNil(TranscriptionSanitizer.prepare("请不吝点赞订阅转发打赏"))
+        XCTAssertNil(TranscriptionSanitizer.prepare("Thanks for watching!"))
+        XCTAssertNil(TranscriptionSanitizer.prepare("Please subscribe to my channel"))
+        XCTAssertNil(TranscriptionSanitizer.prepare("I'm sorry, I can't assist with that request."))
+    }
+
+    func testTranscriptionSanitizerAcceptsRealSpeech() {
+        XCTAssertEqual(TranscriptionSanitizer.prepare("你好世界"), "你好世界")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("Hello world"), "Hello world")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("帮我整理一下这段话"), "帮我整理一下这段话")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("Write a function that adds two numbers"), "Write a function that adds two numbers")
+    }
+
+    func testTranscriptionSanitizerCollapsesSameRecordingDuplicate() {
+        XCTAssertEqual(
+            TranscriptionSanitizer.prepare("帮我整理一下这段话 帮我整理一下这段话"),
+            "帮我整理一下这段话"
+        )
+        XCTAssertEqual(
+            TranscriptionSanitizer.prepare("Write a short release note. Write a short release note."),
+            "Write a short release note."
+        )
+        XCTAssertEqual(TranscriptionSanitizer.prepare("yes yes"), "yes yes")
     }
 
     func testDeferredReplacementOnlyAppliesToSmartFormat() {

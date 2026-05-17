@@ -5,6 +5,8 @@ import AudioToolbox
 struct AudioCaptureActivity: Equatable {
     private static let minimumAverageRMS: Float = 0.0015
     private static let minimumPeakRMS: Float = 0.005
+    private static let lowConfidenceAverageRMS: Float = 0.004
+    private static let lowConfidencePeakRMS: Float = 0.012
 
     private(set) var bufferCount = 0
     private(set) var frameCount = 0
@@ -19,6 +21,11 @@ struct AudioCaptureActivity: Equatable {
     var hasMeaningfulAudio: Bool {
         guard frameCount > 0 else { return false }
         return averageRMS >= Self.minimumAverageRMS || maxRMS >= Self.minimumPeakRMS
+    }
+
+    var hasWeakSpeechEvidence: Bool {
+        guard frameCount > 0 else { return true }
+        return averageRMS < Self.lowConfidenceAverageRMS && maxRMS < Self.lowConfidencePeakRMS
     }
 
     mutating func record(rms: Float, frameCount: Int) {
