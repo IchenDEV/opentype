@@ -186,9 +186,11 @@ xcrun actool "${ICON_WORK_DIR}/Assets.xcassets" \
 
 cp "${ACTOOL_OUT_DIR}/Assets.car" "${APP_BUNDLE}/Contents/Resources/"
 
-# Keep .icns files for the CFBundleIconFile fallback (older macOS) and for
-# the in-app preview in AboutView/SettingsView, which read these via Bundle.
-cp "${ICON_RESOURCE_DIR}/AppIconLight.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+# Keep .icns files for Finder/LaunchServices fallback and for the in-app
+# preview in AboutView/SettingsView, which read these via Bundle. Finder still
+# resolves CFBundleIconFile through AppIcon.icns, so keep the neutral fallback
+# on the dark artwork instead of the white light-mode tile.
+cp "${ICON_RESOURCE_DIR}/AppIconDark.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
 cp "${ICON_RESOURCE_DIR}/AppIconLight.icns" "${APP_BUNDLE}/Contents/Resources/AppIconLight.icns"
 cp "${ICON_RESOURCE_DIR}/AppIconDark.icns" "${APP_BUNDLE}/Contents/Resources/AppIconDark.icns"
 done_msg "AppIcon compiled to Assets.car (light + dark)"
