@@ -4,6 +4,12 @@ struct InputSessionRequest: Codable, Equatable {
     var mode: OutputMode?
     var language: InputLanguage?
     var useScreenContext: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case mode
+        case language
+        case useScreenContext = "use_screen_context"
+    }
 }
 
 struct InputSession: Codable, Equatable, Identifiable {
@@ -12,6 +18,14 @@ struct InputSession: Codable, Equatable, Identifiable {
     var state: InputSessionState
     var createdAt: Date
     var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case request
+        case state
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
 }
 
 enum InputSessionState: String, Codable, Equatable {

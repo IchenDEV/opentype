@@ -85,6 +85,60 @@ final class OpenTypeService {
         appendEvent(.recordingStarted, sessionID: sessionID, at: now)
     }
 
+    func beginProcessing(sessionID: UUID, clientID: String) async throws {
+        try requireAuthorized(clientID: clientID, capability: .record)
+        guard var session = sessions[sessionID] else {
+            throw IntegrationError.sessionNotFound
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+        guard session.state == .recording || session.state == .created else {
+            throw IntegrationError.invalidSessionState
+        }
+
+        let now = Date()
+        session.state = .processing
+        session.updatedAt = now
+        sessions[sessionID] = session
+        appendEvent(.processingStarted, sessionID: sessionID, at: now)
+    }
+
+    func completeSession(sessionID: UUID, clientID: String, finalText: String?) async throws {
+        try requireAuthorized(clientID: clientID, capability: .record)
+        guard var session = sessions[sessionID] else {
+            throw IntegrationError.sessionNotFound
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+        guard !session.state.isTerminal else {
+            throw IntegrationError.invalidSessionState
+        }
+
+        let now = Date()
+        session.state = .completed
+        session.updatedAt = now
+        sessions[sessionID] = session
+        if let finalText, !finalText.isEmpty {
+            appendEvent(.textFinal, sessionID: sessionID, at: now, text: finalText)
+        }
+        appendEvent(.sessionCompleted, sessionID: sessionID, at: now)
+    }
+
+    func failSession(sessionID: UUID, clientID: String, error: IntegrationError) async throws {
+        try requireAuthorized(clientID: clientID, capability: .record)
+        guard var session = sessions[sessionID] else {
+            throw IntegrationError.sessionNotFound
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+        guard !session.state.isTerminal else {
+            throw IntegrationError.invalidSessionState
+        }
+
+        let now = Date()
+        session.state = .failed
+        session.updatedAt = now
+        sessions[sessionID] = session
+        appendEvent(.sessionFailed, sessionID: sessionID, at: now, error: error.payload)
+    }
+
     func cancel(sessionID: UUID, clientID: String) async throws {
         try requireAuthorized(clientID: clientID, capability: .record)
         guard var session = sessions[sessionID] else {
@@ -121,8 +175,15 @@ final class OpenTypeService {
     }
 
     private func requireAuthorized(clientID: String, capability: IntegrationClient.Capability) throws {
-        guard settingsProvider().developerInterfaceEnabled else {
+        let settings = settingsProvider()
+        guard settings.developerInterfaceEnabled else {
             throw IntegrationError.developerInterfaceDisabled
+        }
+        if clientID.hasPrefix("http:") {
+            let currentLocalHTTPClientID = IntegrationClient.localHTTP(tokenID: settings.httpToken).id
+            guard clientID == currentLocalHTTPClientID else {
+                throw IntegrationError.unauthorizedClient
+            }
         }
         guard registry.isAuthorized(clientID: clientID, capability: capability) else {
             throw IntegrationError.unauthorizedClient
@@ -135,15 +196,21 @@ final class OpenTypeService {
         }
     }
 
-    private func appendEvent(_ type: InputSessionEvent.EventType, sessionID: UUID, at timestamp: Date) {
+    private func appendEvent(
+        _ type: InputSessionEvent.EventType,
+        sessionID: UUID,
+        at timestamp: Date,
+        text: String? = nil,
+        error: IntegrationError.Payload? = nil
+    ) {
         let sequence = nextSequenceBySession[sessionID] ?? 1
         let event = InputSessionEvent(
             type: type,
             sessionID: sessionID,
             sequence: sequence,
             timestamp: timestamp,
-            text: nil,
-            error: nil
+            text: text,
+            error: error
         )
         eventsBySession[sessionID, default: []].append(event)
         nextSequenceBySession[sessionID] = sequence + 1
