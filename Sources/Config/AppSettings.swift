@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Security
 
 enum UILanguage: String, Codable, CaseIterable {
     case chinese = "zh"
@@ -276,6 +277,9 @@ final class AppSettings: ObservableObject {
     @Published var modelStoragePath: String
     @Published var localWhisperModelPaths: [String: String]
     @Published var localLLMModelPaths: [String: String]
+    @Published var developerInterfaceEnabled: Bool
+    @Published var developerHTTPPort: Int
+    @Published var developerHTTPToken: String
 
     private let defaults = UserDefaults.standard
     private var cancellables = Set<AnyCancellable>()
@@ -295,6 +299,7 @@ final class AppSettings: ObservableObject {
         case mimoASRRepoPath, mimoASRModel, mimoASRModelPath, mimoASRTokenizerPath
         case preloadSpeechModelOnLaunch, preloadFormattingModelOnLaunch
         case modelStoragePath, localWhisperModelPaths, localLLMModelPaths
+        case developerInterfaceEnabled, developerHTTPPort, developerHTTPToken
     }
 
     private init() {
@@ -359,6 +364,15 @@ final class AppSettings: ObservableObject {
         modelStoragePath = ud.string(forKey: Key.modelStoragePath.rawValue) ?? ModelStorage.defaultRoot.path
         localWhisperModelPaths = ud.dictionary(forKey: Key.localWhisperModelPaths.rawValue) as? [String: String] ?? [:]
         localLLMModelPaths = ud.dictionary(forKey: Key.localLLMModelPaths.rawValue) as? [String: String] ?? [:]
+        developerInterfaceEnabled = ud.object(forKey: Key.developerInterfaceEnabled.rawValue) as? Bool ?? false
+        developerHTTPPort = ud.integer(forKey: Key.developerHTTPPort.rawValue).nonZeroInt ?? 38_765
+        if let savedToken = ud.string(forKey: Key.developerHTTPToken.rawValue), !savedToken.isEmpty {
+            developerHTTPToken = savedToken
+        } else {
+            let token = Self.generateDeveloperHTTPToken()
+            developerHTTPToken = token
+            ud.set(token, forKey: Key.developerHTTPToken.rawValue)
+        }
 
         setupPersistence()
     }
@@ -405,6 +419,22 @@ final class AppSettings: ObservableObject {
         $modelStoragePath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.modelStoragePath.rawValue) }.store(in: &cancellables)
         $localWhisperModelPaths.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localWhisperModelPaths.rawValue) }.store(in: &cancellables)
         $localLLMModelPaths.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localLLMModelPaths.rawValue) }.store(in: &cancellables)
+        $developerInterfaceEnabled.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.developerInterfaceEnabled.rawValue) }.store(in: &cancellables)
+        $developerHTTPPort.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.developerHTTPPort.rawValue) }.store(in: &cancellables)
+        $developerHTTPToken.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.developerHTTPToken.rawValue) }.store(in: &cancellables)
+    }
+
+    func resetDeveloperHTTPToken() {
+        developerHTTPToken = Self.generateDeveloperHTTPToken()
+    }
+
+    private static func generateDeveloperHTTPToken() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        if status != errSecSuccess {
+            bytes = (0..<32).map { _ in UInt8.random(in: .min ... .max) }
+        }
+        return Data(bytes).base64EncodedString()
     }
 
     var zh: Bool { uiLanguage == .chinese }

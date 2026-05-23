@@ -77,6 +77,7 @@
 "settings.interface" = "界面";
 "settings.recognition" = "识别引擎";
 "settings.audio" = "音频";
+"settings.integrations" = "集成";
 "settings.speech_engine" = "语音引擎";
 "settings.hotkey" = "快捷键";
 "settings.mode" = "触发模式";
@@ -110,6 +111,12 @@
 "settings.system_default" = "系统默认";
 "settings.permissions" = "权限管理";
 "settings.history_retention" = "历史保留时长";
+"settings.developer_interface" = "开发者接口";
+"settings.developer_interface_help" = "允许已授权的本机应用通过 OpenType 请求语音识别和文本整理。";
+"settings.developer_http_address" = "HTTP 地址";
+"settings.developer_http_token" = "HTTP Token";
+"settings.developer_reset_token" = "重置 Token";
+"settings.registered_apps" = "已授权应用";
 "retention.forever" = "永久保留";
 "retention.three_days" = "保留 3 天";
 "retention.seven_days" = "保留 7 天";

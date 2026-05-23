@@ -161,6 +161,22 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertFalse(AppSettings.shared.enableInstantInsert)
     }
 
+    func testDeveloperInterfaceDefaultsOff() {
+        XCTAssertFalse(AppSettings.shared.developerInterfaceEnabled)
+    }
+
+    func testDeveloperHTTPTokenCanBeReset() {
+        let settings = AppSettings.shared
+        let original = settings.developerHTTPToken
+        defer { settings.developerHTTPToken = original }
+
+        settings.resetDeveloperHTTPToken()
+        let reset = settings.developerHTTPToken
+
+        XCTAssertFalse(reset.isEmpty)
+        XCTAssertNotEqual(reset, original)
+    }
+
     func testStartupPreloadPolicyLoadsOnlyWhisperSpeechModel() {
         XCTAssertTrue(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .whisper))
         XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .apple))
