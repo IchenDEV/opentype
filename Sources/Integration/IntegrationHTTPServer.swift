@@ -7,6 +7,7 @@ final class IntegrationHTTPServer {
     private let service: OpenTypeService
     private let registry: IntegrationClientRegistry
     private let settingsProvider: @MainActor () -> IntegrationServiceSettings
+    private let onFailure: ((NWError) -> Void)?
     private var listener: NWListener?
     private var activeConnections: [ObjectIdentifier: NWConnection]
 
@@ -14,12 +15,14 @@ final class IntegrationHTTPServer {
         port: Int,
         service: OpenTypeService,
         registry: IntegrationClientRegistry,
-        settingsProvider: @escaping @MainActor () -> IntegrationServiceSettings = { .live }
+        settingsProvider: @escaping @MainActor () -> IntegrationServiceSettings = { .live },
+        onFailure: ((NWError) -> Void)? = nil
     ) {
         self.port = port
         self.service = service
         self.registry = registry
         self.settingsProvider = settingsProvider
+        self.onFailure = onFailure
         self.activeConnections = [:]
     }
 
@@ -40,9 +43,11 @@ final class IntegrationHTTPServer {
                 self?.accept(connection)
             }
         }
-        newListener.stateUpdateHandler = { state in
+        newListener.stateUpdateHandler = { [weak self] state in
             if case let .failed(error) = state {
-                Log.error("Integration HTTP server failed: \(error.localizedDescription)")
+                Task { @MainActor in
+                    self?.onFailure?(error)
+                }
             }
         }
 

@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import Network
 
 @main
 struct OpenTypeApp: App {
@@ -27,11 +28,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var iconTimer: Timer?
     private var previousApp: NSRunningApplication?
-    private let integrationClientRegistry = IntegrationClientRegistry()
-    private lazy var integrationService = OpenTypeService(registry: integrationClientRegistry)
+    private let integrationClientRegistry: IntegrationClientRegistry
+    private var integrationService: OpenTypeService
     private var integrationHTTPServer: IntegrationHTTPServer?
     private var integrationHTTPPort: Int?
     private var integrationHTTPToken: String?
+
+    override init() {
+        let registry = IntegrationClientRegistry()
+        integrationClientRegistry = registry
+        integrationService = OpenTypeService(registry: registry)
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppIcon.install()
@@ -188,7 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private func configureIntegrationHTTPServer() {
         let settings = AppSettings.shared
         guard settings.developerInterfaceEnabled else {
-            stopIntegrationHTTPServer()
+            stopIntegrationHTTPServer(resetService: true)
             return
         }
 
@@ -199,12 +207,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
 
         stopIntegrationHTTPServer()
+        integrationService = OpenTypeService(registry: integrationClientRegistry)
 
-        let server = IntegrationHTTPServer(
+        var server: IntegrationHTTPServer!
+        server = IntegrationHTTPServer(
             port: port,
             service: integrationService,
             registry: integrationClientRegistry,
-            settingsProvider: { .live }
+            settingsProvider: { .live },
+            onFailure: { [weak self, weak server] error in
+                self?.integrationHTTPServerFailed(server, error: error)
+            }
         )
 
         do {
@@ -221,13 +234,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
 
-    private func stopIntegrationHTTPServer() {
+    private func stopIntegrationHTTPServer(resetService: Bool = false) {
         guard let server = integrationHTTPServer else { return }
         server.stop()
         integrationHTTPServer = nil
         integrationHTTPPort = nil
         integrationHTTPToken = nil
+        if resetService {
+            integrationService = OpenTypeService(registry: integrationClientRegistry)
+        }
         Log.info("Integration HTTP server stopped")
+    }
+
+    private func integrationHTTPServerFailed(_ server: IntegrationHTTPServer?, error: NWError) {
+        guard let server, integrationHTTPServer === server else { return }
+        server.stop()
+        integrationHTTPServer = nil
+        integrationHTTPPort = nil
+        integrationHTTPToken = nil
+        Log.error("Integration HTTP server failed: \(error.localizedDescription)")
     }
 
     /// macOS recording indicator orange (matches the system camera/mic dot).
