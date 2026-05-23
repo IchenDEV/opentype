@@ -1,6 +1,20 @@
 import Foundation
 
 final class IntegrationClientRegistry {
+    private enum LoadResult {
+        case loaded([IntegrationClient])
+        case failed
+
+        var clients: [IntegrationClient] {
+            switch self {
+            case let .loaded(clients):
+                return clients
+            case .failed:
+                return []
+            }
+        }
+    }
+
     private let defaults: UserDefaults
     private let key: String
 
@@ -10,27 +24,55 @@ final class IntegrationClientRegistry {
     }
 
     func approvedClients() -> [IntegrationClient] {
-        load().sorted {
+        load().clients.sorted {
             $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
         }
     }
 
     func client(id: String) -> IntegrationClient? {
-        load().first { $0.id == id }
+        load().clients.first { $0.id == id }
     }
 
     func approve(_ client: IntegrationClient) {
-        var clients = load().filter { $0.id != client.id }
-        clients.append(client)
+        let result = load()
+        guard case var .loaded(clients) = result else {
+            return
+        }
+
+        if let index = clients.firstIndex(where: { $0.id == client.id }) {
+            let existing = clients[index]
+            clients[index] = IntegrationClient(
+                id: client.id,
+                displayName: client.displayName,
+                bundleIdentifier: client.bundleIdentifier,
+                teamIdentifier: client.teamIdentifier,
+                codeRequirement: client.codeRequirement,
+                transport: client.transport,
+                capabilities: client.capabilities,
+                firstApprovedAt: existing.firstApprovedAt,
+                lastUsedAt: existing.lastUsedAt
+            )
+        } else {
+            clients.append(client)
+        }
+
         save(clients)
     }
 
     func revoke(clientID: String) {
-        save(load().filter { $0.id != clientID })
+        let result = load()
+        guard case let .loaded(clients) = result else {
+            return
+        }
+
+        save(clients.filter { $0.id != clientID })
     }
 
     func markUsed(clientID: String, at date: Date = Date()) {
-        var clients = load()
+        let result = load()
+        guard case var .loaded(clients) = result else {
+            return
+        }
         guard let index = clients.firstIndex(where: { $0.id == clientID }) else {
             return
         }
@@ -47,12 +89,17 @@ final class IntegrationClientRegistry {
         return client.capabilities.contains(capability)
     }
 
-    private func load() -> [IntegrationClient] {
+    private func load() -> LoadResult {
         guard let data = defaults.data(forKey: key) else {
-            return []
+            return .loaded([])
         }
 
-        return (try? JSONDecoder.integration.decode([IntegrationClient].self, from: data)) ?? []
+        do {
+            return .loaded(try JSONDecoder.integration.decode([IntegrationClient].self, from: data))
+        } catch {
+            Log.error("Failed to decode integration client registry: \(error.localizedDescription)")
+            return .failed
+        }
     }
 
     private func save(_ clients: [IntegrationClient]) {
