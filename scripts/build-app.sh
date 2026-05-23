@@ -83,6 +83,7 @@ xcodebuild \
 done_msg "Build succeeded"
 
 step "Building OpenType CLI helper (Release, arm64)…"
+swift build -c release --product OpenTypeCLI --arch arm64
 CLI_BUILD_DIR="$(swift build -c release --product OpenTypeCLI --arch arm64 --show-bin-path)"
 done_msg "CLI helper built"
 
