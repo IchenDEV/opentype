@@ -93,13 +93,15 @@ final class IntegrationHTTPTests: XCTestCase {
     }
 
     func testHTTPServerStatusMapping() {
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.developerInterfaceDisabled), 401)
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.unauthorizedClient), 401)
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.busy), 409)
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.sessionNotFound), 404)
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.invalidSessionState), 409)
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.permissionDenied), 400)
-        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.modelNotReady), 400)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.developerInterfaceDisabled), 401)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.unauthorizedClient), 401)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.busy), 409)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.sessionNotFound), 404)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.invalidSessionState), 409)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.permissionDenied), 400)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.modelNotReady), 400)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.noSpeechDetected), 400)
+        XCTAssertEqual(IntegrationHTTPDispatcher.statusCode(for: IntegrationError.operationFailed), 500)
     }
 
     @MainActor
@@ -143,14 +145,43 @@ final class IntegrationHTTPTests: XCTestCase {
     }
 
     @MainActor
+    func testHTTPServerDispatchRequiresRegisteredCLIClient() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        let client = IntegrationClient.localCLI(executablePath: "/Applications/OpenType.app/Contents/MacOS/opentype")
+        let server = makeServer(
+            registry: store.registry,
+            settings: IntegrationServiceSettings(developerInterfaceEnabled: true, httpToken: "token")
+        )
+
+        var request = try XCTUnwrap(IntegrationHTTPRequest.parse(from: Data(
+            "POST /v1/sessions HTTP/1.1\r\nAuthorization: Bearer token\r\nX-OpenType-Client-ID: \(client.id)\r\n\r\n".utf8
+        )))
+        XCTAssertEqual((await server.dispatch(request)).statusCode, 401)
+
+        store.registry.approve(client)
+        request = try XCTUnwrap(IntegrationHTTPRequest.parse(from: Data(
+            "POST /v1/sessions HTTP/1.1\r\nAuthorization: Bearer token\r\nX-OpenType-Client-ID: \(client.id)\r\n\r\n".utf8
+        )))
+        let response = await server.dispatch(request)
+        let session = try JSONDecoder.integration.decode(InputSession.self, from: response.body)
+
+        XCTAssertEqual(response.statusCode, 201)
+        XCTAssertEqual(session.state, .created)
+        XCTAssertNil(store.registry.client(id: IntegrationClient.localHTTP(tokenID: "token").id))
+    }
+
+    @MainActor
     private func makeServer(
         registry: IntegrationClientRegistry,
         settings: IntegrationServiceSettings
     ) -> IntegrationHTTPServer {
         let service = OpenTypeService(settings: settings, registry: registry)
+        let coordinator = InputSessionCoordinator(service: service)
         return IntegrationHTTPServer(
             port: 49_999,
             service: service,
+            coordinator: coordinator,
             registry: registry,
             settingsProvider: { settings }
         )

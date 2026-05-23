@@ -195,6 +195,10 @@ struct IntegrationHTTPResponse {
 }
 
 enum IntegrationSSE {
+    static func encode(_ event: InputSessionEvent) throws -> Data {
+        try encode([event])
+    }
+
     static func encode(_ events: [InputSessionEvent]) throws -> Data {
         var data = Data()
 

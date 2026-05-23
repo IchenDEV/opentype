@@ -15,10 +15,13 @@ struct IntegrationServiceSettings {
 
 @MainActor
 final class OpenTypeService {
+    private typealias EventSubscriber = @MainActor (InputSessionEvent) -> Void
+
     private var sessions: [UUID: InputSession]
     private var sessionOwners: [UUID: String]
     private var eventsBySession: [UUID: [InputSessionEvent]]
     private var nextSequenceBySession: [UUID: Int]
+    private var eventSubscribers: [UUID: [UUID: EventSubscriber]]
     private let settingsProvider: @MainActor () -> IntegrationServiceSettings
     private let registry: IntegrationClientRegistry
 
@@ -38,6 +41,7 @@ final class OpenTypeService {
         self.sessionOwners = [:]
         self.eventsBySession = [:]
         self.nextSequenceBySession = [:]
+        self.eventSubscribers = [:]
         self.settingsProvider = settingsProvider
         self.registry = registry
     }
@@ -139,6 +143,18 @@ final class OpenTypeService {
         appendEvent(.sessionFailed, sessionID: sessionID, at: now, error: error.payload)
     }
 
+    func emitTranscriptPartial(sessionID: UUID, clientID: String, text: String) throws {
+        try appendSessionEvent(.transcriptPartial, sessionID: sessionID, clientID: clientID, text: text)
+    }
+
+    func emitTranscriptFinal(sessionID: UUID, clientID: String, text: String) throws {
+        try appendSessionEvent(.transcriptFinal, sessionID: sessionID, clientID: clientID, text: text)
+    }
+
+    func emitAudioReceived(sessionID: UUID, clientID: String) throws {
+        try appendSessionEvent(.audioReceived, sessionID: sessionID, clientID: clientID)
+    }
+
     func cancel(sessionID: UUID, clientID: String) async throws {
         try requireAuthorized(clientID: clientID, capability: .record)
         guard var session = sessions[sessionID] else {
@@ -174,6 +190,30 @@ final class OpenTypeService {
         return eventsBySession[sessionID] ?? []
     }
 
+    func subscribeEvents(
+        sessionID: UUID,
+        clientID: String,
+        onEvent: @escaping @MainActor (InputSessionEvent) -> Void
+    ) throws -> (id: UUID, snapshot: [InputSessionEvent]) {
+        try requireAuthorized(clientID: clientID, capability: .streamEvents)
+        guard sessionOwners[sessionID] != nil else {
+            throw IntegrationError.sessionNotFound
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+
+        let id = UUID()
+        let snapshot = eventsBySession[sessionID] ?? []
+        eventSubscribers[sessionID, default: [:]][id] = onEvent
+        return (id, snapshot)
+    }
+
+    func unsubscribeEvents(sessionID: UUID, subscriberID: UUID) {
+        eventSubscribers[sessionID]?[subscriberID] = nil
+        if eventSubscribers[sessionID]?.isEmpty == true {
+            eventSubscribers[sessionID] = nil
+        }
+    }
+
     private func requireAuthorized(clientID: String, capability: IntegrationClient.Capability) throws {
         let settings = settingsProvider()
         guard settings.developerInterfaceEnabled else {
@@ -196,6 +236,20 @@ final class OpenTypeService {
         }
     }
 
+    private func appendSessionEvent(
+        _ type: InputSessionEvent.EventType,
+        sessionID: UUID,
+        clientID: String,
+        text: String? = nil
+    ) throws {
+        try requireAuthorized(clientID: clientID, capability: .record)
+        guard let session = sessions[sessionID], !session.state.isTerminal else {
+            throw IntegrationError.invalidSessionState
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+        appendEvent(type, sessionID: sessionID, at: Date(), text: text)
+    }
+
     private func appendEvent(
         _ type: InputSessionEvent.EventType,
         sessionID: UUID,
@@ -214,5 +268,10 @@ final class OpenTypeService {
         )
         eventsBySession[sessionID, default: []].append(event)
         nextSequenceBySession[sessionID] = sequence + 1
+        if let subscribers = eventSubscribers[sessionID]?.values {
+            for subscriber in subscribers {
+                subscriber(event)
+            }
+        }
     }
 }

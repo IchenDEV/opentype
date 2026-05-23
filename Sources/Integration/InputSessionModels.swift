@@ -77,6 +77,24 @@ struct InputSessionEvent: Codable, Equatable {
     }
 }
 
+struct InputSessionResult: Codable, Equatable {
+    let session: InputSession
+    let transcript: String
+    let text: String
+}
+
+extension InputSessionEvent.EventType {
+    var closesEventStream: Bool {
+        switch self {
+        case .sessionCompleted, .sessionCancelled, .sessionFailed:
+            return true
+        case .sessionCreated, .recordingStarted, .audioReceived, .transcriptPartial,
+             .transcriptFinal, .processingStarted, .textFinal:
+            return false
+        }
+    }
+}
+
 extension JSONEncoder {
     static var integration: JSONEncoder {
         let encoder = JSONEncoder()

@@ -116,6 +116,10 @@
 "settings.developer_http_address" = "HTTP address";
 "settings.developer_http_token" = "HTTP token";
 "settings.developer_reset_token" = "Reset Token";
+"settings.developer_registered_apps" = "Registered apps";
+"settings.developer_no_registered_apps" = "No registered apps yet.";
+"settings.developer_register_cli" = "Register CLI helper";
+"settings.developer_add_app" = "Add App…";
 "settings.registered_apps" = "Registered Apps";
 "retention.forever" = "Keep Forever";
 "retention.three_days" = "3 Days";

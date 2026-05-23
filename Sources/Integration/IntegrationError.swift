@@ -14,6 +14,8 @@ enum IntegrationError: Error, Equatable {
     case sessionNotFound
     case sessionCancelled
     case invalidSessionState
+    case noSpeechDetected
+    case operationFailed
 
     var payload: Payload {
         switch self {
@@ -33,6 +35,10 @@ enum IntegrationError: Error, Equatable {
             return Payload(error: "session_cancelled", message: "Input session was cancelled.")
         case .invalidSessionState:
             return Payload(error: "invalid_session_state", message: "Input session is not in a valid state for this operation.")
+        case .noSpeechDetected:
+            return Payload(error: "no_speech_detected", message: "No speech was detected in the recording.")
+        case .operationFailed:
+            return Payload(error: "operation_failed", message: "OpenType could not complete the input session.")
         }
     }
 }

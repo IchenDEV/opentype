@@ -116,6 +116,10 @@
 "settings.developer_http_address" = "HTTP 地址";
 "settings.developer_http_token" = "HTTP Token";
 "settings.developer_reset_token" = "重置 Token";
+"settings.developer_registered_apps" = "已登记的 App";
+"settings.developer_no_registered_apps" = "还没有登记的 App。";
+"settings.developer_register_cli" = "登记 CLI helper";
+"settings.developer_add_app" = "添加 App…";
 "settings.registered_apps" = "已授权应用";
 "retention.forever" = "永久保留";
 "retention.three_days" = "保留 3 天";

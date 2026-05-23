@@ -37,4 +37,48 @@ struct IntegrationClient: Codable, Equatable, Identifiable {
             lastUsedAt: nil
         )
     }
+
+    static func localCLI(executablePath: String) -> IntegrationClient {
+        IntegrationClient(
+            id: stableID(prefix: "cli", value: executablePath),
+            displayName: "OpenType CLI",
+            bundleIdentifier: nil,
+            teamIdentifier: nil,
+            codeRequirement: executablePath,
+            transport: .cli,
+            capabilities: [.record, .streamEvents],
+            firstApprovedAt: Date(),
+            lastUsedAt: nil
+        )
+    }
+
+    static func registeredApp(
+        displayName: String,
+        bundleIdentifier: String?,
+        teamIdentifier: String?,
+        codeRequirement: String?,
+        transport: Transport
+    ) -> IntegrationClient {
+        let identity = bundleIdentifier ?? codeRequirement ?? displayName
+        return IntegrationClient(
+            id: stableID(prefix: transport.rawValue, value: identity),
+            displayName: displayName,
+            bundleIdentifier: bundleIdentifier,
+            teamIdentifier: teamIdentifier,
+            codeRequirement: codeRequirement,
+            transport: transport,
+            capabilities: [.record, .streamEvents],
+            firstApprovedAt: Date(),
+            lastUsedAt: nil
+        )
+    }
+
+    private static func stableID(prefix: String, value: String) -> String {
+        let encoded = Data(value.utf8)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+        return "\(prefix):\(encoded)"
+    }
 }

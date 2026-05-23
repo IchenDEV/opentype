@@ -7,6 +7,10 @@ let package = Package(
     platforms: [
         .macOS("26.0")
     ],
+    products: [
+        .executable(name: "OpenType", targets: ["OpenType"]),
+        .executable(name: "OpenTypeCLI", targets: ["OpenTypeCLI"]),
+    ],
     dependencies: [
         .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0"),
         .package(url: "https://github.com/huggingface/swift-transformers", from: "1.1.7"),
@@ -35,6 +39,13 @@ let package = Package(
                 .process("Resources/en.lproj"),
                 .process("Resources/zh-Hans.lproj"),
             ],
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]
+        ),
+        .executableTarget(
+            name: "OpenTypeCLI",
+            path: "SourcesCLI",
             swiftSettings: [
                 .swiftLanguageMode(.v5)
             ]

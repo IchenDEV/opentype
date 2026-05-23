@@ -48,53 +48,65 @@ final class TextProcessor {
 
     func process(text: String, stylePrompt: String, model: String, screenContext: String = "", memoryContext: String = "") async -> String {
         let settings = AppSettings.shared
+        var options = TextProcessingOptions(settings: settings)
+        options.customStylePrompt = stylePrompt
+        options.llmModel = model
+        return await process(text: text, options: options, screenContext: screenContext, memoryContext: memoryContext)
+    }
+
+    func process(
+        text: String,
+        options: TextProcessingOptions,
+        screenContext: String = "",
+        memoryContext: String = ""
+    ) async -> String {
         let preCleanStarted = CFAbsoluteTimeGetCurrent()
-        let cleanedText = preCleanForFormatting(text: text, inputLanguage: settings.inputLanguage)
+        let cleanedText = preCleanForFormatting(text: text, inputLanguage: options.inputLanguage)
         let preCleanElapsed = CFAbsoluteTimeGetCurrent() - preCleanStarted
         Log.info("[TextProcessor] pre-cleaned \(text.count) chars to \(cleanedText.count) chars in \(String(format: "%.2f", preCleanElapsed))s")
 
         var systemPrompt = PromptBuilder.buildSystemPrompt(
-            style: settings.languageStyle,
-            stylePrompt: stylePrompt,
+            style: options.languageStyle,
+            stylePrompt: options.customStylePrompt,
             screenContext: screenContext,
             memoryContext: memoryContext,
-            inputLanguage: settings.inputLanguage
+            inputLanguage: options.inputLanguage
         )
 
         let rulesDesc = dictionary.activeRulesDescription()
         if !rulesDesc.isEmpty {
-            let rulesPrefix = settings.inputLanguage == .english ? "Extra edit rules:" : "额外编辑规则："
+            let rulesPrefix = options.inputLanguage == .english ? "Extra edit rules:" : "额外编辑规则："
             systemPrompt += "\n\n\(rulesPrefix)\n\(rulesDesc)"
         }
 
-        let userPrompt = PromptBuilder.buildUserPrompt(text: cleanedText, inputLanguage: settings.inputLanguage)
-        let options = formattingOptions(for: cleanedText, style: settings.languageStyle)
+        let userPrompt = PromptBuilder.buildUserPrompt(text: cleanedText, inputLanguage: options.inputLanguage)
+        let generationOptions = formattingOptions(for: cleanedText, style: options.languageStyle)
 
         do {
             var result: String
             let llmStarted = CFAbsoluteTimeGetCurrent()
-            if settings.useRemoteLLM {
+            if options.useRemoteLLM {
                 result = try await remoteLLMClient.generate(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,
-                    baseURL: settings.remoteBaseURL,
-                    apiKey: settings.remoteAPIKey,
-                    model: settings.remoteModel,
-                    provider: settings.remoteProvider,
-                    maxTokens: options.maxTokens,
-                    temperature: options.temperature
+                    baseURL: options.remoteBaseURL,
+                    apiKey: options.remoteAPIKey,
+                    model: options.remoteModel,
+                    provider: options.remoteProvider,
+                    maxTokens: generationOptions.maxTokens,
+                    temperature: generationOptions.temperature
                 )
             } else {
-                await ensureModelLoaded(model)
+                await ensureModelLoaded(options.llmModel)
                 result = try await llm.generate(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,
-                    maxTokens: options.maxTokens,
-                    temperature: options.temperature
+                    maxTokens: generationOptions.maxTokens,
+                    temperature: generationOptions.temperature
                 )
             }
             let llmElapsed = CFAbsoluteTimeGetCurrent() - llmStarted
-            Log.info("[TextProcessor] formatting LLM completed in \(String(format: "%.2f", llmElapsed))s with budget \(options.maxTokens) tokens")
+            Log.info("[TextProcessor] formatting LLM completed in \(String(format: "%.2f", llmElapsed))s with budget \(generationOptions.maxTokens) tokens")
 
             result = stripThinkingTags(result)
             result = dictionary.applyReplacements(to: result)
@@ -108,27 +120,38 @@ final class TextProcessor {
     /// Command mode: uses voice command system prompt, higher max tokens.
     func processCommand(text: String, model: String, screenContext: String, memoryContext: String = "") async -> String {
         let settings = AppSettings.shared
+        var options = TextProcessingOptions(settings: settings)
+        options.llmModel = model
+        return await processCommand(text: text, options: options, screenContext: screenContext, memoryContext: memoryContext)
+    }
+
+    func processCommand(
+        text: String,
+        options: TextProcessingOptions,
+        screenContext: String,
+        memoryContext: String = ""
+    ) async -> String {
         let systemPrompt = PromptBuilder.buildCommandSystemPrompt(
             screenContext: screenContext,
             memoryContext: memoryContext,
-            inputLanguage: settings.inputLanguage
+            inputLanguage: options.inputLanguage
         )
         let userPrompt = text
 
         do {
             var result: String
-            if settings.useRemoteLLM {
+            if options.useRemoteLLM {
                 result = try await remoteLLMClient.generate(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,
-                    baseURL: settings.remoteBaseURL,
-                    apiKey: settings.remoteAPIKey,
-                    model: settings.remoteModel,
-                    provider: settings.remoteProvider,
+                    baseURL: options.remoteBaseURL,
+                    apiKey: options.remoteAPIKey,
+                    model: options.remoteModel,
+                    provider: options.remoteProvider,
                     maxTokens: 4096
                 )
             } else {
-                await ensureModelLoaded(model)
+                await ensureModelLoaded(options.llmModel)
                 result = try await llm.generate(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,

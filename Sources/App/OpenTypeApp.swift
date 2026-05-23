@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var previousApp: NSRunningApplication?
     private let integrationClientRegistry: IntegrationClientRegistry
     private var integrationService: OpenTypeService
+    private var integrationSessionCoordinator: InputSessionCoordinator!
     private var integrationHTTPServer: IntegrationHTTPServer?
     private var integrationHTTPPort: Int?
     private var integrationHTTPToken: String?
@@ -39,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         integrationClientRegistry = registry
         integrationService = OpenTypeService(registry: registry)
         super.init()
+        integrationSessionCoordinator = makeIntegrationSessionCoordinator(service: integrationService)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -59,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        stopIntegrationHTTPServer()
+        stopIntegrationHTTPServer(resetService: true)
     }
 
     private func setupMenuBar() {
@@ -206,13 +208,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             return
         }
 
-        stopIntegrationHTTPServer()
-        integrationService = OpenTypeService(registry: integrationClientRegistry)
+        stopIntegrationHTTPServer(resetService: true)
 
         var server: IntegrationHTTPServer!
         server = IntegrationHTTPServer(
             port: port,
             service: integrationService,
+            coordinator: integrationSessionCoordinator,
             registry: integrationClientRegistry,
             settingsProvider: { .live },
             onFailure: { [weak self, weak server] error in
@@ -235,13 +237,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     private func stopIntegrationHTTPServer(resetService: Bool = false) {
-        guard let server = integrationHTTPServer else { return }
+        guard let server = integrationHTTPServer else {
+            if resetService {
+                resetIntegrationService()
+            }
+            return
+        }
         server.stop()
         integrationHTTPServer = nil
         integrationHTTPPort = nil
         integrationHTTPToken = nil
         if resetService {
-            integrationService = OpenTypeService(registry: integrationClientRegistry)
+            resetIntegrationService()
         }
         Log.info("Integration HTTP server stopped")
     }
@@ -252,7 +259,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         integrationHTTPServer = nil
         integrationHTTPPort = nil
         integrationHTTPToken = nil
+        resetIntegrationService()
         Log.error("Integration HTTP server failed: \(error.localizedDescription)")
+    }
+
+    private func resetIntegrationService() {
+        integrationSessionCoordinator?.releaseActiveSessionForShutdown()
+        integrationService = OpenTypeService(registry: integrationClientRegistry)
+        integrationSessionCoordinator = makeIntegrationSessionCoordinator(service: integrationService)
+    }
+
+    private func makeIntegrationSessionCoordinator(service: OpenTypeService) -> InputSessionCoordinator {
+        InputSessionCoordinator(
+            service: service,
+            isUserWorkflowBusy: { [weak self] in
+                self?.appState.isBusy ?? false
+            }
+        )
     }
 
     /// macOS recording indicator orange (matches the system camera/mic dot).
@@ -309,6 +332,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     }
 
     private func startRecording() {
+        if integrationSessionCoordinator.isBusy {
+            pipeline?.showBusyHint()
+            return
+        }
         savePreviousApp()
         if popover.isShown { closePopover() }
         Task { await pipeline?.start() }

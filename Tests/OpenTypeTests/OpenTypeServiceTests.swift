@@ -212,6 +212,28 @@ final class OpenTypeServiceTests: XCTestCase {
         }
     }
 
+    func testSubscribeEventsReturnsSnapshotAndReceivesLiveEvents() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        approveLocalHTTP(in: store.registry)
+        let service = makeService(registry: store.registry)
+        let session = try await service.createSession(request(), clientID: clientID)
+
+        var received: [InputSessionEvent] = []
+        let subscription = try service.subscribeEvents(sessionID: session.id, clientID: clientID) { event in
+            received.append(event)
+        }
+
+        XCTAssertEqual(subscription.snapshot.map(\.type), [.sessionCreated])
+        try service.emitTranscriptPartial(sessionID: session.id, clientID: clientID, text: "hel")
+        try service.emitTranscriptFinal(sessionID: session.id, clientID: clientID, text: "hello")
+        service.unsubscribeEvents(sessionID: session.id, subscriberID: subscription.id)
+        try service.emitTranscriptPartial(sessionID: session.id, clientID: clientID, text: "ignored")
+
+        XCTAssertEqual(received.map(\.type), [.transcriptPartial, .transcriptFinal])
+        XCTAssertEqual(received.map(\.text), ["hel", "hello"])
+    }
+
     func testSettingsProviderIsReadForEachCreateSession() async throws {
         let store = registry()
         defer { store.cleanup() }

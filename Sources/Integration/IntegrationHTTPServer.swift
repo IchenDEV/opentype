@@ -5,25 +5,31 @@ import Network
 final class IntegrationHTTPServer {
     private let port: Int
     private let service: OpenTypeService
-    private let registry: IntegrationClientRegistry
-    private let settingsProvider: @MainActor () -> IntegrationServiceSettings
+    private let dispatcher: IntegrationHTTPDispatcher
     private let onFailure: ((NWError) -> Void)?
     private var listener: NWListener?
     private var activeConnections: [ObjectIdentifier: NWConnection]
+    private var eventStreams: [ObjectIdentifier: (sessionID: UUID, subscriberID: UUID)]
 
     init(
         port: Int,
         service: OpenTypeService,
+        coordinator: InputSessionCoordinator,
         registry: IntegrationClientRegistry,
         settingsProvider: @escaping @MainActor () -> IntegrationServiceSettings = { .live },
         onFailure: ((NWError) -> Void)? = nil
     ) {
         self.port = port
         self.service = service
-        self.registry = registry
-        self.settingsProvider = settingsProvider
+        self.dispatcher = IntegrationHTTPDispatcher(
+            service: service,
+            coordinator: coordinator,
+            registry: registry,
+            settingsProvider: settingsProvider
+        )
         self.onFailure = onFailure
         self.activeConnections = [:]
+        self.eventStreams = [:]
     }
 
     func start() throws {
@@ -62,86 +68,14 @@ final class IntegrationHTTPServer {
             connection.cancel()
         }
         activeConnections.removeAll()
+        for stream in eventStreams.values {
+            service.unsubscribeEvents(sessionID: stream.sessionID, subscriberID: stream.subscriberID)
+        }
+        eventStreams.removeAll()
     }
 
     func dispatch(_ request: IntegrationHTTPRequest) async -> IntegrationHTTPResponse {
-        let settings = settingsProvider()
-        guard settings.developerInterfaceEnabled else {
-            return IntegrationHTTPResponse.error(.developerInterfaceDisabled, statusCode: 401)
-        }
-        guard let token = request.bearerToken, token == settings.httpToken else {
-            return IntegrationHTTPResponse.error(.unauthorizedClient, statusCode: 401)
-        }
-
-        let client = IntegrationClient.localHTTP(tokenID: token)
-        registry.approve(client)
-
-        do {
-            switch IntegrationHTTPRoute.match(method: request.method, path: request.path) {
-            case .createSession:
-                let sessionRequest = try decodeSessionRequest(from: request.body)
-                let session = try await service.createSession(sessionRequest, clientID: client.id)
-                return IntegrationHTTPResponse.json(session, statusCode: 201)
-            case let .events(sessionID):
-                let events = try service.snapshotEvents(sessionID: sessionID, clientID: client.id)
-                let body = try IntegrationSSE.encode(events)
-                return IntegrationHTTPResponse(
-                    statusCode: 200,
-                    reason: "OK",
-                    headers: [
-                        "Cache-Control": "no-cache",
-                        "Content-Type": "text/event-stream"
-                    ],
-                    body: body
-                )
-            case let .startRecording(sessionID):
-                try await service.startRecording(sessionID: sessionID, clientID: client.id)
-                guard let session = try service.session(sessionID, clientID: client.id) else {
-                    return IntegrationHTTPResponse.notFound()
-                }
-                return IntegrationHTTPResponse.json(session, statusCode: 202)
-            case let .stopRecording(sessionID):
-                try await service.beginProcessing(sessionID: sessionID, clientID: client.id)
-                try await service.completeSession(sessionID: sessionID, clientID: client.id, finalText: nil)
-                guard let session = try service.session(sessionID, clientID: client.id) else {
-                    return IntegrationHTTPResponse.notFound()
-                }
-                return IntegrationHTTPResponse.json(session, statusCode: 202)
-            case let .cancel(sessionID):
-                guard try service.session(sessionID, clientID: client.id) != nil else {
-                    return IntegrationHTTPResponse(statusCode: 204, reason: "No Content", headers: [:], body: Data())
-                }
-                try await service.cancel(sessionID: sessionID, clientID: client.id)
-                guard let session = try service.session(sessionID, clientID: client.id) else {
-                    return IntegrationHTTPResponse.notFound()
-                }
-                return IntegrationHTTPResponse.json(session, statusCode: 202)
-            case .notFound:
-                return IntegrationHTTPResponse.notFound()
-            }
-        } catch let error as IntegrationError {
-            return IntegrationHTTPResponse.error(error, statusCode: Self.statusCode(for: error))
-        } catch is DecodingError {
-            return Self.badRequest(message: "Request body is not valid JSON.")
-        } catch {
-            return Self.internalServerError()
-        }
-    }
-
-    nonisolated static func statusCode(for error: Error) -> Int {
-        guard let error = error as? IntegrationError else {
-            return 500
-        }
-        switch error {
-        case .developerInterfaceDisabled, .unauthorizedClient:
-            return 401
-        case .busy, .invalidSessionState, .sessionCancelled:
-            return 409
-        case .sessionNotFound:
-            return 404
-        case .permissionDenied, .modelNotReady:
-            return 400
-        }
+        await dispatcher.dispatch(request)
     }
 
     private func accept(_ connection: NWConnection) {
@@ -152,7 +86,7 @@ final class IntegrationHTTPServer {
             switch state {
             case .cancelled, .failed:
                 Task { @MainActor in
-                    self?.activeConnections[id] = nil
+                    self?.connectionDidEnd(id)
                 }
             default:
                 break
@@ -195,21 +129,84 @@ final class IntegrationHTTPServer {
             return
         }
 
+        if case .events = IntegrationHTTPRoute.match(method: request.method, path: request.path) {
+            streamEvents(for: request, on: connection)
+            return
+        }
+
         let response = await dispatch(request)
         send(response, on: connection)
     }
 
     private func send(_ response: IntegrationHTTPResponse, on connection: NWConnection) {
-        connection.send(content: response.serialize(), completion: .contentProcessed { _ in
+        send(response.serialize(), on: connection, closeAfterSend: true)
+    }
+
+    private func send(_ data: Data, on connection: NWConnection, closeAfterSend: Bool) {
+        connection.send(content: data, completion: .contentProcessed { _ in
+            guard closeAfterSend else { return }
             connection.cancel()
         })
     }
 
-    private func decodeSessionRequest(from body: Data) throws -> InputSessionRequest {
-        guard !body.isEmpty else {
-            return InputSessionRequest(mode: nil, language: nil, useScreenContext: nil)
+    private func connectionDidEnd(_ id: ObjectIdentifier) {
+        activeConnections[id] = nil
+        if let stream = eventStreams[id] {
+            service.unsubscribeEvents(sessionID: stream.sessionID, subscriberID: stream.subscriberID)
+            eventStreams[id] = nil
         }
-        return try JSONDecoder.integration.decode(InputSessionRequest.self, from: body)
+    }
+
+    private func streamEvents(for request: IntegrationHTTPRequest, on connection: NWConnection) {
+        let authorizedClient = dispatcher.authorizeLocalHTTPClient(for: request)
+        guard case let .success(client) = authorizedClient else {
+            if case let .failure(response) = authorizedClient {
+                send(response, on: connection)
+            } else {
+                send(Self.internalServerError(), on: connection)
+            }
+            return
+        }
+        guard case let .events(sessionID) = IntegrationHTTPRoute.match(method: request.method, path: request.path) else {
+            send(IntegrationHTTPResponse.notFound(), on: connection)
+            return
+        }
+
+        do {
+            let subscription = try service.subscribeEvents(sessionID: sessionID, clientID: client.id) { [weak self, weak connection] event in
+                guard let self, let connection else { return }
+                self.sendSSEEvent(event, on: connection)
+            }
+            let id = ObjectIdentifier(connection)
+            eventStreams[id] = (sessionID: sessionID, subscriberID: subscription.id)
+            send(sseHeader(), on: connection, closeAfterSend: false)
+            sendSSEEvents(subscription.snapshot, on: connection)
+        } catch let error as IntegrationError {
+            send(IntegrationHTTPResponse.error(error, statusCode: IntegrationHTTPDispatcher.statusCode(for: error)), on: connection)
+        } catch {
+            send(Self.internalServerError(), on: connection)
+        }
+    }
+
+    private func sseHeader() -> Data {
+        var data = Data()
+        append("HTTP/1.1 200 OK\r\n", to: &data)
+        append("Cache-Control: no-cache\r\n", to: &data)
+        append("Connection: keep-alive\r\n", to: &data)
+        append("Content-Type: text/event-stream\r\n", to: &data)
+        append("\r\n", to: &data)
+        return data
+    }
+
+    private func sendSSEEvents(_ events: [InputSessionEvent], on connection: NWConnection) {
+        for event in events {
+            sendSSEEvent(event, on: connection)
+        }
+    }
+
+    private func sendSSEEvent(_ event: InputSessionEvent, on connection: NWConnection) {
+        guard let data = try? IntegrationSSE.encode(event) else { return }
+        send(data, on: connection, closeAfterSend: event.type.closesEventStream)
     }
 
     private nonisolated static func hasCompleteRequest(_ data: Data) -> Bool {
@@ -253,6 +250,13 @@ final class IntegrationHTTPServer {
             IntegrationError.Payload(error: "internal_server_error", message: "Internal server error."),
             statusCode: 500
         )
+    }
+
+    private nonisolated func append(_ string: String, to data: inout Data) {
+        guard let encoded = string.data(using: .utf8) else {
+            return
+        }
+        data.append(encoded)
     }
 }
 
