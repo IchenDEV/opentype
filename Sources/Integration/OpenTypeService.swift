@@ -16,30 +16,34 @@ struct IntegrationServiceSettings {
 @MainActor
 final class OpenTypeService {
     private var sessions: [UUID: InputSession]
+    private var sessionOwners: [UUID: String]
     private var eventsBySession: [UUID: [InputSessionEvent]]
     private var nextSequenceBySession: [UUID: Int]
-    private let settings: IntegrationServiceSettings
+    private let settingsProvider: @MainActor () -> IntegrationServiceSettings
     private let registry: IntegrationClientRegistry
 
     convenience init(registry: IntegrationClientRegistry = IntegrationClientRegistry()) {
-        self.init(settings: .live, registry: registry)
+        self.init(settingsProvider: { .live }, registry: registry)
     }
 
-    init(settings: IntegrationServiceSettings, registry: IntegrationClientRegistry = IntegrationClientRegistry()) {
+    convenience init(settings: IntegrationServiceSettings, registry: IntegrationClientRegistry = IntegrationClientRegistry()) {
+        self.init(settingsProvider: { settings }, registry: registry)
+    }
+
+    init(
+        settingsProvider: @escaping @MainActor () -> IntegrationServiceSettings,
+        registry: IntegrationClientRegistry = IntegrationClientRegistry()
+    ) {
         self.sessions = [:]
+        self.sessionOwners = [:]
         self.eventsBySession = [:]
         self.nextSequenceBySession = [:]
-        self.settings = settings
+        self.settingsProvider = settingsProvider
         self.registry = registry
     }
 
     func createSession(_ request: InputSessionRequest, clientID: String) async throws -> InputSession {
-        guard settings.developerInterfaceEnabled else {
-            throw IntegrationError.developerInterfaceDisabled
-        }
-        guard registry.isAuthorized(clientID: clientID, capability: .record) else {
-            throw IntegrationError.unauthorizedClient
-        }
+        try requireAuthorized(clientID: clientID, capability: .record)
         guard sessions.values.allSatisfy({ $0.state.isTerminal }) else {
             throw IntegrationError.busy
         }
@@ -53,6 +57,7 @@ final class OpenTypeService {
             updatedAt: now
         )
         sessions[session.id] = session
+        sessionOwners[session.id] = clientID
         nextSequenceBySession[session.id] = 1
         appendEvent(.sessionCreated, sessionID: session.id, at: now)
         registry.markUsed(clientID: clientID, at: now)
@@ -60,10 +65,12 @@ final class OpenTypeService {
         return session
     }
 
-    func startRecording(sessionID: UUID) async throws {
+    func startRecording(sessionID: UUID, clientID: String) async throws {
+        try requireAuthorized(clientID: clientID, capability: .record)
         guard var session = sessions[sessionID] else {
             throw IntegrationError.sessionNotFound
         }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
         guard session.state == .created else {
             throw IntegrationError.invalidSessionState
         }
@@ -78,8 +85,13 @@ final class OpenTypeService {
         appendEvent(.recordingStarted, sessionID: sessionID, at: now)
     }
 
-    func cancel(sessionID: UUID) async {
-        guard var session = sessions[sessionID], !session.state.isTerminal else {
+    func cancel(sessionID: UUID, clientID: String) async throws {
+        try requireAuthorized(clientID: clientID, capability: .record)
+        guard var session = sessions[sessionID] else {
+            return
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+        guard !session.state.isTerminal else {
             return
         }
 
@@ -90,12 +102,37 @@ final class OpenTypeService {
         appendEvent(.sessionCancelled, sessionID: sessionID, at: now)
     }
 
-    func session(_ id: UUID) -> InputSession? {
-        sessions[id]
+    func session(_ id: UUID, clientID: String) throws -> InputSession? {
+        try requireAuthorized(clientID: clientID, capability: .record)
+        guard let session = sessions[id] else {
+            return nil
+        }
+        try requireOwner(sessionID: id, clientID: clientID)
+        return session
     }
 
-    func snapshotEvents(sessionID: UUID) -> [InputSessionEvent] {
-        eventsBySession[sessionID] ?? []
+    func snapshotEvents(sessionID: UUID, clientID: String) throws -> [InputSessionEvent] {
+        try requireAuthorized(clientID: clientID, capability: .streamEvents)
+        guard sessionOwners[sessionID] != nil else {
+            return []
+        }
+        try requireOwner(sessionID: sessionID, clientID: clientID)
+        return eventsBySession[sessionID] ?? []
+    }
+
+    private func requireAuthorized(clientID: String, capability: IntegrationClient.Capability) throws {
+        guard settingsProvider().developerInterfaceEnabled else {
+            throw IntegrationError.developerInterfaceDisabled
+        }
+        guard registry.isAuthorized(clientID: clientID, capability: capability) else {
+            throw IntegrationError.unauthorizedClient
+        }
+    }
+
+    private func requireOwner(sessionID: UUID, clientID: String) throws {
+        guard sessionOwners[sessionID] == clientID else {
+            throw IntegrationError.unauthorizedClient
+        }
     }
 
     private func appendEvent(_ type: InputSessionEvent.EventType, sessionID: UUID, at timestamp: Date) {

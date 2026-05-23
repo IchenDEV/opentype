@@ -39,8 +39,8 @@ final class OpenTypeServiceTests: XCTestCase {
 
         let session = try await service.createSession(request(), clientID: clientID)
 
-        XCTAssertEqual(service.session(session.id), session)
-        let events = service.snapshotEvents(sessionID: session.id)
+        XCTAssertEqual(try service.session(session.id, clientID: clientID), session)
+        let events = try service.snapshotEvents(sessionID: session.id, clientID: clientID)
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(events.first?.type, .sessionCreated)
         XCTAssertEqual(events.first?.sessionID, session.id)
@@ -54,12 +54,12 @@ final class OpenTypeServiceTests: XCTestCase {
         approveLocalHTTP(in: store.registry)
         let service = makeService(registry: store.registry)
         let first = try await service.createSession(request(), clientID: clientID)
-        try await service.startRecording(sessionID: first.id)
+        try await service.startRecording(sessionID: first.id, clientID: clientID)
 
         await assertThrowsIntegrationError(.busy) {
             try await service.createSession(request(), clientID: clientID)
         }
-        XCTAssertEqual(service.session(first.id)?.state, .recording)
+        XCTAssertEqual(try service.session(first.id, clientID: clientID)?.state, .recording)
     }
 
     func testCancelSessionTransitionsToTerminalState() async throws {
@@ -69,10 +69,10 @@ final class OpenTypeServiceTests: XCTestCase {
         let service = makeService(registry: store.registry)
         let session = try await service.createSession(request(), clientID: clientID)
 
-        await service.cancel(sessionID: session.id)
+        try await service.cancel(sessionID: session.id, clientID: clientID)
 
-        XCTAssertEqual(service.session(session.id)?.state, .cancelled)
-        let events = service.snapshotEvents(sessionID: session.id)
+        XCTAssertEqual(try service.session(session.id, clientID: clientID)?.state, .cancelled)
+        let events = try service.snapshotEvents(sessionID: session.id, clientID: clientID)
         XCTAssertEqual(events.map(\.type), [.sessionCreated, .sessionCancelled])
         XCTAssertEqual(events.map(\.sequence), [1, 2])
     }
@@ -84,10 +84,10 @@ final class OpenTypeServiceTests: XCTestCase {
         let service = makeService(registry: store.registry)
         let session = try await service.createSession(request(), clientID: clientID)
 
-        try await service.startRecording(sessionID: session.id)
+        try await service.startRecording(sessionID: session.id, clientID: clientID)
 
-        XCTAssertEqual(service.session(session.id)?.state, .recording)
-        let events = service.snapshotEvents(sessionID: session.id)
+        XCTAssertEqual(try service.session(session.id, clientID: clientID)?.state, .recording)
+        let events = try service.snapshotEvents(sessionID: session.id, clientID: clientID)
         XCTAssertEqual(events.map(\.type), [.sessionCreated, .recordingStarted])
         XCTAssertEqual(events.map(\.sequence), [1, 2])
     }
@@ -99,16 +99,108 @@ final class OpenTypeServiceTests: XCTestCase {
         let service = makeService(registry: store.registry)
         let session = try await service.createSession(request(), clientID: clientID)
 
-        await service.cancel(sessionID: UUID())
-        await service.cancel(sessionID: session.id)
-        await service.cancel(sessionID: session.id)
+        try await service.cancel(sessionID: UUID(), clientID: clientID)
+        try await service.cancel(sessionID: session.id, clientID: clientID)
+        try await service.cancel(sessionID: session.id, clientID: clientID)
 
-        XCTAssertEqual(service.session(session.id)?.state, .cancelled)
-        XCTAssertEqual(service.snapshotEvents(sessionID: session.id).map(\.type), [.sessionCreated, .sessionCancelled])
+        XCTAssertEqual(try service.session(session.id, clientID: clientID)?.state, .cancelled)
+        XCTAssertEqual(
+            try service.snapshotEvents(sessionID: session.id, clientID: clientID).map(\.type),
+            [.sessionCreated, .sessionCancelled]
+        )
+    }
+
+    func testOtherApprovedClientCannotStartOwnedSession() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        approveLocalHTTP(in: store.registry)
+        approveOtherLocalHTTP(in: store.registry)
+        let service = makeService(registry: store.registry)
+        let session = try await service.createSession(request(), clientID: clientID)
+
+        await assertThrowsIntegrationError(.unauthorizedClient) {
+            try await service.startRecording(sessionID: session.id, clientID: otherClientID)
+        }
+    }
+
+    func testOtherApprovedClientCannotCancelOwnedSession() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        approveLocalHTTP(in: store.registry)
+        approveOtherLocalHTTP(in: store.registry)
+        let service = makeService(registry: store.registry)
+        let session = try await service.createSession(request(), clientID: clientID)
+
+        await assertThrowsIntegrationError(.unauthorizedClient) {
+            try await service.cancel(sessionID: session.id, clientID: otherClientID)
+        }
+        XCTAssertEqual(try service.session(session.id, clientID: clientID)?.state, .created)
+    }
+
+    func testOtherApprovedClientCannotReadOwnedSession() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        approveLocalHTTP(in: store.registry)
+        approveOtherLocalHTTP(in: store.registry)
+        let service = makeService(registry: store.registry)
+        let session = try await service.createSession(request(), clientID: clientID)
+
+        await assertThrowsIntegrationError(.unauthorizedClient) {
+            _ = try service.session(session.id, clientID: otherClientID)
+        }
+        await assertThrowsIntegrationError(.unauthorizedClient) {
+            _ = try service.snapshotEvents(sessionID: session.id, clientID: otherClientID)
+        }
+    }
+
+    func testClientWithoutStreamEventsCannotReadSnapshotEvents() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        store.registry.approve(recordOnlyClient)
+        let service = makeService(registry: store.registry)
+        let session = try await service.createSession(request(), clientID: recordOnlyClient.id)
+
+        await assertThrowsIntegrationError(.unauthorizedClient) {
+            _ = try service.snapshotEvents(sessionID: session.id, clientID: recordOnlyClient.id)
+        }
+    }
+
+    func testSettingsProviderIsReadForEachCreateSession() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        approveLocalHTTP(in: store.registry)
+        var settings = IntegrationServiceSettings(developerInterfaceEnabled: true, httpToken: "token")
+        let service = OpenTypeService(settingsProvider: { settings }, registry: store.registry)
+        let session = try await service.createSession(request(), clientID: clientID)
+        try await service.cancel(sessionID: session.id, clientID: clientID)
+
+        settings.developerInterfaceEnabled = false
+
+        await assertThrowsIntegrationError(.developerInterfaceDisabled) {
+            try await service.createSession(request(), clientID: clientID)
+        }
     }
 
     private var clientID: String {
         IntegrationClient.localHTTP(tokenID: "token").id
+    }
+
+    private var otherClientID: String {
+        IntegrationClient.localHTTP(tokenID: "other").id
+    }
+
+    private var recordOnlyClient: IntegrationClient {
+        IntegrationClient(
+            id: "http:record-only",
+            displayName: "Record Only",
+            bundleIdentifier: nil,
+            teamIdentifier: nil,
+            codeRequirement: nil,
+            transport: .http,
+            capabilities: [.record],
+            firstApprovedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            lastUsedAt: nil
+        )
     }
 
     private func makeService(registry: IntegrationClientRegistry) -> OpenTypeService {
@@ -124,6 +216,10 @@ final class OpenTypeServiceTests: XCTestCase {
 
     private func approveLocalHTTP(in registry: IntegrationClientRegistry) {
         registry.approve(IntegrationClient.localHTTP(tokenID: "token"))
+    }
+
+    private func approveOtherLocalHTTP(in registry: IntegrationClientRegistry) {
+        registry.approve(IntegrationClient.localHTTP(tokenID: "other"))
     }
 
     private func registry() -> RegistryStore {
