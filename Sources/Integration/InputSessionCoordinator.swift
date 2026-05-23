@@ -3,7 +3,7 @@ import Foundation
 
 @MainActor
 final class InputSessionCoordinator {
-    private struct ActiveSession {
+    struct ActiveSession {
         let sessionID: UUID
         let clientID: String
         let engine: any SpeechEngine
@@ -15,13 +15,13 @@ final class InputSessionCoordinator {
         let screenContextTask: Task<String, Never>?
     }
 
-    private let service: OpenTypeService
+    let service: OpenTypeService
     private let audioCapture: AudioCaptureManager
-    private let engineProvider: SpeechEngineProvider
+    let engineProvider: SpeechEngineProvider
     private let textProcessor: TextProcessor
-    private let settings: AppSettings
-    private let isUserWorkflowBusy: @MainActor () -> Bool
-    private var activeSession: ActiveSession?
+    let settings: AppSettings
+    let isUserWorkflowBusy: @MainActor () -> Bool
+    var activeSession: ActiveSession?
 
     var isBusy: Bool { activeSession != nil }
 
@@ -163,9 +163,7 @@ final class InputSessionCoordinator {
             )
         }
 
-        guard let transcript = TranscriptionSanitizer.prepare(raw, audioActivity: audioCapture.lastActivity) else {
-            throw IntegrationError.noSpeechDetected
-        }
+        let transcript = try prepareTranscript(raw, audioActivity: audioCapture.lastActivity)
 
         try service.emitTranscriptFinal(
             sessionID: active.sessionID,
@@ -177,7 +175,14 @@ final class InputSessionCoordinator {
         return (transcript, text)
     }
 
-    private func outputText(for raw: String, active: ActiveSession) async -> String {
+    func prepareTranscript(_ raw: String, audioActivity: AudioCaptureActivity?) throws -> String {
+        guard let transcript = TranscriptionSanitizer.prepare(raw, audioActivity: audioActivity) else {
+            throw IntegrationError.noSpeechDetected
+        }
+        return transcript
+    }
+
+    func outputText(for raw: String, active: ActiveSession) async -> String {
         let options = TextProcessingOptions(settings: settings, inputLanguage: active.inputLanguage)
         switch active.mode {
         case .direct:
@@ -214,7 +219,7 @@ final class InputSessionCoordinator {
         activeSession = nil
     }
 
-    private func effectiveSettings(
+    func effectiveSettings(
         for request: InputSessionRequest
     ) -> (mode: OutputMode, inputLanguage: InputLanguage, useScreenContext: Bool, streamingEnabled: Bool, languageCode: String?) {
         let inputLanguage = request.language ?? settings.inputLanguage
@@ -227,7 +232,7 @@ final class InputSessionCoordinator {
         )
     }
 
-    private func startScreenContextCaptureIfNeeded(
+    func startScreenContextCaptureIfNeeded(
         mode: OutputMode,
         useScreenContext: Bool
     ) -> Task<String, Never>? {

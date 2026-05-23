@@ -94,18 +94,7 @@ struct IntegrationsSettingsView: View {
         panel.canChooseFiles = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let bundle = Bundle(url: url)
-        let displayName = bundle?.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
-            ?? bundle?.object(forInfoDictionaryKey: "CFBundleName") as? String
-            ?? url.deletingPathExtension().lastPathComponent
-        let client = IntegrationClient.registeredApp(
-            displayName: displayName,
-            bundleIdentifier: bundle?.bundleIdentifier,
-            teamIdentifier: nil,
-            codeRequirement: url.path,
-            transport: .xpc
-        )
-        registry.approve(client)
+        registry.approve(IntegrationClient.appIdentity(url: url, transport: .xpc))
         refreshClients()
     }
 

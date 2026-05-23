@@ -39,6 +39,15 @@ struct IntegrationHTTPDispatcher {
                     ],
                     body: body
                 )
+            case let .submitAudio(sessionID):
+                let audioURL = try writeAudioUpload(request)
+                let result = try await coordinator.processAudioFile(
+                    sessionID: sessionID,
+                    clientID: client.id,
+                    audioURL: audioURL,
+                    cleanup: true
+                )
+                return IntegrationHTTPResponse.json(result, statusCode: 200)
             case let .startRecording(sessionID):
                 try await coordinator.startRecording(sessionID: sessionID, clientID: client.id)
                 guard let session = try service.session(sessionID, clientID: client.id) else {
@@ -117,6 +126,20 @@ struct IntegrationHTTPDispatcher {
         return try JSONDecoder.integration.decode(InputSessionRequest.self, from: body)
     }
 
+    private func writeAudioUpload(_ request: IntegrationHTTPRequest) throws -> URL {
+        guard !request.body.isEmpty else {
+            throw IntegrationError.noSpeechDetected
+        }
+        let ext = request.header("X-OpenType-Audio-Extension")?
+            .trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+            .nonEmpty ?? "wav"
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("opentype_upload_\(UUID().uuidString)")
+            .appendingPathExtension(ext)
+        try request.body.write(to: url, options: [.atomic])
+        return url
+    }
+
     private static func badRequest(message: String) -> IntegrationHTTPResponse {
         IntegrationHTTPResponse.json(
             IntegrationError.Payload(error: "bad_request", message: message),
@@ -129,5 +152,11 @@ struct IntegrationHTTPDispatcher {
             IntegrationError.Payload(error: "internal_server_error", message: "Internal server error."),
             statusCode: 500
         )
+    }
+}
+
+private extension String {
+    var nonEmpty: String? {
+        isEmpty ? nil : self
     }
 }

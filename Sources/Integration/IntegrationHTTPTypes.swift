@@ -74,6 +74,7 @@ struct IntegrationHTTPRequest {
 enum IntegrationHTTPRoute: Equatable {
     case createSession
     case events(UUID)
+    case submitAudio(UUID)
     case startRecording(UUID)
     case stopRecording(UUID)
     case cancel(UUID)
@@ -95,6 +96,10 @@ enum IntegrationHTTPRoute: Equatable {
 
         if method == "GET", components.count == 4, components[3] == "events" {
             return .events(sessionID)
+        }
+
+        if method == "POST", components.count == 4, components[3] == "audio" {
+            return .submitAudio(sessionID)
         }
 
         if method == "POST", components.count == 5, components[3] == "recording" {

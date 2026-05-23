@@ -41,6 +41,10 @@ final class IntegrationHTTPTests: XCTestCase {
             .startRecording(sessionID)
         )
         XCTAssertEqual(
+            IntegrationHTTPRoute.match(method: "POST", path: "/v1/sessions/\(sessionID.uuidString)/audio"),
+            .submitAudio(sessionID)
+        )
+        XCTAssertEqual(
             IntegrationHTTPRoute.match(method: "POST", path: "/v1/sessions/\(sessionID.uuidString)/recording/stop"),
             .stopRecording(sessionID)
         )
