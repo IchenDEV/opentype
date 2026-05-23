@@ -91,4 +91,89 @@ final class IntegrationHTTPTests: XCTestCase {
         XCTAssertTrue(string.contains("\"type\":\"transcript.partial\""))
         XCTAssertTrue(string.hasSuffix("\n\n"))
     }
+
+    func testHTTPServerStatusMapping() {
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.developerInterfaceDisabled), 401)
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.unauthorizedClient), 401)
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.busy), 409)
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.sessionNotFound), 404)
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.invalidSessionState), 409)
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.permissionDenied), 400)
+        XCTAssertEqual(IntegrationHTTPServer.statusCode(for: IntegrationError.modelNotReady), 400)
+    }
+
+    @MainActor
+    func testHTTPServerDispatchRejectsUnauthorizedBearerToken() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        let server = makeServer(
+            registry: store.registry,
+            settings: IntegrationServiceSettings(developerInterfaceEnabled: true, httpToken: "expected")
+        )
+        let request = try XCTUnwrap(IntegrationHTTPRequest.parse(from: Data(
+            "POST /v1/sessions HTTP/1.1\r\nAuthorization: Bearer wrong\r\n\r\n".utf8
+        )))
+
+        let response = await server.dispatch(request)
+        let payload = try JSONDecoder.integration.decode(IntegrationError.Payload.self, from: response.body)
+
+        XCTAssertEqual(response.statusCode, 401)
+        XCTAssertEqual(payload, IntegrationError.unauthorizedClient.payload)
+        XCTAssertNil(store.registry.client(id: IntegrationClient.localHTTP(tokenID: "wrong").id))
+    }
+
+    @MainActor
+    func testHTTPServerDispatchApprovesTokenAndCreatesSession() async throws {
+        let store = registry()
+        defer { store.cleanup() }
+        let server = makeServer(
+            registry: store.registry,
+            settings: IntegrationServiceSettings(developerInterfaceEnabled: true, httpToken: "token")
+        )
+        let request = try XCTUnwrap(IntegrationHTTPRequest.parse(from: Data(
+            "POST /v1/sessions HTTP/1.1\r\nAuthorization: Bearer token\r\n\r\n".utf8
+        )))
+
+        let response = await server.dispatch(request)
+        let session = try JSONDecoder.integration.decode(InputSession.self, from: response.body)
+
+        XCTAssertEqual(response.statusCode, 201)
+        XCTAssertEqual(session.state, .created)
+        XCTAssertNotNil(store.registry.client(id: IntegrationClient.localHTTP(tokenID: "token").id))
+    }
+
+    @MainActor
+    private func makeServer(
+        registry: IntegrationClientRegistry,
+        settings: IntegrationServiceSettings
+    ) -> IntegrationHTTPServer {
+        let service = OpenTypeService(settings: settings, registry: registry)
+        return IntegrationHTTPServer(
+            port: 49_999,
+            service: service,
+            registry: registry,
+            settingsProvider: { settings }
+        )
+    }
+
+    private func registry() -> RegistryStore {
+        let suiteName = "IntegrationHTTPTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return RegistryStore(
+            registry: IntegrationClientRegistry(defaults: defaults),
+            defaults: defaults,
+            suiteName: suiteName
+        )
+    }
+}
+
+private struct RegistryStore {
+    let registry: IntegrationClientRegistry
+    let defaults: UserDefaults
+    let suiteName: String
+
+    func cleanup() {
+        defaults.removePersistentDomain(forName: suiteName)
+    }
 }
