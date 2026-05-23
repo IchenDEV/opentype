@@ -27,6 +27,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var iconTimer: Timer?
     private var previousApp: NSRunningApplication?
+    private let integrationClientRegistry = IntegrationClientRegistry()
+    private lazy var integrationService = OpenTypeService(registry: integrationClientRegistry)
+    private var integrationHTTPServer: IntegrationHTTPServer?
+    private var integrationHTTPPort: Int?
+    private var integrationHTTPToken: String?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppIcon.install()
@@ -37,10 +42,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         observeMenuBarIconSetting()
         observeAppIconSetting()
         observeSystemAppearanceForIcon()
+        observeIntegrationSettings()
+        configureIntegrationHTTPServer()
 
         if !AppSettings.shared.hasCompletedOnboarding {
             showOnboarding()
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        stopIntegrationHTTPServer()
     }
 
     private func setupMenuBar() {
@@ -158,6 +169,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 AppIcon.install()
             }
             .store(in: &cancellables)
+    }
+
+    // MARK: - Integrations
+
+    private func observeIntegrationSettings() {
+        let settings = AppSettings.shared
+        settings.$developerInterfaceEnabled
+            .combineLatest(settings.$developerHTTPPort, settings.$developerHTTPToken)
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _, _, _ in
+                self?.configureIntegrationHTTPServer()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func configureIntegrationHTTPServer() {
+        let settings = AppSettings.shared
+        guard settings.developerInterfaceEnabled else {
+            stopIntegrationHTTPServer()
+            return
+        }
+
+        let port = settings.developerHTTPPort
+        let token = settings.developerHTTPToken
+        if integrationHTTPServer != nil, integrationHTTPPort == port, integrationHTTPToken == token {
+            return
+        }
+
+        stopIntegrationHTTPServer()
+
+        let server = IntegrationHTTPServer(
+            port: port,
+            service: integrationService,
+            registry: integrationClientRegistry,
+            settingsProvider: { .live }
+        )
+
+        do {
+            try server.start()
+            integrationHTTPServer = server
+            integrationHTTPPort = port
+            integrationHTTPToken = token
+            Log.info("Integration HTTP server started on 127.0.0.1:\(port)")
+        } catch {
+            integrationHTTPServer = nil
+            integrationHTTPPort = nil
+            integrationHTTPToken = nil
+            Log.error("Failed to start integration HTTP server on 127.0.0.1:\(port): \(error.localizedDescription)")
+        }
+    }
+
+    private func stopIntegrationHTTPServer() {
+        guard let server = integrationHTTPServer else { return }
+        server.stop()
+        integrationHTTPServer = nil
+        integrationHTTPPort = nil
+        integrationHTTPToken = nil
+        Log.info("Integration HTTP server stopped")
     }
 
     /// macOS recording indicator orange (matches the system camera/mic dot).
