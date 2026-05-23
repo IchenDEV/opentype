@@ -281,7 +281,7 @@ final class AppSettings: ObservableObject {
     @Published var developerHTTPPort: Int
     @Published var developerHTTPToken: String
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private var cancellables = Set<AnyCancellable>()
 
     private enum Key: String {
@@ -302,8 +302,9 @@ final class AppSettings: ObservableObject {
         case developerInterfaceEnabled, developerHTTPPort, developerHTTPToken
     }
 
-    private init() {
-        let ud = UserDefaults.standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let ud = defaults
         hotkeyType = HotkeyType(rawValue: ud.string(forKey: Key.hotkeyType.rawValue) ?? "") ?? .fn
         let savedMode = ud.string(forKey: Key.activationMode.rawValue) ?? ""
         activationMode = ActivationMode(rawValue: savedMode)
@@ -365,7 +366,7 @@ final class AppSettings: ObservableObject {
         localWhisperModelPaths = ud.dictionary(forKey: Key.localWhisperModelPaths.rawValue) as? [String: String] ?? [:]
         localLLMModelPaths = ud.dictionary(forKey: Key.localLLMModelPaths.rawValue) as? [String: String] ?? [:]
         developerInterfaceEnabled = ud.object(forKey: Key.developerInterfaceEnabled.rawValue) as? Bool ?? false
-        developerHTTPPort = ud.integer(forKey: Key.developerHTTPPort.rawValue).nonZeroInt ?? 38_765
+        developerHTTPPort = Self.validDeveloperHTTPPort(ud.integer(forKey: Key.developerHTTPPort.rawValue))
         if let savedToken = ud.string(forKey: Key.developerHTTPToken.rawValue), !savedToken.isEmpty {
             developerHTTPToken = savedToken
         } else {
@@ -435,6 +436,10 @@ final class AppSettings: ObservableObject {
             bytes = (0..<32).map { _ in UInt8.random(in: .min ... .max) }
         }
         return Data(bytes).base64EncodedString()
+    }
+
+    private static func validDeveloperHTTPPort(_ port: Int) -> Int {
+        (1 ... 65_535).contains(port) ? port : 38_765
     }
 
     var zh: Bool { uiLanguage == .chinese }
