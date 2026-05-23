@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Security
 
 enum UILanguage: String, Codable, CaseIterable {
     case chinese = "zh"
@@ -276,8 +277,11 @@ final class AppSettings: ObservableObject {
     @Published var modelStoragePath: String
     @Published var localWhisperModelPaths: [String: String]
     @Published var localLLMModelPaths: [String: String]
+    @Published var developerInterfaceEnabled: Bool
+    @Published var developerHTTPPort: Int
+    @Published var developerHTTPToken: String
 
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private var cancellables = Set<AnyCancellable>()
 
     private enum Key: String {
@@ -295,10 +299,12 @@ final class AppSettings: ObservableObject {
         case mimoASRRepoPath, mimoASRModel, mimoASRModelPath, mimoASRTokenizerPath
         case preloadSpeechModelOnLaunch, preloadFormattingModelOnLaunch
         case modelStoragePath, localWhisperModelPaths, localLLMModelPaths
+        case developerInterfaceEnabled, developerHTTPPort, developerHTTPToken
     }
 
-    private init() {
-        let ud = UserDefaults.standard
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let ud = defaults
         hotkeyType = HotkeyType(rawValue: ud.string(forKey: Key.hotkeyType.rawValue) ?? "") ?? .fn
         let savedMode = ud.string(forKey: Key.activationMode.rawValue) ?? ""
         activationMode = ActivationMode(rawValue: savedMode)
@@ -359,6 +365,15 @@ final class AppSettings: ObservableObject {
         modelStoragePath = ud.string(forKey: Key.modelStoragePath.rawValue) ?? ModelStorage.defaultRoot.path
         localWhisperModelPaths = ud.dictionary(forKey: Key.localWhisperModelPaths.rawValue) as? [String: String] ?? [:]
         localLLMModelPaths = ud.dictionary(forKey: Key.localLLMModelPaths.rawValue) as? [String: String] ?? [:]
+        developerInterfaceEnabled = ud.object(forKey: Key.developerInterfaceEnabled.rawValue) as? Bool ?? false
+        developerHTTPPort = Self.validDeveloperHTTPPort(ud.integer(forKey: Key.developerHTTPPort.rawValue))
+        if let savedToken = ud.string(forKey: Key.developerHTTPToken.rawValue), !savedToken.isEmpty {
+            developerHTTPToken = savedToken
+        } else {
+            let token = Self.generateDeveloperHTTPToken()
+            developerHTTPToken = token
+            ud.set(token, forKey: Key.developerHTTPToken.rawValue)
+        }
 
         setupPersistence()
     }
@@ -405,6 +420,26 @@ final class AppSettings: ObservableObject {
         $modelStoragePath.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.modelStoragePath.rawValue) }.store(in: &cancellables)
         $localWhisperModelPaths.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localWhisperModelPaths.rawValue) }.store(in: &cancellables)
         $localLLMModelPaths.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.localLLMModelPaths.rawValue) }.store(in: &cancellables)
+        $developerInterfaceEnabled.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.developerInterfaceEnabled.rawValue) }.store(in: &cancellables)
+        $developerHTTPPort.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.developerHTTPPort.rawValue) }.store(in: &cancellables)
+        $developerHTTPToken.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.developerHTTPToken.rawValue) }.store(in: &cancellables)
+    }
+
+    func resetDeveloperHTTPToken() {
+        developerHTTPToken = Self.generateDeveloperHTTPToken()
+    }
+
+    private static func generateDeveloperHTTPToken() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        if status != errSecSuccess {
+            bytes = (0..<32).map { _ in UInt8.random(in: .min ... .max) }
+        }
+        return Data(bytes).base64EncodedString()
+    }
+
+    private static func validDeveloperHTTPPort(_ port: Int) -> Int {
+        (1 ... 65_535).contains(port) ? port : 38_765
     }
 
     var zh: Bool { uiLanguage == .chinese }

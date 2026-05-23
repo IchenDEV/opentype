@@ -91,6 +91,7 @@ playground.xcworkspace
 # AI Tool Config
 # ===========================
 CLAUDE.md
+.worktrees/
 
 # ===========================
 # Environment & Secrets

@@ -82,6 +82,11 @@ xcodebuild \
     -quiet
 done_msg "Build succeeded"
 
+step "Building OpenType CLI helper (Release, arm64)…"
+swift build -c release --product OpenTypeCLI --arch arm64
+CLI_BUILD_DIR="$(swift build -c release --product OpenTypeCLI --arch arm64 --show-bin-path)"
+done_msg "CLI helper built"
+
 # ─── Step 2: Assemble .app bundle ───────────────────────────────────────────────
 
 step "Assembling ${APP_NAME}.app…"
@@ -92,6 +97,7 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
 # Binary
 cp "${BUILD_DIR}/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/"
+cp "${CLI_BUILD_DIR}/OpenTypeCLI" "${APP_BUNDLE}/Contents/MacOS/opentype"
 
 # Info.plist (with version injected)
 cp "${PROJECT_DIR}/Resources/Info.plist" "${APP_BUNDLE}/Contents/"

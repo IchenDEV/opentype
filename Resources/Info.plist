@@ -26,6 +26,11 @@
     <string>26.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>MachServices</key>
+    <dict>
+        <key>com.opentype.voiceinput.xpc</key>
+        <true/>
+    </dict>
     <key>NSMicrophoneUsageDescription</key>
     <string>OpenType needs microphone access to capture voice for transcription.</string>
     <key>NSSpeechRecognitionUsageDescription</key>

@@ -161,6 +161,43 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertFalse(AppSettings.shared.enableInstantInsert)
     }
 
+    func testDeveloperInterfaceDefaultsOff() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = AppSettings(defaults: defaults)
+
+        XCTAssertFalse(settings.developerInterfaceEnabled)
+    }
+
+    func testDeveloperHTTPTokenCanBeReset() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let settings = AppSettings(defaults: defaults)
+        let original = settings.developerHTTPToken
+
+        settings.resetDeveloperHTTPToken()
+        let reset = settings.developerHTTPToken
+
+        XCTAssertFalse(reset.isEmpty)
+        XCTAssertNotEqual(reset, original)
+    }
+
+    func testDeveloperHTTPPortFallsBackForInvalidPersistedValue() {
+        let (negativeDefaults, negativeSuiteName) = makeIsolatedDefaults()
+        defer { negativeDefaults.removePersistentDomain(forName: negativeSuiteName) }
+        negativeDefaults.set(-1, forKey: "developerHTTPPort")
+
+        XCTAssertEqual(AppSettings(defaults: negativeDefaults).developerHTTPPort, 38_765)
+
+        let (largeDefaults, largeSuiteName) = makeIsolatedDefaults()
+        defer { largeDefaults.removePersistentDomain(forName: largeSuiteName) }
+        largeDefaults.set(70_000, forKey: "developerHTTPPort")
+
+        XCTAssertEqual(AppSettings(defaults: largeDefaults).developerHTTPPort, 38_765)
+    }
+
     func testStartupPreloadPolicyLoadsOnlyWhisperSpeechModel() {
         XCTAssertTrue(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .whisper))
         XCTAssertFalse(StartupModelPreloadPolicy.shouldPreloadSpeechModel(enabled: true, speechEngine: .apple))
@@ -203,4 +240,11 @@ private func writeTestFiles(_ paths: [String], under dir: URL) throws {
         )
         try Data("x".utf8).write(to: file)
     }
+}
+
+private func makeIsolatedDefaults(function: String = #function) -> (UserDefaults, String) {
+    let suiteName = "OpenTypeTests.\(function).\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    return (defaults, suiteName)
 }
