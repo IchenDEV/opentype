@@ -24,6 +24,8 @@ struct SettingsView: View {
                 .tabItem { Label(L("tab.style"), systemImage: "text.book.closed") }
             HistoryStatsView()
                 .tabItem { Label(L("tab.history"), systemImage: "clock.arrow.circlepath") }
+            IntegrationsSettingsView()
+                .tabItem { Label(L("settings.integrations"), systemImage: "point.3.connected.trianglepath.dotted") }
             aboutTab
                 .tabItem { Label(L("tab.about"), systemImage: "info.circle") }
         }
