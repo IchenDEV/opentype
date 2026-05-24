@@ -7,15 +7,22 @@ import Foundation
 ///
 /// Usage: `L("status.ready")`
 enum Loc {
+    private static var selectedLang: UILanguage?
     private static var cachedLang: UILanguage?
     private static var cachedBundle: Bundle?
 
-    static func string(_ key: String) -> String {
-        // Read UserDefaults directly to avoid circular init with AppSettings.shared
-        let lang = UILanguage(rawValue: UserDefaults.standard.string(forKey: "uiLanguage") ?? "") ?? .chinese
+    static func use(_ language: UILanguage) {
+        selectedLang = language
+        cachedLang = nil
+        cachedBundle = nil
+    }
+
+    static func string(_ key: String, language explicitLanguage: UILanguage? = nil) -> String {
+        // Fall back to UserDefaults to avoid circular init with AppSettings.shared.
+        let lang = explicitLanguage ?? selectedLang ?? savedLanguage()
         if lang != cachedLang {
             cachedLang = lang
-            let code = lang == .chinese ? "zh-Hans" : "en"
+            let code = lang == .chinese ? "zh-hans" : "en"
             if let path = Bundle.module.path(forResource: code, ofType: "lproj"),
                let bundle = Bundle(path: path) {
                 cachedBundle = bundle
@@ -24,6 +31,10 @@ enum Loc {
             }
         }
         return cachedBundle?.localizedString(forKey: key, value: key, table: nil) ?? key
+    }
+
+    private static func savedLanguage() -> UILanguage {
+        UILanguage(rawValue: UserDefaults.standard.string(forKey: "uiLanguage") ?? "") ?? .chinese
     }
 }
 

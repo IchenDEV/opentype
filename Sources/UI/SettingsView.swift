@@ -29,7 +29,7 @@ struct SettingsView: View {
             aboutTab
                 .tabItem { Label(L("tab.about"), systemImage: "info.circle") }
         }
-        .frame(width: 640, height: 520)
+        .frame(width: SettingsWindowLayout.width, height: SettingsWindowLayout.height)
         .id(settings.uiLanguage)
     }
 

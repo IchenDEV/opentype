@@ -305,6 +305,8 @@ final class AppSettings: ObservableObject {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         let ud = defaults
+        let loadedUILanguage = UILanguage(rawValue: ud.string(forKey: Key.uiLanguage.rawValue) ?? "") ?? .chinese
+        Loc.use(loadedUILanguage)
         hotkeyType = HotkeyType(rawValue: ud.string(forKey: Key.hotkeyType.rawValue) ?? "") ?? .fn
         let savedMode = ud.string(forKey: Key.activationMode.rawValue) ?? ""
         activationMode = ActivationMode(rawValue: savedMode)
@@ -336,7 +338,7 @@ final class AppSettings: ObservableObject {
         useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? false
         enableInstantInsert = ud.object(forKey: Key.enableInstantInsert.rawValue) as? Bool ?? false
         hasCompletedOnboarding = ud.bool(forKey: Key.hasCompletedOnboarding.rawValue)
-        uiLanguage = UILanguage(rawValue: ud.string(forKey: Key.uiLanguage.rawValue) ?? "") ?? .chinese
+        uiLanguage = loadedUILanguage
         historyRetention = HistoryRetention(rawValue: ud.string(forKey: Key.historyRetention.rawValue) ?? "") ?? .forever
         enableMemory = ud.object(forKey: Key.enableMemory.rawValue) as? Bool ?? true
         memoryWindowMinutes = (ud.integer(forKey: Key.memoryWindowMinutes.rawValue)).nonZeroInt ?? 30
@@ -395,7 +397,10 @@ final class AppSettings: ObservableObject {
         $useScreenContext.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useScreenContext.rawValue) }.store(in: &cancellables)
         $enableInstantInsert.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableInstantInsert.rawValue) }.store(in: &cancellables)
         $hasCompletedOnboarding.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.hasCompletedOnboarding.rawValue) }.store(in: &cancellables)
-        $uiLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue) }.store(in: &cancellables)
+        $uiLanguage.dropFirst().sink { [defaults] in
+            Loc.use($0)
+            defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue)
+        }.store(in: &cancellables)
         $historyRetention.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.historyRetention.rawValue) }.store(in: &cancellables)
         $enableMemory.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableMemory.rawValue) }.store(in: &cancellables)
         $memoryWindowMinutes.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.memoryWindowMinutes.rawValue) }.store(in: &cancellables)

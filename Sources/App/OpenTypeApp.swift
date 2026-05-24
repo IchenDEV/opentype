@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         observeMenuBarIconSetting()
         observeAppIconSetting()
         observeSystemAppearanceForIcon()
+        observeUILanguageForSettingsWindow()
         observeIntegrationSettings()
         configureIntegrationHTTPServer()
         configureIntegrationXPCServer()
@@ -203,12 +204,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         .environmentObject(AppSettings.shared)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 640, height: 540),
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: SettingsWindowLayout.width,
+                height: SettingsWindowLayout.height
+            ),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        window.title = "OpenType Settings"
+        window.title = SettingsWindowTitle.current
         window.center()
         window.contentView = NSHostingView(rootView: settingsView)
         window.isReleasedWhenClosed = false
@@ -225,6 +231,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         AppIcon.install()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func observeUILanguageForSettingsWindow() {
+        AppSettings.shared.$uiLanguage
+            .sink { [weak self] language in
+                self?.settingsWindow?.title = SettingsWindowTitle.text(for: language)
+            }
+            .store(in: &cancellables)
     }
 
     private func closePopover() {

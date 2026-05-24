@@ -157,6 +157,36 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(UILanguage.english.displayName, "English")
     }
 
+    func testLocalizedStringsFollowExplicitUILanguage() {
+        XCTAssertEqual(Loc.string("tab.general", language: .english), "General")
+        XCTAssertEqual(Loc.string("tab.general", language: .chinese), "通用")
+    }
+
+    @MainActor
+    func testAppSettingsUpdatesLocalizationLanguageImmediately() {
+        let priorLanguage = AppSettings.shared.uiLanguage
+        defer { Loc.use(priorLanguage) }
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(UILanguage.english.rawValue, forKey: "uiLanguage")
+
+        let settings = AppSettings(defaults: defaults)
+        XCTAssertEqual(L("tab.general"), "General")
+
+        settings.uiLanguage = .chinese
+        XCTAssertEqual(L("tab.general"), "通用")
+    }
+
+    @MainActor
+    func testSettingsWindowTitleFollowsUILanguage() {
+        XCTAssertEqual(SettingsWindowTitle.text(for: .english), "OpenType Settings")
+        XCTAssertEqual(SettingsWindowTitle.text(for: .chinese), "OpenType 设置")
+    }
+
+    func testSettingsWindowWidthAllowsEnglishTabLabels() {
+        XCTAssertGreaterThanOrEqual(SettingsWindowLayout.width, 760)
+    }
+
     func testInstantInsertDefaultsOff() {
         XCTAssertFalse(AppSettings.shared.enableInstantInsert)
     }
