@@ -176,6 +176,8 @@
 "model.gemma_fast" = "Gemma 3 极速 ~600 MB";
 "model.gemma_balanced" = "Gemma 3 均衡 ~2.5 GB";
 "model.gemma_quality" = "Gemma 3 高质量 ~7 GB";
+"model.gemma4_edge" = "Gemma 4 端侧模型 ~3.6 GB";
+"model.gemma4_edge_quality" = "Gemma 4 端侧高质量 ~5.2 GB";
 "model.llama_balanced" = "Llama 4 Scout 均衡 ~10 GB";
 "model.llama_quality" = "Llama 4 Maverick 高质量 ~25 GB";
 "model.import_local" = "导入本地模型…";

@@ -15,9 +15,6 @@ APP_MACOS="$APP_CONTENTS/MacOS"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 
-if [ -d /Applications/Xcode.app ]; then
-  export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
-fi
 export CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-/tmp/clang-module-cache}"
 mkdir -p "$CLANG_MODULE_CACHE_PATH"
 

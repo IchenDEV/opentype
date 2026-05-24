@@ -20,7 +20,7 @@ actor LLMEngine {
             )
             progress?(1)
         } else {
-            let config = ModelConfiguration(id: id)
+            let config = Self.modelConfiguration(for: id)
             container = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,
                 using: MLXModelLoading.tokenizerLoader,
@@ -116,6 +116,11 @@ actor LLMEngine {
     private static func applyNoThink(prompt: String, modelID: String?) -> String {
         guard let id = modelID?.lowercased(), id.contains("qwen3") else { return prompt }
         return "/no_think\n\(prompt)"
+    }
+
+    private static func modelConfiguration(for id: String) -> ModelConfiguration {
+        let extraEOSTokens: Set<String> = id.lowercased().contains("gemma-4") ? ["<turn|>"] : []
+        return ModelConfiguration(id: id, extraEOSTokens: extraEOSTokens)
     }
 }
 

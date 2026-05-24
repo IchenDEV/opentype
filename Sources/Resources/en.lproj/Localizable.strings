@@ -176,6 +176,8 @@
 "model.gemma_fast" = "Gemma 3, fast ~600 MB";
 "model.gemma_balanced" = "Gemma 3, balanced ~2.5 GB";
 "model.gemma_quality" = "Gemma 3, best quality ~7 GB";
+"model.gemma4_edge" = "Gemma 4 edge model ~3.6 GB";
+"model.gemma4_edge_quality" = "Gemma 4 edge quality ~5.2 GB";
 "model.llama_balanced" = "Llama 4 Scout, balanced ~10 GB";
 "model.llama_quality" = "Llama 4 Maverick, high quality ~25 GB";
 "model.import_local" = "Import Local Model…";

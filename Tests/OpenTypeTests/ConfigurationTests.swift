@@ -146,6 +146,13 @@ final class ConfigurationTests: XCTestCase {
     }
 
     @MainActor
+    func testGemma4ModelsRemainListed() {
+        let models = ModelCatalog.defaultLLMModels
+        XCTAssertTrue(models.contains { $0.0 == "mlx-community/gemma-4-e2b-it-4bit" })
+        XCTAssertTrue(models.contains { $0.0 == "mlx-community/gemma-4-e4b-it-4bit" })
+    }
+
+    @MainActor
     func testLocalASRModelsRemainListed() {
         let models = ModelCatalog.defaultASRModels
         XCTAssertTrue(models.contains { $0.id == LocalASRConfiguration.qwen3DefaultModel && $0.provider == .qwen3 })
