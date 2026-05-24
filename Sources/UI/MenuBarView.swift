@@ -25,8 +25,7 @@ struct MenuBarView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "waveform")
-                .foregroundStyle(.tint)
+            AppIconView(size: 18)
             Text("OpenType")
                 .font(.system(size: 13, weight: .semibold))
             Text(settings.inputLanguage.rawValue)
