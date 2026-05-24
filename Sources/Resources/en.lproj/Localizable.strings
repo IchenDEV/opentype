@@ -24,6 +24,7 @@
 "status.no_speech_detected" = "No Speech Detected";
 
 /* ── Tabs ── */
+"settings.window_title" = "OpenType Settings";
 "tab.general" = "General";
 "tab.voice" = "Voice";
 "tab.models" = "Models";

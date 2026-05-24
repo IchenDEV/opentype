@@ -24,6 +24,7 @@
 "status.no_speech_detected" = "未检测到语音";
 
 /* ── Tabs ── */
+"settings.window_title" = "OpenType 设置";
 "tab.general" = "通用";
 "tab.voice" = "语音";
 "tab.models" = "模型";
