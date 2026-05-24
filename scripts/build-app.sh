@@ -21,6 +21,7 @@ set -euo pipefail
 
 APP_NAME="OpenType"
 BUNDLE_ID="com.opentype.voiceinput"
+CLI_HELPER_NAME="opentype-cli"
 # Default: use latest git tag (strip leading "v"), fallback to 0.0.0-dev
 if [ -z "${VERSION:-}" ]; then
     VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0-dev")"
@@ -67,6 +68,13 @@ DMG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.dmg"
 step() { echo ""; echo "▶ $1"; }
 done_msg() { echo "  ✓ $1"; }
 
+if [ "$(printf '%s' "$CLI_HELPER_NAME" | tr '[:upper:]' '[:lower:]')" = \
+     "$(printf '%s' "$APP_NAME" | tr '[:upper:]' '[:lower:]')" ] && \
+   [ "$CLI_HELPER_NAME" != "$APP_NAME" ]; then
+    echo "error: CLI helper name '${CLI_HELPER_NAME}' conflicts with app executable '${APP_NAME}' on case-insensitive filesystems" >&2
+    exit 1
+fi
+
 # ─── Step 1: Build with xcodebuild (Universal Binary) ─────────────────────────
 
 step "Building ${APP_NAME} (Release, arm64)…"
@@ -97,7 +105,7 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
 # Binary
 cp "${BUILD_DIR}/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/"
-cp "${CLI_BUILD_DIR}/OpenTypeCLI" "${APP_BUNDLE}/Contents/MacOS/opentype"
+cp "${CLI_BUILD_DIR}/OpenTypeCLI" "${APP_BUNDLE}/Contents/MacOS/${CLI_HELPER_NAME}"
 
 # Info.plist (with version injected)
 cp "${PROJECT_DIR}/Resources/Info.plist" "${APP_BUNDLE}/Contents/"

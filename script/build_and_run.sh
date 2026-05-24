@@ -4,6 +4,7 @@ set -euo pipefail
 MODE="${1:-run}"
 APP_NAME="OpenType"
 BUNDLE_ID="com.opentype.voiceinput"
+CLI_HELPER_NAME="opentype-cli"
 MIN_SYSTEM_VERSION="26.0"
 SUBSYSTEM="com.opentype.voiceinput"
 
@@ -13,6 +14,7 @@ APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_BINARY="$APP_MACOS/$APP_NAME"
+CLI_HELPER_BINARY="$APP_MACOS/$CLI_HELPER_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 
 export CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-/tmp/clang-module-cache}"
@@ -23,16 +25,25 @@ pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 cd "$ROOT_DIR"
 swift build
 BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
+CLI_BUILD_BINARY="$(swift build --show-bin-path)/OpenTypeCLI"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
+if [ -x "$CLI_BUILD_BINARY" ]; then
+  cp "$CLI_BUILD_BINARY" "$CLI_HELPER_BINARY"
+  chmod +x "$CLI_HELPER_BINARY"
+fi
 
 # Sign with entitlements so macOS 26 doesn't kill the app for Speech/mic access
 ENTITLEMENTS="$ROOT_DIR/Resources/OpenType.entitlements"
 codesign --force --sign - --options runtime --entitlements "$ENTITLEMENTS" "$APP_BINARY" 2>/dev/null \
   || codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP_BINARY"
+if [ -x "$CLI_HELPER_BINARY" ]; then
+  codesign --force --sign - --options runtime "$CLI_HELPER_BINARY" 2>/dev/null \
+    || codesign --force --sign - "$CLI_HELPER_BINARY"
+fi
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

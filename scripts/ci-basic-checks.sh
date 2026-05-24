@@ -48,6 +48,24 @@ test -f Sources/Resources/Sounds/stop.caf || fail "missing stop sound"
 test -s Resources/Info.plist || fail "missing Info.plist"
 test -s Resources/OpenType.entitlements || fail "missing entitlements"
 
+step "Checking bundled helper names"
+app_executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' Resources/Info.plist)"
+app_executable_lower="$(printf '%s' "$app_executable" | tr '[:upper:]' '[:lower:]')"
+if command -v rg >/dev/null 2>&1; then
+    helper_paths="$(rg --no-filename -o 'Contents/MacOS/[[:alnum:]._-]+' scripts Sources Tests || true)"
+else
+    helper_paths="$(grep -RhoE 'Contents/MacOS/[[:alnum:]._-]+' scripts Sources Tests || true)"
+fi
+
+while IFS= read -r helper_path; do
+    [ -n "$helper_path" ] || continue
+    helper_name="${helper_path##*/}"
+    helper_name_lower="$(printf '%s' "$helper_name" | tr '[:upper:]' '[:lower:]')"
+    if [ "$helper_name_lower" = "$app_executable_lower" ] && [ "$helper_name" != "$app_executable" ]; then
+        fail "bundled helper '${helper_name}' conflicts with app executable '${app_executable}' on case-insensitive filesystems"
+    fi
+done <<< "$helper_paths"
+
 step "Checking for conflict markers"
 if command -v rg >/dev/null 2>&1; then
     conflict_markers="$(rg -n '^(<<<<<<<|=======|>>>>>>>)' --glob '!Package.resolved' . || true)"

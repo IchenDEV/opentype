@@ -80,7 +80,7 @@ struct IntegrationsSettingsView: View {
     }
 
     private func registerCLIHelper() {
-        let url = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/opentype")
+        let url = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/opentype-cli")
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         registry.approve(IntegrationClient.localCLI(executablePath: url.resolvingSymlinksInPath().path))
         refreshClients()
