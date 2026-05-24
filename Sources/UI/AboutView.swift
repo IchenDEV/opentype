@@ -4,8 +4,6 @@ import Speech
 
 struct AboutView: View {
     @State private var showPermissions = false
-    @ObservedObject private var settings = AppSettings.shared
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView {
@@ -49,23 +47,7 @@ struct AboutView: View {
     }
 
     private var appIcon: some View {
-        Group {
-            if let image = AppIcon.image(
-                for: settings.appIconAppearance,
-                systemIsDark: colorScheme == .dark
-            ) {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .aspectRatio(contentMode: .fit)
-            } else {
-                Image(systemName: "waveform.circle.fill")
-                    .resizable()
-                    .foregroundStyle(.tint)
-            }
-        }
-        .frame(width: 64, height: 64)
-        .accessibilityHidden(true)
+        AppIconView(size: 64)
     }
 
     // MARK: - Permissions

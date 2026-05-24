@@ -33,9 +33,8 @@ struct OnboardingView: View {
     private var welcomePage: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "waveform.circle.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.tint)
+            AppIconView(size: 72)
+                .shadow(color: .black.opacity(0.12), radius: 10, y: 5)
 
             Text(L("onboarding.welcome"))
                 .font(.system(size: 24, weight: .bold, design: .rounded))

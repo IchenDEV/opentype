@@ -107,12 +107,15 @@ struct SettingsView: View {
                 Picker(L("settings.ui_language"), selection: $settings.uiLanguage) {
                     ForEach(UILanguage.allCases, id: \.self) { Text($0.displayName) }
                 }
-                Picker(L("settings.app_icon"), selection: $settings.appIconAppearance) {
-                    ForEach(AppIconAppearance.allCases, id: \.self) { appearance in
-                        Text(appearance.label).tag(appearance)
+                HStack {
+                    Picker(L("settings.app_icon"), selection: $settings.appIconAppearance) {
+                        ForEach(AppIconAppearance.allCases, id: \.self) { appearance in
+                            Text(appearance.label).tag(appearance)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    AppIconView(size: 28)
                 }
-                .pickerStyle(.segmented)
                 HStack {
                     Text(L("settings.menubar_icon"))
                     Spacer()
