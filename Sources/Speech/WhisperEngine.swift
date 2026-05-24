@@ -75,8 +75,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
 
             progress(dp(0.02, stage: .downloading))
 
-            var lastTime = Date()
-            var lastBytes: Int64 = 0
+            let speedTracker = DownloadSpeedTracker()
 
             let folder: URL
             if let localFolder {
@@ -87,18 +86,9 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                         variant: selectedModel,
                         downloadBase: ModelCatalog.whisperDownloadBase,
                         progressCallback: { p in
-                            let now = Date()
-                            let elapsed = now.timeIntervalSince(lastTime)
                             let completed = p.completedUnitCount
                             let total = p.totalUnitCount
-
-                            var speed: Double = 0
-                            if elapsed > 0.5 {
-                                let deltaBytes = completed - lastBytes
-                                if deltaBytes > 0 { speed = Double(deltaBytes) / elapsed }
-                                lastTime = now
-                                lastBytes = completed
-                            }
+                            let speed = speedTracker.speed(completedBytes: completed)
 
                             let frac = 0.02 + p.fractionCompleted * 0.58
                             progress(DownloadProgress(
@@ -119,8 +109,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
             let compute = ModelComputeOptions(
                 melCompute: .cpuAndGPU,
                 audioEncoderCompute: .cpuAndNeuralEngine,
-                textDecoderCompute: .cpuAndNeuralEngine,
-                prefillCompute: .cpuAndGPU
+                textDecoderCompute: .cpuAndNeuralEngine
             )
 
             let kit: WhisperKit
@@ -245,7 +234,6 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         return DecodingOptions(
             language: language,
             usePrefillPrompt: language != nil,
-            usePrefillCache: true,
             skipSpecialTokens: true,
             withoutTimestamps: true,
             promptTokens: promptTokens,
@@ -260,6 +248,29 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
 
     private func dp(_ fraction: Double, stage: DownloadProgress.Stage) -> DownloadProgress {
         DownloadProgress(fraction: fraction, completedBytes: 0, totalBytes: 0, speedBytesPerSec: 0, stage: stage)
+    }
+}
+
+private final class DownloadSpeedTracker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lastTime = Date()
+    private var lastBytes: Int64 = 0
+
+    func speed(completedBytes: Int64) -> Double {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastTime)
+        guard elapsed > 0.5 else { return 0 }
+
+        defer {
+            lastTime = now
+            lastBytes = completedBytes
+        }
+
+        let deltaBytes = completedBytes - lastBytes
+        return deltaBytes > 0 ? Double(deltaBytes) / elapsed : 0
     }
 }
 

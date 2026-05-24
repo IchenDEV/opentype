@@ -12,8 +12,8 @@ let package = Package(
         .executable(name: "OpenTypeCLI", targets: ["OpenTypeCLI"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0"),
-        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.1.7"),
+        .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "1.0.0"),
+        .package(url: "https://github.com/huggingface/swift-transformers", from: "1.3.3"),
         .package(url: "https://github.com/ml-explore/mlx-swift-lm", branch: "main"),
     ],
     targets: [
