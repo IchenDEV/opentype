@@ -4,13 +4,15 @@ enum LocalASRRuntime {
     private static let qwenPackage = "qwen3-asr-mlx"
     private static let qwenImport = "qwen3_asr_mlx"
     private static let markerName = ".opentype-runtime-ready"
+    private static let nativeMarkerName = ".opentype-native-runtime-ready"
 
     static func isReady(for provider: LocalASRConfiguration.Provider) -> Bool {
         switch provider {
         case .qwen3:
             let python = qwenPythonURL()
             return FileManager.default.isExecutableFile(atPath: python.path) &&
-                FileManager.default.fileExists(atPath: qwenMarkerURL().path)
+                FileManager.default.fileExists(atPath: qwenMarkerURL().path) &&
+                FileManager.default.fileExists(atPath: qwenNativeMarkerURL().path)
         case .mimo:
             return LocalASRConfiguration.resolvePythonPath() != nil
         }
@@ -36,6 +38,17 @@ enum LocalASRRuntime {
         let runtimePython = qwenPythonURL().path
         if isReady(for: .qwen3) { return runtimePython }
 
+        if FileManager.default.isExecutableFile(atPath: runtimePython) &&
+            FileManager.default.fileExists(atPath: qwenMarkerURL().path) {
+            try await prepareNativeExtensions(in: runtimeDir)
+            try await runProcess(
+                executable: runtimePython,
+                arguments: ["-c", "import \(qwenImport)"]
+            )
+            try Data(qwenPackage.utf8).write(to: qwenNativeMarkerURL())
+            return runtimePython
+        }
+
         guard let builderPython = LocalASRConfiguration.resolvePythonPath(preferredPath: preferredPath) else {
             throw LocalASRRuntimeError.pythonMissing
         }
@@ -55,11 +68,13 @@ enum LocalASRRuntime {
             executable: runtimePython,
             arguments: ["-m", "pip", "install", "--quiet", qwenPackage]
         )
+        try await prepareNativeExtensions(in: runtimeDir)
         try await runProcess(
             executable: runtimePython,
             arguments: ["-c", "import \(qwenImport)"]
         )
         try Data(qwenPackage.utf8).write(to: qwenMarkerURL())
+        try Data(qwenPackage.utf8).write(to: qwenNativeMarkerURL())
         return runtimePython
     }
 
@@ -69,6 +84,44 @@ enum LocalASRRuntime {
 
     private static func qwenMarkerURL() -> URL {
         ModelStorage.qwenASRRuntimeDir().appendingPathComponent(markerName)
+    }
+
+    private static func qwenNativeMarkerURL() -> URL {
+        ModelStorage.qwenASRRuntimeDir().appendingPathComponent(nativeMarkerName)
+    }
+
+    private static func prepareNativeExtensions(in runtimeDir: URL) async throws {
+        let nativeExtensions = nativeExtensionURLs(in: runtimeDir)
+        for url in nativeExtensions {
+            try? await runProcess(
+                executable: "/usr/bin/xattr",
+                arguments: ["-d", "com.apple.quarantine", url.path]
+            )
+            try? await runProcess(
+                executable: "/usr/bin/xattr",
+                arguments: ["-d", "com.apple.provenance", url.path]
+            )
+            try await runProcess(
+                executable: "/usr/bin/codesign",
+                arguments: ["-s", "-", "-f", url.path]
+            )
+        }
+    }
+
+    private static func nativeExtensionURLs(in runtimeDir: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: runtimeDir,
+            includingPropertiesForKeys: [.isRegularFileKey]
+        ) else {
+            return []
+        }
+
+        return enumerator.compactMap { item in
+            guard let url = item as? URL else { return nil }
+            guard ["so", "dylib"].contains(url.pathExtension) else { return nil }
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
+            return values?.isRegularFile == true ? url : nil
+        }
     }
 
     private static func runProcess(executable: String, arguments: [String]) async throws {

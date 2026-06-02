@@ -36,15 +36,6 @@ if [ -x "$CLI_BUILD_BINARY" ]; then
   chmod +x "$CLI_HELPER_BINARY"
 fi
 
-# Sign with entitlements so macOS 26 doesn't kill the app for Speech/mic access
-ENTITLEMENTS="$ROOT_DIR/Resources/OpenType.entitlements"
-codesign --force --sign - --options runtime --entitlements "$ENTITLEMENTS" "$APP_BINARY" 2>/dev/null \
-  || codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP_BINARY"
-if [ -x "$CLI_HELPER_BINARY" ]; then
-  codesign --force --sign - --options runtime "$CLI_HELPER_BINARY" 2>/dev/null \
-    || codesign --force --sign - "$CLI_HELPER_BINARY"
-fi
-
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -76,6 +67,16 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
+# Sign with entitlements so macOS 26 doesn't kill the app for Speech/mic access.
+# The helper is nested code, so it must be signed before sealing the app bundle.
+ENTITLEMENTS="$ROOT_DIR/Resources/OpenType.entitlements"
+if [ -x "$CLI_HELPER_BINARY" ]; then
+  codesign --force --sign - --options runtime "$CLI_HELPER_BINARY" 2>/dev/null \
+    || codesign --force --sign - "$CLI_HELPER_BINARY"
+fi
+codesign --force --sign - --options runtime --entitlements "$ENTITLEMENTS" "$APP_BUNDLE" 2>/dev/null \
+  || codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"
 }
@@ -97,8 +98,11 @@ case "$MODE" in
     ;;
   --verify|verify)
     open_app
-    sleep 1
-    pgrep -x "$APP_NAME" >/dev/null
+    for _ in {1..20}; do
+      pgrep -x "$APP_NAME" >/dev/null && exit 0
+      sleep 0.25
+    done
+    exit 1
     ;;
   *)
     echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
