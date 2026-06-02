@@ -27,7 +27,8 @@ def transcribe_qwen(args):
         from qwen3_asr_mlx import Qwen3ASR
     except ImportError as exc:
         raise RuntimeError(
-            "Missing qwen3-asr-mlx in the detected Python environment."
+            "Unable to import qwen3-asr-mlx or one of its native dependencies: "
+            f"{exc}"
         ) from exc
 
     model = Qwen3ASR.from_pretrained(args.model)

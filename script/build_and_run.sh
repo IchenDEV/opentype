@@ -75,10 +75,23 @@ for bundle in "$BUILD_DIR"/*.bundle; do
   cp -R "$bundle" "$APP_RESOURCES/"
 done
 
-# Sign with entitlements so macOS 26 doesn't kill the app for Speech/mic access
+# Sign after copying all nested helpers and SwiftPM resource bundles.
 ENTITLEMENTS="$ROOT_DIR/Resources/OpenType.entitlements"
-codesign --force --deep --sign - --options runtime --entitlements "$ENTITLEMENTS" "$APP_BUNDLE" 2>/dev/null \
-  || codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+SIGN_IDENTITY="${SIGN_IDENTITY:-}"
+if [ -z "$SIGN_IDENTITY" ]; then
+  for candidate in "Developer ID Application" "Apple Development" "OpenType Signing"; do
+    if security find-identity -v -p codesigning 2>/dev/null | grep -q "$candidate"; then
+      SIGN_IDENTITY="$candidate"
+      break
+    fi
+  done
+fi
+
+if [ -n "$SIGN_IDENTITY" ] && [ "$SIGN_IDENTITY" != "-" ]; then
+  codesign --force --deep --sign "$SIGN_IDENTITY" --options runtime --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+else
+  codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+fi
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"
@@ -101,8 +114,11 @@ case "$MODE" in
     ;;
   --verify|verify)
     open_app
-    sleep 1
-    pgrep -x "$APP_NAME" >/dev/null
+    for _ in {1..20}; do
+      pgrep -x "$APP_NAME" >/dev/null && exit 0
+      sleep 0.25
+    done
+    exit 1
     ;;
   *)
     echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
