@@ -33,13 +33,13 @@ final class SoundPlayer {
     }
 
     private func loadSounds() {
-        if let startURL = Bundle.main.url(forResource: "start", withExtension: "caf"),
+        if let startURL = AppResources.bundle.url(forResource: "start", withExtension: "caf", subdirectory: "Sounds"),
            let data = try? Data(contentsOf: startURL), data.count > 100 {
             startPlayer = try? AVAudioPlayer(contentsOf: startURL)
             startPlayer?.prepareToPlay()
             useSystemSounds = false
         }
-        if let stopURL = Bundle.main.url(forResource: "stop", withExtension: "caf"),
+        if let stopURL = AppResources.bundle.url(forResource: "stop", withExtension: "caf", subdirectory: "Sounds"),
            let data = try? Data(contentsOf: stopURL), data.count > 100 {
             stopPlayer = try? AVAudioPlayer(contentsOf: stopURL)
             stopPlayer?.prepareToPlay()

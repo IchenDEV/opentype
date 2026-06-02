@@ -105,7 +105,9 @@ struct SettingsView: View {
 
             Section(L("settings.interface")) {
                 Picker(L("settings.ui_language"), selection: $settings.uiLanguage) {
-                    ForEach(UILanguage.allCases, id: \.self) { Text($0.displayName) }
+                    ForEach(UILanguage.allCases, id: \.self) { language in
+                        Text(language.displayName).tag(language)
+                    }
                 }
                 HStack {
                     Picker(L("settings.app_icon"), selection: $settings.appIconAppearance) {

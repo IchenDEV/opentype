@@ -148,7 +148,7 @@ final class LocalASREngine: SpeechEngine, @unchecked Sendable {
     }
 
     private static func runnerScriptURL() -> URL? {
-        Bundle.module.url(
+        AppResources.bundle.url(
             forResource: "local-asr-runner",
             withExtension: "py",
             subdirectory: "Scripts"

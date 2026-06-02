@@ -252,7 +252,9 @@ final class AppSettings: ObservableObject {
     @Published var useScreenContext: Bool
     @Published var enableInstantInsert: Bool
     @Published var hasCompletedOnboarding: Bool
-    @Published var uiLanguage: UILanguage
+    @Published var uiLanguage: UILanguage {
+        didSet { Loc.use(uiLanguage) }
+    }
     @Published var historyRetention: HistoryRetention
     @Published var enableMemory: Bool
     @Published var memoryWindowMinutes: Int
@@ -397,10 +399,7 @@ final class AppSettings: ObservableObject {
         $useScreenContext.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useScreenContext.rawValue) }.store(in: &cancellables)
         $enableInstantInsert.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableInstantInsert.rawValue) }.store(in: &cancellables)
         $hasCompletedOnboarding.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.hasCompletedOnboarding.rawValue) }.store(in: &cancellables)
-        $uiLanguage.dropFirst().sink { [defaults] in
-            Loc.use($0)
-            defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue)
-        }.store(in: &cancellables)
+        $uiLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue) }.store(in: &cancellables)
         $historyRetention.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.historyRetention.rawValue) }.store(in: &cancellables)
         $enableMemory.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableMemory.rawValue) }.store(in: &cancellables)
         $memoryWindowMinutes.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.memoryWindowMinutes.rawValue) }.store(in: &cancellables)

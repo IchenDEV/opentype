@@ -22,12 +22,14 @@ enum Loc {
         let lang = explicitLanguage ?? selectedLang ?? savedLanguage()
         if lang != cachedLang {
             cachedLang = lang
-            let code = lang == .chinese ? "zh-hans" : "en"
-            if let path = Bundle.module.path(forResource: code, ofType: "lproj"),
+            if let path = lprojNames(for: lang)
+                .lazy
+                .compactMap({ AppResources.bundle.path(forResource: $0, ofType: "lproj") })
+                .first,
                let bundle = Bundle(path: path) {
                 cachedBundle = bundle
             } else {
-                cachedBundle = Bundle.module
+                cachedBundle = AppResources.bundle
             }
         }
         return cachedBundle?.localizedString(forKey: key, value: key, table: nil) ?? key
@@ -35,6 +37,13 @@ enum Loc {
 
     private static func savedLanguage() -> UILanguage {
         UILanguage(rawValue: UserDefaults.standard.string(forKey: "uiLanguage") ?? "") ?? .chinese
+    }
+
+    private static func lprojNames(for language: UILanguage) -> [String] {
+        switch language {
+        case .chinese: return ["zh-Hans", "zh-hans", "zh"]
+        case .english: return ["en"]
+        }
     }
 }
 
