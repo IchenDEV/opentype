@@ -13,6 +13,7 @@ DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
+APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 CLI_HELPER_BINARY="$APP_MACOS/$CLI_HELPER_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
@@ -23,12 +24,14 @@ mkdir -p "$CLANG_MODULE_CACHE_PATH"
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
 cd "$ROOT_DIR"
-swift build
-BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
-CLI_BUILD_BINARY="$(swift build --show-bin-path)/OpenTypeCLI"
+swift build --product "$APP_NAME"
+swift build --product OpenTypeCLI
+BUILD_DIR="$(swift build --show-bin-path)"
+BUILD_BINARY="$BUILD_DIR/$APP_NAME"
+CLI_BUILD_BINARY="$BUILD_DIR/OpenTypeCLI"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS"
+mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 if [ -x "$CLI_BUILD_BINARY" ]; then
@@ -67,15 +70,28 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
-# Sign with entitlements so macOS 26 doesn't kill the app for Speech/mic access.
-# The helper is nested code, so it must be signed before sealing the app bundle.
+for bundle in "$BUILD_DIR"/*.bundle; do
+  [ -d "$bundle" ] || continue
+  cp -R "$bundle" "$APP_RESOURCES/"
+done
+
+# Sign after copying all nested helpers and SwiftPM resource bundles.
 ENTITLEMENTS="$ROOT_DIR/Resources/OpenType.entitlements"
-if [ -x "$CLI_HELPER_BINARY" ]; then
-  codesign --force --sign - --options runtime "$CLI_HELPER_BINARY" 2>/dev/null \
-    || codesign --force --sign - "$CLI_HELPER_BINARY"
+SIGN_IDENTITY="${SIGN_IDENTITY:-}"
+if [ -z "$SIGN_IDENTITY" ]; then
+  for candidate in "Developer ID Application" "Apple Development" "OpenType Signing"; do
+    if security find-identity -v -p codesigning 2>/dev/null | grep -q "$candidate"; then
+      SIGN_IDENTITY="$candidate"
+      break
+    fi
+  done
 fi
-codesign --force --sign - --options runtime --entitlements "$ENTITLEMENTS" "$APP_BUNDLE" 2>/dev/null \
-  || codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+
+if [ -n "$SIGN_IDENTITY" ] && [ "$SIGN_IDENTITY" != "-" ]; then
+  codesign --force --deep --sign "$SIGN_IDENTITY" --options runtime --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+else
+  codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_BUNDLE"
+fi
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"

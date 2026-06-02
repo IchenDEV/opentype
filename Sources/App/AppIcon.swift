@@ -21,7 +21,7 @@ enum AppIcon {
     }
 
     private static func image(named resource: String, size: CGFloat?) -> NSImage? {
-        guard let url = Bundle.module.url(forResource: resource, withExtension: "png"),
+        guard let url = AppResources.bundle.url(forResource: resource, withExtension: "png"),
               let image = NSImage(contentsOf: url) else {
             return nil
         }
