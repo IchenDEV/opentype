@@ -58,7 +58,9 @@ struct OnboardingView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                 Picker("", selection: $settings.uiLanguage) {
-                    ForEach(UILanguage.allCases, id: \.self) { Text($0.displayName) }
+                    ForEach(UILanguage.allCases, id: \.self) { language in
+                        Text(language.displayName).tag(language)
+                    }
                 }
                 .labelsHidden()
                 .frame(width: 100)
