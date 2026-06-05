@@ -29,9 +29,10 @@ struct OverlayLayout: Equatable {
             bottomPadding = 16
             stackSpacing = 12
         case .recording:
+            let compactHeight: CGFloat = 64
             width = 324
-            height = 64
-            outerCornerRadius = 24
+            height = compactHeight
+            outerCornerRadius = compactHeight / 2
             innerCornerRadius = 18
             horizontalPadding = 18
             topPadding = 16

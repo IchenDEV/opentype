@@ -36,6 +36,7 @@ final class OverlayPanel {
             hostingView.wantsLayer = true
             hostingView.layer?.backgroundColor = NSColor.clear.cgColor
             hostingView.layer?.isOpaque = false
+            hostingView.layer?.masksToBounds = true
             panel.contentView = hostingView
 
             self.window = panel
@@ -59,6 +60,8 @@ final class OverlayPanel {
         let frame = frame(for: layout.panelSize, window: window)
 
         hostingView.frame = NSRect(origin: .zero, size: layout.panelSize)
+        hostingView.layer?.cornerRadius = layout.outerCornerRadius
+        hostingView.layer?.cornerCurve = .continuous
         window.setFrame(frame, display: true, animate: animated)
     }
 
