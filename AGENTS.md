@@ -19,11 +19,12 @@ OpenType is a macOS menu bar voice input app built with Swift 6 / SwiftUI / AppK
 | `Audio/` | `AudioCaptureManager` (AVAudioEngine), `SoundPlayer` |
 | `Config/` | `AppSettings` (UserDefaults-backed), `ModelCatalog`, `RemoteModelConfig`, `Loc` (localization helper), `Log` |
 | `Hotkey/` | `HotkeyManager` — CGEvent tap for global keyboard shortcuts |
-| `LLM/` | `LLMEngine` (MLX local), `RemoteLLMClient` (OpenAI + Anthropic formats), `PromptBuilder` |
+| `LLM/` | `LLMEngine` (MLX local), `RemoteLLMClient` (OpenAI + Anthropic formats) |
 | `Output/` | `TextInserter` — Accessibility API text injection with clipboard fallback |
 | `Processing/` | `TextProcessor`, `InputHistory`, `MemoryStore`, `PersonalDictionary` |
+| `Prompts/` | `PromptBuilder`, prompt catalogs, style prompt presets |
 | `Screen/` | `ScreenOCR` — ScreenCaptureKit + Vision framework |
-| `Speech/` | `SpeechEngineProtocol`, `AppleSpeechEngine`, `WhisperEngine` |
+| `Speech/` | `SpeechEngineProtocol`, `AppleSpeechEngine`, `WhisperEngine`, Volc/Qwen/MiMo local ASR support |
 | `UI/` | All SwiftUI views: MenuBar, Settings (tabbed), Onboarding, Overlay HUD, History, Models, About |
 | `Resources/` | `en.lproj/` and `zh-Hans.lproj/` Localizable.strings, Sounds/ |
 
@@ -33,11 +34,12 @@ OpenType is a macOS menu bar voice input app built with Swift 6 / SwiftUI / AppK
 - **Localization**: all user-facing strings go through `L("key")` (defined in `Loc.swift`), with entries in both `en.lproj` and `zh-Hans.lproj`
 - **Settings persistence**: `AppSettings` uses `@Published` + Combine `sink` to auto-persist to `UserDefaults`
 - **Remote LLM**: `RemoteLLMClient` dispatches to OpenAI-format (`/chat/completions`) or Anthropic-format (`/messages`) based on `provider.apiFormat`
+- **Prompt management**: `Sources/Prompts/PromptBuilder.swift` assembles prompts; fixed prompt text belongs in `PromptCatalog.swift` and style presets belong in `PromptStylePrompts.swift`
 - **Text processing**: no hardcoded filler-word removal — the LLM handles all contextual cleanup via the system prompt
 
 ## Build & Release
 
-- **Dev build**: `swift build` or open `Package.swift` in Xcode
+- **Dev build**: `swift build`, `bash scripts/build-and-run.sh --verify`, or open `Package.swift` in Xcode
 - **Release build**: `bash scripts/build-app.sh` — uses `xcodebuild` (required for Metal shader bundling), then assembles .app and .dmg
 - **CI**: `.github/workflows/release.yml` — builds on macOS, signs, optionally notarizes, publishes to GitHub Releases
 - **Icon**: `scripts/generate-icon.swift` programmatically renders the icon and generates `.icns`; `Sources/App/AppIcon.swift` renders the same icon at runtime for the Dock
@@ -49,6 +51,7 @@ OpenType is a macOS menu bar voice input app built with Swift 6 / SwiftUI / AppK
 - Mark `@MainActor` explicitly on types that touch UI or AppKit
 - Use structured concurrency (`async/await`, `Task`, `actor`) — avoid GCD
 - All logging through `Log.info()` / `Log.error()` (defined in `Config/Log.swift`)
+- Keep repository automation under `scripts/`; do not create another top-level script directory
 - Comments: only non-obvious intent, no narrating code
 
 ## Common Pitfalls

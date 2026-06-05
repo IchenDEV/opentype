@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Build, bundle, sign, and run the development OpenType.app.
+# Usage: ./scripts/build-and-run.sh [run|--debug|--logs|--telemetry|--verify]
+
 MODE="${1:-run}"
 APP_NAME="OpenType"
 BUNDLE_ID="com.opentype.voiceinput"

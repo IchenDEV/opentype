@@ -80,6 +80,9 @@ bash scripts/build-app.sh
 swift build
 swift run OpenType
 
+# 构建、签名并启动开发用 .app 包
+bash scripts/build-and-run.sh --verify
+
 # 或在 Xcode 中打开
 open Package.swift
 ```
@@ -135,17 +138,22 @@ Sources/
 ├── Audio/        # 麦克风录音（AVAudioEngine）、音效播放
 ├── Config/       # 用户设置、模型目录、远程模型配置、多语言
 ├── Hotkey/       # 全局快捷键（CGEvent tap）
-├── LLM/          # 本地推理引擎（MLX）、远程客户端（OpenAI/Anthropic）、提示词构建
+├── LLM/          # 本地推理引擎（MLX）、远程客户端（OpenAI/Anthropic）
 ├── Output/       # 文本注入（Accessibility API + 剪贴板粘贴）
 ├── Processing/   # 文本处理器、输入历史、记忆系统、个人词库
+├── Prompts/      # 提示词构建、固定提示词目录、风格提示词预设
 ├── Screen/       # 屏幕 OCR（ScreenCaptureKit + Vision）
 ├── Speech/       # 语音识别协议、WhisperKit 引擎、Apple Speech 引擎、豆包语音识别引擎、本地语音识别引擎
 ├── UI/           # SwiftUI：菜单栏、设置面板、新手引导、浮动 HUD、历史、模型管理
 └── Resources/    # 本地化字符串（中/英）、音效、应用图标
 scripts/
-├── build-app.sh            # 构建 .app 包和 .dmg 安装器
+├── build-and-run.sh        # 构建、签名并启动开发用 .app 包
+├── build-app.sh            # 构建发布用 .app 包和 .dmg 安装器
+├── ci-basic-checks.sh      # CI 文件关联和资源检查
+├── create-signing-cert.sh  # 生成自签名代码签名证书
 ├── generate-icon.swift     # 从源 PNG 生成 AppIcon.icns
-└── create-signing-cert.sh  # 生成自签名代码签名证书
+├── unit-test-coverage.sh   # 运行单元测试并检查覆盖率
+└── validate-volc-asr.swift # 手动验证火山引擎 ASR 配置
 ```
 
 ## 技术栈

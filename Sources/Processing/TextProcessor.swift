@@ -110,10 +110,10 @@ final class TextProcessor {
 
             result = stripThinkingTags(result)
             result = dictionary.applyReplacements(to: result)
-            return normalizeFormattedOutput(result)
+            return FormattedOutputCleaner.clean(result)
         } catch {
             Log.error("[TextProcessor] LLM failed, falling back to pre-cleaned text: \(error.localizedDescription)")
-            return normalizeFormattedOutput(cleanedText)
+            return FormattedOutputCleaner.clean(cleanedText)
         }
     }
 
@@ -161,7 +161,7 @@ final class TextProcessor {
 
             result = stripThinkingTags(result)
             result = dictionary.applyReplacements(to: result)
-            return normalizeFormattedOutput(result)
+            return FormattedOutputCleaner.clean(result)
         } catch {
             Log.error("[TextProcessor] Command LLM failed, falling back to basicClean: \(error.localizedDescription)")
             return basicClean(text: text)
@@ -213,33 +213,6 @@ final class TextProcessor {
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     }
 
-    private func normalizeFormattedOutput(_ text: String) -> String {
-        let cleaned = stripOutputScaffolding(from: text)
-        let lines = promoteStructuredBreaks(in: cleaned)
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-            .components(separatedBy: "\n")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-
-        var normalized: [String] = []
-        var previousWasBlank = false
-
-        for line in lines {
-            let isBlank = line.isEmpty
-            if isBlank {
-                if previousWasBlank { continue }
-                normalized.append("")
-            } else {
-                normalized.append(line)
-            }
-            previousWasBlank = isBlank
-        }
-
-        return normalized
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     func formattingOptions(for text: String, style: LanguageStyle) -> GenerationOptions {
         let characterCount = text.trimmingCharacters(in: .whitespacesAndNewlines).count
 
@@ -273,40 +246,4 @@ final class TextProcessor {
         )
     }
 
-    private func stripOutputScaffolding(from text: String) -> String {
-        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let scaffoldingPatterns = [
-            "^(整理后|最终文本|润色后|输出结果)[：:]\\s*",
-            "^(Final text|Rewritten text|Output)[:]\\s*"
-        ]
-
-        for pattern in scaffoldingPatterns {
-            result = result.replacingOccurrences(of: pattern, with: "", options: [.regularExpression, .caseInsensitive])
-        }
-
-        return result
-    }
-
-    private func promoteStructuredBreaks(in text: String) -> String {
-        guard !text.contains("\n"), text.count >= 48 else { return text }
-
-        let chineseMarkers = ["首先", "其次", "再次", "然后", "最后", "另外", "还有", "第一", "第二", "第三", "第四", "第五"]
-        let englishMarkers = ["First", "Second", "Third", "Fourth", "Finally", "Next"]
-        let markerCount = chineseMarkers.reduce(0) { $0 + text.components(separatedBy: $1).count - 1 }
-            + englishMarkers.reduce(0) { $0 + text.components(separatedBy: $1).count - 1 }
-
-        guard markerCount >= 2 else { return text }
-
-        var result = text
-        let patterns = [
-            "(?<!^)(?=(首先|其次|再次|然后|最后|另外|还有|第一|第二|第三|第四|第五))",
-            "(?<!^)(?=(First\\b|Second\\b|Third\\b|Fourth\\b|Finally\\b|Next\\b))",
-        ]
-
-        for pattern in patterns {
-            result = result.replacingOccurrences(of: pattern, with: "\n", options: .regularExpression)
-        }
-
-        return result
-    }
 }
