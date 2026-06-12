@@ -38,14 +38,14 @@ extension VoicePipeline {
                 return
             }
 
-            let finalText = await outputText(for: preparedRaw, settings: settings)
+            let output = await outputText(for: preparedRaw, settings: settings, targetApp: targetApp)
 
             guard !Task.isCancelled else {
                 resetToIdle()
                 return
             }
 
-            await insertFinalText(finalText, raw: preparedRaw, settings: settings, targetApp: targetApp)
+            await insertFinalText(output, raw: preparedRaw, settings: settings, targetApp: targetApp)
         } catch VoicePipelineStop.noSpeech {
             return
         } catch {
@@ -87,46 +87,88 @@ extension VoicePipeline {
         return prepared
     }
 
-    private func outputText(for raw: String, settings: AppSettings) async -> String {
+    private func outputText(
+        for raw: String,
+        settings: AppSettings,
+        targetApp: NSRunningApplication?
+    ) async -> VoicePipelineOutput {
         switch settings.outputMode {
         case .processed:
-            return await processSmartFormat(raw, settings: settings)
+            return await processSmartFormat(raw, settings: settings, targetApp: targetApp)
         case .command:
-            return await processCommand(raw, settings: settings)
+            return await processCommand(raw, settings: settings, targetApp: targetApp)
         case .direct:
             cancelScreenContextCapture()
-            return textProcessor.basicClean(text: raw)
+            let context = InputContext.capture(
+                targetApp: targetApp,
+                screenContext: "",
+                outputMode: .direct,
+                inputLanguage: settings.inputLanguage,
+                source: .menuBar
+            )
+            return VoicePipelineOutput(text: textProcessor.basicClean(text: raw), context: context)
         }
     }
 
-    private func processSmartFormat(_ raw: String, settings: AppSettings) async -> String {
+    private func processSmartFormat(
+        _ raw: String,
+        settings: AppSettings,
+        targetApp: NSRunningApplication?
+    ) async -> VoicePipelineOutput {
         appState.phase = .processing
         appState.statusMessage = L("pipeline.formatting")
 
         let started = CFAbsoluteTimeGetCurrent()
         let screenContext = await finishScreenContextCapture()
-        guard !Task.isCancelled else { return "" }
+        let inputContext = InputContext.capture(
+            targetApp: targetApp,
+            screenContext: screenContext,
+            outputMode: .processed,
+            inputLanguage: settings.inputLanguage,
+            source: .menuBar
+        )
+        guard !Task.isCancelled else { return VoicePipelineOutput(text: "", context: inputContext) }
 
+        let memoryContext = VoicePipelinePolicy.memoryContext(
+            for: .processed,
+            settings: settings,
+            currentContext: inputContext
+        )
         let text = await textProcessor.process(
             text: raw,
             stylePrompt: settings.customStylePrompt,
             model: settings.llmModel,
             screenContext: screenContext,
-            memoryContext: ""
+            memoryContext: memoryContext
         )
         recordFormattingDuration(started, label: "Smart Format")
-        return text
+        return VoicePipelineOutput(text: text, context: inputContext)
     }
 
-    private func processCommand(_ raw: String, settings: AppSettings) async -> String {
+    private func processCommand(
+        _ raw: String,
+        settings: AppSettings,
+        targetApp: NSRunningApplication?
+    ) async -> VoicePipelineOutput {
         appState.phase = .processing
         appState.statusMessage = L("pipeline.formatting")
 
         let started = CFAbsoluteTimeGetCurrent()
         let screenContext = await finishScreenContextCapture()
-        guard !Task.isCancelled else { return "" }
+        let inputContext = InputContext.capture(
+            targetApp: targetApp,
+            screenContext: screenContext,
+            outputMode: .command,
+            inputLanguage: settings.inputLanguage,
+            source: .menuBar
+        )
+        guard !Task.isCancelled else { return VoicePipelineOutput(text: "", context: inputContext) }
 
-        let memoryContext = VoicePipelinePolicy.memoryContext(for: .command, settings: settings)
+        let memoryContext = VoicePipelinePolicy.memoryContext(
+            for: .command,
+            settings: settings,
+            currentContext: inputContext
+        )
         let text = await textProcessor.processCommand(
             text: raw,
             model: settings.llmModel,
@@ -134,7 +176,7 @@ extension VoicePipeline {
             memoryContext: memoryContext
         )
         recordFormattingDuration(started, label: "Voice Command formatting")
-        return text
+        return VoicePipelineOutput(text: text, context: inputContext)
     }
 
     private func recordFormattingDuration(_ started: CFAbsoluteTime, label: String) {
@@ -144,11 +186,12 @@ extension VoicePipeline {
     }
 
     private func insertFinalText(
-        _ finalText: String,
+        _ output: VoicePipelineOutput,
         raw: String,
         settings: AppSettings,
         targetApp: NSRunningApplication?
     ) async {
+        let finalText = output.text
         appState.processedText = finalText
         appState.phase = .inserting
         appState.statusMessage = L("pipeline.inserting")
@@ -160,7 +203,12 @@ extension VoicePipeline {
         Log.info("[VoicePipeline] insert stage finished in \(String(format: "%.2f", elapsed))s")
 
         let wasProcessed = settings.outputMode == .processed || settings.outputMode == .command
-        InputHistory.shared.addRecord(rawText: raw, processedText: finalText, wasProcessed: wasProcessed)
+        InputHistory.shared.addRecord(
+            rawText: raw,
+            processedText: finalText,
+            wasProcessed: wasProcessed,
+            context: output.context
+        )
 
         appState.lastInsertedText = finalText
         appState.phase = .done
@@ -173,6 +221,11 @@ extension VoicePipeline {
             showInsertionFailedAlert(text: finalText, reason: reason)
         }
     }
+}
+
+private struct VoicePipelineOutput {
+    let text: String
+    let context: InputContext
 }
 
 private enum VoicePipelineStop: Error {

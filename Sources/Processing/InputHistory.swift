@@ -8,18 +8,20 @@ struct InputRecord: Codable, Identifiable {
     let rawCharCount: Int
     let processedCharCount: Int
     let wasProcessed: Bool
+    let context: InputContext?
 
-    init(rawText: String, processedText: String, wasProcessed: Bool) {
+    init(rawText: String, processedText: String, wasProcessed: Bool, context: InputContext? = nil) {
         self.init(
             id: UUID(),
             date: Date(),
             rawText: rawText,
             processedText: processedText,
-            wasProcessed: wasProcessed
+            wasProcessed: wasProcessed,
+            context: context
         )
     }
 
-    init(id: UUID, date: Date, rawText: String, processedText: String, wasProcessed: Bool) {
+    init(id: UUID, date: Date, rawText: String, processedText: String, wasProcessed: Bool, context: InputContext? = nil) {
         self.id = id
         self.date = date
         self.rawText = rawText
@@ -27,6 +29,39 @@ struct InputRecord: Codable, Identifiable {
         self.rawCharCount = rawText.count
         self.processedCharCount = processedText.count
         self.wasProcessed = wasProcessed
+        self.context = context
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, date, rawText, processedText, rawCharCount, processedCharCount, wasProcessed, context
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        date = try container.decode(Date.self, forKey: .date)
+        rawText = try container.decode(String.self, forKey: .rawText)
+        processedText = try container.decode(String.self, forKey: .processedText)
+        rawCharCount = try container.decodeIfPresent(Int.self, forKey: .rawCharCount) ?? rawText.count
+        processedCharCount = try container.decodeIfPresent(Int.self, forKey: .processedCharCount) ?? processedText.count
+        wasProcessed = try container.decode(Bool.self, forKey: .wasProcessed)
+        context = try container.decodeIfPresent(InputContext.self, forKey: .context)
+    }
+
+    func matchesSearch(_ query: String) -> Bool {
+        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalized.isEmpty else { return true }
+
+        return [
+            rawText,
+            processedText,
+            context?.appName,
+            context?.bundleIdentifier,
+            context?.windowTitle,
+            context?.screenContext,
+        ].contains { value in
+            value?.lowercased().contains(normalized) == true
+        }
     }
 }
 
@@ -63,8 +98,8 @@ final class InputHistory: ObservableObject {
         pruneExpired()
     }
 
-    func addRecord(rawText: String, processedText: String, wasProcessed: Bool) {
-        let record = InputRecord(rawText: rawText, processedText: processedText, wasProcessed: wasProcessed)
+    func addRecord(rawText: String, processedText: String, wasProcessed: Bool, context: InputContext? = nil) {
+        let record = InputRecord(rawText: rawText, processedText: processedText, wasProcessed: wasProcessed, context: context)
         records.insert(record, at: 0)
         if records.count > Self.maxRecords {
             records = Array(records.prefix(Self.maxRecords))
@@ -73,9 +108,9 @@ final class InputHistory: ObservableObject {
         save()
     }
 
-    func replaceLatestRecord(rawText: String, processedText: String, wasProcessed: Bool) {
+    func replaceLatestRecord(rawText: String, processedText: String, wasProcessed: Bool, context: InputContext? = nil) {
         guard let latest = records.first, latest.rawText == rawText else {
-            addRecord(rawText: rawText, processedText: processedText, wasProcessed: wasProcessed)
+            addRecord(rawText: rawText, processedText: processedText, wasProcessed: wasProcessed, context: context)
             return
         }
 
@@ -84,7 +119,8 @@ final class InputHistory: ObservableObject {
             date: latest.date,
             rawText: rawText,
             processedText: processedText,
-            wasProcessed: wasProcessed
+            wasProcessed: wasProcessed,
+            context: context ?? latest.context
         )
         save()
     }

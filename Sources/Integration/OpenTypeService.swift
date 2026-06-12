@@ -181,6 +181,10 @@ final class OpenTypeService {
         return session
     }
 
+    func integrationClient(id clientID: String) -> IntegrationClient? {
+        registry.client(id: clientID)
+    }
+
     func snapshotEvents(sessionID: UUID, clientID: String) throws -> [InputSessionEvent] {
         try requireAuthorized(clientID: clientID, capability: .streamEvents)
         guard sessionOwners[sessionID] != nil else {

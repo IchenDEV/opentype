@@ -26,29 +26,54 @@ final class VoicePipelinePolicyTests: XCTestCase {
         return activity
     }
 
-    func testVoicePipelinePolicySkipsMemoryForSmartFormat() {
+    func testVoicePipelinePolicyUsesMemoryForSmartFormat() {
         withCleanSettings {
             var providerCalls = 0
-            let context = VoicePipelinePolicy.memoryContext(for: .processed, settings: AppSettings.shared) { _ in
+            let inputContext = InputContext(
+                appName: "Notes",
+                outputMode: .processed,
+                inputLanguage: .english,
+                source: .menuBar
+            )
+            let context = VoicePipelinePolicy.memoryContext(
+                for: .processed,
+                settings: AppSettings.shared,
+                currentContext: inputContext
+            ) { minutes, currentContext in
                 providerCalls += 1
-                return "should not be used"
+                XCTAssertEqual(minutes, 30)
+                XCTAssertEqual(currentContext?.appName, "Notes")
+                return "smart format memory"
             }
 
-            XCTAssertEqual(context, "")
-            XCTAssertEqual(providerCalls, 0)
+            XCTAssertEqual(context, "smart format memory")
+            XCTAssertEqual(providerCalls, 1)
         }
     }
 
     func testVoicePipelinePolicyKeepsMemoryForVoiceCommand() {
         withCleanSettings {
             var providerCalls = 0
-            let context = VoicePipelinePolicy.memoryContext(for: .command, settings: AppSettings.shared) { minutes in
+            let context = VoicePipelinePolicy.memoryContext(for: .command, settings: AppSettings.shared) { minutes, _ in
                 providerCalls += 1
                 return "recent \(minutes)"
             }
 
             XCTAssertEqual(context, "recent 30")
             XCTAssertEqual(providerCalls, 1)
+        }
+    }
+
+    func testVoicePipelinePolicySkipsMemoryForDirectInput() {
+        withCleanSettings {
+            var providerCalls = 0
+            let context = VoicePipelinePolicy.memoryContext(for: .direct, settings: AppSettings.shared) { _, _ in
+                providerCalls += 1
+                return "should not be used"
+            }
+
+            XCTAssertEqual(context, "")
+            XCTAssertEqual(providerCalls, 0)
         }
     }
 

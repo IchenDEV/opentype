@@ -13,12 +13,13 @@ final class InputSessionCoordinator {
         let useScreenContext: Bool
         let streamingEnabled: Bool
         let screenContextTask: Task<String, Never>?
+        let client: IntegrationClient?
     }
 
     let service: OpenTypeService
     private let audioCapture: AudioCaptureManager
     let engineProvider: SpeechEngineProvider
-    private let textProcessor: TextProcessor
+    let textProcessor: TextProcessor
     let settings: AppSettings
     let isUserWorkflowBusy: @MainActor () -> Bool
     var activeSession: ActiveSession?
@@ -95,7 +96,8 @@ final class InputSessionCoordinator {
                 screenContextTask: startScreenContextCaptureIfNeeded(
                     mode: effective.mode,
                     useScreenContext: effective.useScreenContext
-                )
+                ),
+                client: service.integrationClient(id: clientID)
             )
         } catch {
             audioCapture.stop()
@@ -182,30 +184,6 @@ final class InputSessionCoordinator {
         return transcript
     }
 
-    func outputText(for raw: String, active: ActiveSession) async -> String {
-        let options = TextProcessingOptions(settings: settings, inputLanguage: active.inputLanguage)
-        switch active.mode {
-        case .direct:
-            active.screenContextTask?.cancel()
-            return textProcessor.basicClean(text: raw)
-        case .processed:
-            return await textProcessor.process(
-                text: raw,
-                options: options,
-                screenContext: await screenContext(from: active),
-                memoryContext: ""
-            )
-        case .command:
-            let memoryContext = VoicePipelinePolicy.memoryContext(for: .command, settings: settings)
-            return await textProcessor.processCommand(
-                text: raw,
-                options: options,
-                screenContext: await screenContext(from: active),
-                memoryContext: memoryContext
-            )
-        }
-    }
-
     private func failActiveSession(_ active: ActiveSession, error: IntegrationError) async {
         release(active)
         try? await service.failSession(sessionID: active.sessionID, clientID: active.clientID, error: error)
@@ -251,7 +229,4 @@ final class InputSessionCoordinator {
         }
     }
 
-    private func screenContext(from active: ActiveSession) async -> String {
-        await active.screenContextTask?.value ?? ""
-    }
 }
