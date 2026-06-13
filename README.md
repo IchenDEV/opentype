@@ -80,6 +80,9 @@ bash scripts/build-app.sh
 swift build
 swift run OpenType
 
+# Build, sign, and launch the development .app bundle
+bash scripts/build-and-run.sh --verify
+
 # Or open in Xcode
 open Package.swift
 ```
@@ -135,17 +138,22 @@ Sources/
 ├── Audio/        # Microphone capture (AVAudioEngine), sound playback
 ├── Config/       # AppSettings, ModelCatalog, RemoteModelConfig, Localization
 ├── Hotkey/       # Global hotkey via CGEvent tap
-├── LLM/          # LLMEngine (MLX), RemoteLLMClient (OpenAI/Anthropic), PromptBuilder
+├── LLM/          # LLMEngine (MLX), RemoteLLMClient (OpenAI/Anthropic)
 ├── Output/       # Text injection (Accessibility API + clipboard paste)
 ├── Processing/   # TextProcessor, InputHistory, MemoryStore, PersonalDictionary
+├── Prompts/      # PromptBuilder, prompt catalogs, style prompt presets
 ├── Screen/       # Screen OCR (ScreenCaptureKit + Vision)
 ├── Speech/       # SpeechEngine protocol, WhisperKit, Apple Speech, Doubao ASR, local ASR engines
 ├── UI/           # SwiftUI: MenuBar, Settings, Onboarding, Overlay, History, Models
 └── Resources/    # Localization strings (en/zh-Hans), sounds, app icon
 scripts/
-├── build-app.sh            # Build .app bundle and .dmg installer
+├── build-and-run.sh        # Build, sign, and launch a development .app bundle
+├── build-app.sh            # Build release .app bundle and .dmg installer
+├── ci-basic-checks.sh      # CI guardrails for linked files and resources
+├── create-signing-cert.sh  # Generate self-signed code signing certificate
 ├── generate-icon.swift     # Generate AppIcon.icns from source PNG
-└── create-signing-cert.sh  # Generate self-signed code signing certificate
+├── unit-test-coverage.sh   # Run unit tests with coverage thresholds
+└── validate-volc-asr.swift # Validate Volcengine ASR configuration manually
 ```
 
 ## Tech Stack

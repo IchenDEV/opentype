@@ -197,6 +197,45 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
+    func testFormattedOutputCleanerKeepsOnlyMarkedFinalText() {
+        let llmOutput = """
+        ---
+
+        **整理后文本：**
+
+        接下来，将整个系统的十八 n 语言 Flow 全部重新做了。
+        所有十八 n 文案维护在一个单独的 package 里头，叫 ec at ec 杠 i 幺八 n。
+
+        ---
+
+        **说明：**
+        1. **纠错与同音词修正**：
+        * 原文“十八 n”在上下文中多次出现。
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            接下来，将整个系统的十八 n 语言 Flow 全部重新做了。
+            所有十八 n 文案维护在一个单独的 package 里头，叫 ec at ec 杠 i 幺八 n。
+            """
+        )
+    }
+
+    func testFormattedOutputCleanerRemovesUnmarkedExplanationSection() {
+        let llmOutput = """
+        接下来，将 i18n 文案迁移到 @ec/i18n。
+
+        说明：
+        这里是解释，不应该进入最终输出。
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "接下来，将 i18n 文案迁移到 @ec/i18n。"
+        )
+    }
+
     func testPreCleanRemovesChineseFillers() {
         withCleanSettings {
             let processor = TextProcessor()
