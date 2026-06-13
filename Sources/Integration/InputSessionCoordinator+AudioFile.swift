@@ -45,7 +45,8 @@ extension InputSessionCoordinator {
                 screenContextTask: startScreenContextCaptureIfNeeded(
                     mode: effective.mode,
                     useScreenContext: effective.useScreenContext
-                )
+                ),
+                client: service.integrationClient(id: clientID)
             )
             let text = await outputText(for: transcript, active: active)
             try await service.completeSession(sessionID: sessionID, clientID: clientID, finalText: text)

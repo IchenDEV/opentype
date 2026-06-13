@@ -39,6 +39,13 @@ extension VoicePipeline {
         targetApp: NSRunningApplication?
     ) async {
         let quickText = immediateInsertText(from: raw, settings: settings)
+        let quickContext = InputContext.capture(
+            targetApp: targetApp,
+            screenContext: "",
+            outputMode: .processed,
+            inputLanguage: settings.inputLanguage,
+            source: .menuBar
+        )
         let ocrTask = screenOCRTask
         let ocrStartedAt = screenOCRStartedAt
         screenOCRTask = nil
@@ -54,7 +61,7 @@ extension VoicePipeline {
         let elapsed = CFAbsoluteTimeGetCurrent() - started
         Log.info("[VoicePipeline] instant insert stage finished in \(String(format: "%.2f", elapsed))s")
 
-        InputHistory.shared.addRecord(rawText: raw, processedText: quickText, wasProcessed: false)
+        InputHistory.shared.addRecord(rawText: raw, processedText: quickText, wasProcessed: false, context: quickContext)
         appState.lastInsertedText = quickText
         appState.phase = .done
         appState.statusMessage = L("status.done")
@@ -71,7 +78,8 @@ extension VoicePipeline {
             rawText: raw,
             insertedText: quickText,
             targetApp: targetApp,
-            message: L("pipeline.background_formatting")
+            message: L("pipeline.background_formatting"),
+            context: quickContext
         )
         appState.pendingReplacement = replacement
 
@@ -119,7 +127,8 @@ extension VoicePipeline {
         InputHistory.shared.replaceLatestRecord(
             rawText: replacement.rawText,
             processedText: formattedText,
-            wasProcessed: true
+            wasProcessed: true,
+            context: replacement.context
         )
         appState.clearPendingReplacement()
         appState.phase = .done
@@ -149,13 +158,29 @@ extension VoicePipeline {
         }
 
         guard !Task.isCancelled else { return }
+        guard let currentReplacement = appState.pendingReplacement, currentReplacement.id == replacementID else { return }
+
+        let inputContext = InputContext(
+            appName: currentReplacement.targetAppName,
+            bundleIdentifier: currentReplacement.targetBundleIdentifier,
+            windowTitle: currentReplacement.context?.windowTitle,
+            screenContext: screenContext,
+            outputMode: .processed,
+            inputLanguage: settings.inputLanguage,
+            source: .menuBar
+        )
+        let memoryContext = VoicePipelinePolicy.memoryContext(
+            for: .processed,
+            settings: settings,
+            currentContext: inputContext
+        )
 
         let formattedText = await textProcessor.process(
             text: raw,
             stylePrompt: settings.customStylePrompt,
             model: settings.llmModel,
             screenContext: screenContext,
-            memoryContext: ""
+            memoryContext: memoryContext
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - started
         appState.lastFormattingDurationSeconds = elapsed
@@ -167,6 +192,7 @@ extension VoicePipeline {
         replacement.formattedText = formattedText
         replacement.state = .ready
         replacement.message = L("pipeline.formatted_ready")
+        replacement.context = inputContext
         appState.pendingReplacement = replacement
     }
 

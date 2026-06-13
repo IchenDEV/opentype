@@ -151,11 +151,7 @@ struct HistoryStatsView: View {
 
     private var filteredRecords: [InputRecord] {
         if searchText.isEmpty { return history.records }
-        let query = searchText.lowercased()
-        return history.records.filter {
-            $0.processedText.lowercased().contains(query) ||
-            $0.rawText.lowercased().contains(query)
-        }
+        return history.records.filter { $0.matchesSearch(searchText) }
     }
 
     // MARK: - Record card
@@ -180,11 +176,12 @@ struct HistoryStatsView: View {
                 }
             }
 
-            HStack(spacing: 6) {
-                Text(formatDate(record.date))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.quaternary)
+            Text(metadataText(for: record))
+                .font(.system(size: 10))
+                .foregroundStyle(.quaternary)
+                .lineLimit(1)
 
+            HStack(spacing: 6) {
                 if record.wasProcessed && record.rawCharCount != record.processedCharCount {
                     let delta = record.rawCharCount - record.processedCharCount
                     Text(delta > 0
@@ -222,6 +219,20 @@ struct HistoryStatsView: View {
         .padding(.vertical, 8)
         .background(Color(nsColor: .controlBackgroundColor).opacity(0.6))
         .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func metadataText(for record: InputRecord) -> String {
+        var parts = [formatDate(record.date)]
+        if let context = record.context {
+            parts.append(context.outputMode.label)
+            if let appName = context.appName ?? context.bundleIdentifier {
+                parts.append(appName)
+            }
+            if let windowTitle = context.windowTitle {
+                parts.append(windowTitle)
+            }
+        }
+        return parts.joined(separator: " / ")
     }
 
     // MARK: - Date formatting

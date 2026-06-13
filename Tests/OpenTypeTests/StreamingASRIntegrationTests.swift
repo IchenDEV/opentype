@@ -15,8 +15,7 @@ final class StreamingASRIntegrationTests: XCTestCase {
         let compute = ModelComputeOptions(
             melCompute: .cpuAndGPU,
             audioEncoderCompute: .cpuAndNeuralEngine,
-            textDecoderCompute: .cpuAndNeuralEngine,
-            prefillCompute: .cpuAndGPU
+            textDecoderCompute: .cpuAndNeuralEngine
         )
         let whisperKit = try await WhisperKit(
             WhisperKitConfig(
@@ -39,7 +38,6 @@ final class StreamingASRIntegrationTests: XCTestCase {
                 DecodingOptions(
                     language: "zh",
                     usePrefillPrompt: true,
-                    usePrefillCache: true,
                     skipSpecialTokens: true,
                     withoutTimestamps: true,
                     suppressBlank: true

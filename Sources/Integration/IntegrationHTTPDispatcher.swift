@@ -101,7 +101,7 @@ struct IntegrationHTTPDispatcher {
         return .success(client)
     }
 
-    static func statusCode(for error: Error) -> Int {
+    nonisolated static func statusCode(for error: Error) -> Int {
         guard let error = error as? IntegrationError else {
             return 500
         }

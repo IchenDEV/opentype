@@ -161,7 +161,8 @@ final class IntegrationHTTPTests: XCTestCase {
         var request = try XCTUnwrap(IntegrationHTTPRequest.parse(from: Data(
             "POST /v1/sessions HTTP/1.1\r\nAuthorization: Bearer token\r\nX-OpenType-Client-ID: \(client.id)\r\n\r\n".utf8
         )))
-        XCTAssertEqual((await server.dispatch(request)).statusCode, 401)
+        let unauthorizedResponse = await server.dispatch(request)
+        XCTAssertEqual(unauthorizedResponse.statusCode, 401)
 
         store.registry.approve(client)
         request = try XCTUnwrap(IntegrationHTTPRequest.parse(from: Data(
