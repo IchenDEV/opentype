@@ -123,75 +123,22 @@ done
 
 done_msg "App bundle assembled"
 
-# ─── Step 3: Build AppIcon asset catalog (light + dark variants) ────────────────
+# ─── Step 3: Build AppIcon asset catalog (system appearances) ───────────────────
 
-step "Building AppIcon asset catalog (light + dark variants)…"
+step "Building AppIcon asset catalog (system appearances)…"
 
 ICON_RESOURCE_DIR="${PROJECT_DIR}/Sources/Resources"
 ICON_WORK_DIR="${PROJECT_DIR}/.build/AppIcon.work"
-ICONSET_DIR="${ICON_WORK_DIR}/Assets.xcassets/AppIcon.appiconset"
+ICON_COMPOSER_DIR="${ICON_RESOURCE_DIR}/AppIcon.icon"
 ACTOOL_OUT_DIR="${ICON_WORK_DIR}/compiled"
 
 rm -rf "${ICON_WORK_DIR}"
-mkdir -p "${ICONSET_DIR}" "${ACTOOL_OUT_DIR}"
+mkdir -p "${ACTOOL_OUT_DIR}"
 
-# Generate sized PNGs for both appearances; write Contents.json with
-# `luminosity = dark` variants so macOS Sonoma+ swaps the Launchpad/Dock
-# icon based on system appearance.
-SIZE_SPECS=(
-    "16:16:1x"  "16:32:2x"
-    "32:32:1x"  "32:64:2x"
-    "128:128:1x" "128:256:2x"
-    "256:256:1x" "256:512:2x"
-    "512:512:1x" "512:1024:2x"
-)
-
-CONTENTS_JSON="${ICONSET_DIR}/Contents.json"
-{
-    echo '{'
-    echo '  "images" : ['
-    first=true
-    for spec in "${SIZE_SPECS[@]}"; do
-        pt="${spec%%:*}"
-        rest="${spec#*:}"
-        px="${rest%%:*}"
-        scale="${rest##*:}"
-        light_name="icon_${pt}x${pt}_${scale}.png"
-        dark_name="icon_${pt}x${pt}_${scale}_dark.png"
-
-        sips -z "${px}" "${px}" "${ICON_RESOURCE_DIR}/AppIconLight.png" \
-            --out "${ICONSET_DIR}/${light_name}" >/dev/null
-        sips -z "${px}" "${px}" "${ICON_RESOURCE_DIR}/AppIconDark.png" \
-            --out "${ICONSET_DIR}/${dark_name}" >/dev/null
-
-        if [ "$first" = true ]; then first=false; else echo '    ,'; fi
-        cat <<EOF
-    {
-      "idiom" : "mac",
-      "scale" : "${scale}",
-      "size" : "${pt}x${pt}",
-      "filename" : "${light_name}"
-    },
-    {
-      "idiom" : "mac",
-      "scale" : "${scale}",
-      "size" : "${pt}x${pt}",
-      "filename" : "${dark_name}",
-      "appearances" : [
-        { "appearance" : "luminosity", "value" : "dark" }
-      ]
-    }
-EOF
-    done
-    echo '  ],'
-    echo '  "info" : { "version" : 1, "author" : "opentype" }'
-    echo '}'
-} > "${CONTENTS_JSON}"
-
-xcrun actool "${ICON_WORK_DIR}/Assets.xcassets" \
+xcrun actool "${ICON_COMPOSER_DIR}" \
     --compile "${ACTOOL_OUT_DIR}" \
     --platform macosx \
-    --minimum-deployment-target 14.0 \
+    --minimum-deployment-target 26.0 \
     --app-icon AppIcon \
     --include-all-app-icons \
     --output-partial-info-plist "${ICON_WORK_DIR}/Assets-partial.plist" \
@@ -199,15 +146,13 @@ xcrun actool "${ICON_WORK_DIR}/Assets.xcassets" \
     >/dev/null
 
 cp "${ACTOOL_OUT_DIR}/Assets.car" "${APP_BUNDLE}/Contents/Resources/"
+cp "${ACTOOL_OUT_DIR}/AppIcon.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
 
-# Keep .icns files for Finder/LaunchServices fallback and for the in-app
-# preview in AboutView/SettingsView, which read these via Bundle. Finder still
-# resolves CFBundleIconFile through AppIcon.icns, so keep the neutral fallback
-# on the dark artwork instead of the white light-mode tile.
-cp "${ICON_RESOURCE_DIR}/AppIconDark.icns" "${APP_BUNDLE}/Contents/Resources/AppIcon.icns"
+# Keep .icns files for Finder/LaunchServices and for the in-app preview in
+# AboutView/SettingsView, which read these via Bundle.
 cp "${ICON_RESOURCE_DIR}/AppIconLight.icns" "${APP_BUNDLE}/Contents/Resources/AppIconLight.icns"
 cp "${ICON_RESOURCE_DIR}/AppIconDark.icns" "${APP_BUNDLE}/Contents/Resources/AppIconDark.icns"
-done_msg "AppIcon compiled to Assets.car (light + dark)"
+done_msg "AppIcon compiled to Assets.car (system appearances)"
 
 # ─── Step 4: Code sign ───────────────────────────────────────────────────────
 

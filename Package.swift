@@ -29,6 +29,7 @@ let package = Package(
             path: "Sources",
             resources: [
                 .copy("Resources/AppIcon.png"),
+                .copy("Resources/AppIcon.icon"),
                 .copy("Resources/AppIconDark.png"),
                 .copy("Resources/AppIconLight.png"),
                 .copy("Resources/Scripts"),
