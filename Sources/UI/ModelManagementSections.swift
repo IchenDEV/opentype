@@ -134,11 +134,7 @@ extension ModelManagementView {
     var localLLMModelsSection: some View {
         if let family = selectedModelFamily {
             let familyModels = catalog.llmModels.filter { $0.family == family }
-            if family == .qwen {
-                groupedQwenModelList(familyModels, activeID: settings.llmModel)
-            } else {
-                modelList(familyModels, activeID: settings.llmModel, type: .llm)
-            }
+            groupedLLMModelList(familyModels, activeID: settings.llmModel)
         }
         let customModels = catalog.llmModels.filter { $0.family == nil }
         if !customModels.isEmpty {
@@ -170,6 +166,35 @@ extension ModelManagementView {
         guard !settings.useRemoteLLM else { return }
         if let family = catalog.llmModels.first(where: { $0.id == settings.llmModel })?.family {
             selectedModelFamily = family
+        }
+    }
+
+    /// Split a family's models into recommended (top), standard, and legacy (folded) tiers.
+    @ViewBuilder
+    func groupedLLMModelList(
+        _ models: [ModelCatalog.ModelEntry], activeID: String
+    ) -> some View {
+        let recommended = models.filter { $0.tier == .recommended }
+        let standard = models.filter { $0.tier == .standard }
+        let legacy = models.filter { $0.tier == .legacy }
+
+        VStack(spacing: 8) {
+            if !recommended.isEmpty {
+                modelList(recommended, activeID: activeID, type: .llm)
+            }
+            if !standard.isEmpty {
+                modelList(standard, activeID: activeID, type: .llm)
+            }
+            if !legacy.isEmpty {
+                DisclosureGroup(isExpanded: $showLegacyModels) {
+                    modelList(legacy, activeID: activeID, type: .llm)
+                        .padding(.top, 4)
+                } label: {
+                    Text("\(L("model.legacy_group")) (\(legacy.count))")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }

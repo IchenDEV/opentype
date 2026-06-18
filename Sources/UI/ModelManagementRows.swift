@@ -7,26 +7,6 @@ extension ModelManagementView {
         case asr
     }
 
-    func groupedQwenModelList(
-        _ models: [ModelCatalog.ModelEntry], activeID: String
-    ) -> some View {
-        let seriesOrder = ["Qwen2.5", "Qwen3", "Qwen3.5"]
-        let grouped = Dictionary(grouping: models) { qwenSeries(from: $0.displayName) }
-        let series = seriesOrder.filter { grouped[$0] != nil }
-
-        return VStack(spacing: 8) {
-            ForEach(series, id: \.self) { seriesName in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(seriesName)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 2)
-                    modelList(grouped[seriesName] ?? [], activeID: activeID, type: .llm)
-                }
-            }
-        }
-    }
-
     func modelList(
         _ models: [ModelCatalog.ModelEntry], activeID: String, type: ModelType
     ) -> some View {
@@ -54,6 +34,15 @@ extension ModelManagementView {
                 HStack(spacing: 6) {
                     Text(model.displayName)
                         .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                    if model.tier == .recommended {
+                        Text(L("common.recommended"))
+                            .font(.system(size: 9, weight: .medium))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Color.green.opacity(0.15))
+                            .foregroundStyle(.green)
+                            .clipShape(Capsule())
+                    }
                     if isActive {
                         Text(L("model.active"))
                             .font(.system(size: 9, weight: .medium))
@@ -264,9 +253,5 @@ extension ModelManagementView {
             }
         }
         .frame(width: 8, height: 8)
-    }
-
-    private func qwenSeries(from displayName: String) -> String {
-        displayName.components(separatedBy: " ").first ?? displayName
     }
 }

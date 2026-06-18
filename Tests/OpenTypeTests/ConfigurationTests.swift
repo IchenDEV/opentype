@@ -153,6 +153,15 @@ final class ConfigurationTests: XCTestCase {
     }
 
     @MainActor
+    func testLLMModelsAreTiered() {
+        let models = ModelCatalog.defaultLLMModels
+        XCTAssertTrue(models.contains { $0.4 == .recommended })
+        XCTAssertTrue(models.contains { $0.4 == .legacy })
+        let defaultModel = models.first { $0.0 == "mlx-community/Qwen3.5-2B-4bit" }
+        XCTAssertEqual(defaultModel?.4, .recommended)
+    }
+
+    @MainActor
     func testLocalASRModelsRemainListed() {
         let models = ModelCatalog.defaultASRModels
         XCTAssertTrue(models.contains { $0.id == LocalASRConfiguration.qwen3DefaultModel && $0.provider == .qwen3 })
