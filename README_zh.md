@@ -18,7 +18,7 @@
 [![WhisperKit](https://img.shields.io/badge/驱动-WhisperKit-blue?style=flat-square)](https://github.com/argmaxinc/WhisperKit)
 [![MLX](https://img.shields.io/badge/驱动-MLX--LM-orange?style=flat-square)](https://github.com/ml-explore/mlx-swift-lm)
 
-[English](README.md)
+[官网](https://opentype.idevlab.dev) · [English](README.md)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## 项目简介
 
-**OpenType** 是一款 macOS 菜单栏语音输入应用，支持完全本地推理和远程 LLM API 两种模式。按住快捷键开始录音，松开后自动转写，结果直接输入到当前激活的应用中。
+**OpenType** 是一款 macOS 菜单栏 AI 语音输入与听写应用，支持完全本地推理和远程 LLM API 两种模式。按住快捷键开始录音，松开后自动转写，结果直接输入到当前激活的应用中。
 
 三种输出模式：
 
