@@ -3,27 +3,142 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenType - Voice input for macOS</title>
-  <meta name="description" content="OpenType is a native macOS menu bar voice input app. Hold a key, speak naturally, and polished text appears at your cursor." />
-  <meta name="theme-color" content="#10100F" />
-  <meta property="og:title" content="OpenType - Voice input for macOS" />
-  <meta property="og:description" content="Hold a key, speak naturally, and your Mac writes polished text anywhere." />
+
+  <title>OpenType — Local AI Voice Input & Dictation for macOS</title>
+  <meta name="description" content="OpenType is a native macOS menu bar app for AI-powered voice input and dictation. Hold a key, speak, and polished text appears at your cursor — with on-device WhisperKit speech recognition and MLX LLM cleanup. Works in any app on Apple Silicon Macs." />
+  <meta name="keywords" content="macOS voice input, dictation app, speech to text, voice dictation Mac, AI voice typing, on-device speech recognition, WhisperKit, MLX, local LLM, Apple Silicon, menu bar app, voice command, offline dictation" />
+  <meta name="author" content="OpenType" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow" />
+  <meta name="generator" content="OpenType" />
+  <link rel="canonical" href="https://opentype.idevlab.dev/" />
+
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://opentype.idevlab.dev/assets/opentype-icon.png" />
+  <meta property="og:site_name" content="OpenType" />
+  <meta property="og:title" content="OpenType — Local AI Voice Input for macOS" />
+  <meta property="og:description" content="Hold a key, speak naturally, and OpenType writes polished text into any app on your Mac. On-device speech recognition and LLM cleanup — no cloud required." />
+  <meta property="og:url" content="https://opentype.idevlab.dev/" />
+  <meta property="og:image" content="https://opentype.idevlab.dev/assets/social-card.png" />
+  <meta property="og:image:secure_url" content="https://opentype.idevlab.dev/assets/social-card.png" />
+  <meta property="og:image:alt" content="OpenType — Local AI voice input for macOS. Hold a key, speak, polished text appears at your cursor." />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="zh_CN" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="OpenType — Local AI Voice Input for macOS" />
+  <meta name="twitter:description" content="Hold a key, speak naturally, and OpenType writes polished text into any app on your Mac. On-device speech recognition and LLM cleanup." />
+  <meta name="twitter:image" content="https://opentype.idevlab.dev/assets/social-card.png" />
+  <meta name="twitter:image:alt" content="OpenType — Local AI voice input for macOS" />
+
+  <meta name="theme-color" content="#10100F" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f4f5ee" media="(prefers-color-scheme: light)" />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" href="assets/opentype-icon.png" />
-  <link rel="stylesheet" href="assets/styles.css?v=20260513-hero" />
+  <link rel="preconnect" href="https://github.com" crossorigin />
+
+  <link rel="stylesheet" href="assets/styles.css?v=20260618-seo" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "OpenType",
+    "applicationCategory": "UtilitiesApplication",
+    "applicationSubCategory": "Voice Input & Dictation",
+    "operatingSystem": "macOS 26+",
+    "runtimePlatform": "Apple Silicon (M1/M2/M3/M4)",
+    "url": "https://opentype.idevlab.dev/",
+    "downloadUrl": "https://github.com/IchenDEV/opentype/releases/latest",
+    "codeRepository": "https://github.com/IchenDEV/opentype",
+    "license": "https://github.com/IchenDEV/opentype/blob/main/LICENSE",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "description": "OpenType is a native macOS menu bar app for AI-powered voice input and dictation. Hold a hotkey, speak, and polished text appears at your cursor. WhisperKit and Apple Speech run on-device, with MLX LLM cleanup on Apple Silicon. Optional remote LLM providers.",
+    "featureList": [
+      "On-device speech recognition with WhisperKit, Apple Speech, Qwen3-ASR, or MiMo",
+      "LLM text cleanup with local MLX Qwen2.5/Qwen3 or remote providers",
+      "Screen context OCR via ScreenCaptureKit + Vision for homophone correction",
+      "Voice command mode that acts on what is on screen",
+      "Global hotkey works in any macOS app",
+      "Bilingual UI in English and Simplified Chinese",
+      "Input history, memory, and personal edit rules"
+    ],
+    "author": { "@type": "Organization", "name": "OpenType", "url": "https://github.com/IchenDEV/opentype" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is OpenType?",
+        "acceptedAnswer": { "@type": "Answer", "text": "OpenType is a native macOS menu bar app that turns your voice into polished text in any app. Hold a hotkey, speak, and the transcribed, cleaned-up text is typed directly at your cursor. Speech recognition and language model cleanup run locally on Apple Silicon by default, with optional remote LLM providers." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does OpenType work offline?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. With the WhisperKit or Apple Speech engine plus a local MLX model such as Qwen3, OpenType transcribes and refines text entirely on-device — no audio leaves your Mac. Remote LLM providers are optional and only used if you configure them." }
+      },
+      {
+        "@type": "Question",
+        "name": "Which macOS version and hardware does OpenType require?",
+        "acceptedAnswer": { "@type": "Answer", "text": "macOS 26 (Tahoe) or later on Apple Silicon (M1, M2, M3, or M4). Intel Macs are not supported." }
+      },
+      {
+        "@type": "Question",
+        "name": "How is OpenType different from Apple's built-in dictation?",
+        "acceptedAnswer": { "@type": "Answer", "text": "OpenType adds on-device LLM cleanup (filler removal, grammar fixes, structured formatting), screen context via OCR to correct homophones, a voice command mode that acts on what is on screen, and works in any app from a global hotkey without switching context." }
+      },
+      {
+        "@type": "Question",
+        "name": "Which apps does OpenType work in?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Any macOS app that accepts text input. OpenType uses the Accessibility API to insert text at your cursor, with a clipboard-paste fallback." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is OpenType free and open source?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. OpenType is MIT-licensed and the full source is on GitHub. Prebuilt binaries are published on GitHub Releases." }
+      },
+      {
+        "@type": "Question",
+        "name": "Which languages does OpenType support?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Speech recognition supports many languages via WhisperKit and Apple Speech. The app UI is bilingual (English and Simplified Chinese). The LLM cleanup language is configurable independently of the recognition language." }
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "Dictate text with OpenType",
+    "description": "Hold a key, speak, and release to insert polished text at your cursor in any macOS app.",
+    "totalTime": "PT5S",
+    "step": [
+      { "@type": "HowToStep", "position": 1, "name": "Hold your hotkey", "text": "Press and hold your configured key (Fn by default). Recording starts instantly." },
+      { "@type": "HowToStep", "position": 2, "name": "Speak naturally", "text": "Talk the way you normally would. Audio is captured on your Mac." },
+      { "@type": "HowToStep", "position": 3, "name": "Release to insert", "text": "Release the key. OpenType transcribes, cleans up the text with the LLM, and types the result at your cursor." }
+    ]
+  }
+  </script>
 </head>
 <body>
   <nav class="top" aria-label="Primary navigation">
     <div class="wrap nav-wrap">
       <a href="#hero" class="nav-logo" aria-label="OpenType home">
-        <img src="assets/opentype-icon.png" alt="" />
+        <img src="assets/opentype-icon.png" alt="OpenType app icon" />
         <span>OpenType</span>
       </a>
       <div class="nav-right">
+        <a class="btn btn-secondary" href="#features">Features</a>
+        <a class="btn btn-secondary" href="#faq">FAQ</a>
         <a class="btn btn-secondary" href="https://github.com/IchenDEV/opentype">GitHub</a>
-        <a class="btn btn-primary" href="https://github.com/IchenDEV/opentype/releases/latest">GitHub Releases</a>
+        <a class="btn btn-primary" href="https://github.com/IchenDEV/opentype/releases/latest">Download</a>
       </div>
     </div>
   </nav>
@@ -33,7 +148,7 @@
       <div class="wrap hero-grid">
         <div class="hero-copy">
           <div class="product-mark">
-            <img src="assets/opentype-icon.png" alt="" />
+            <img src="assets/opentype-icon.png" alt="OpenType app icon" />
             <span>OpenType for macOS</span>
           </div>
           <h1>Speak. Your Mac types anywhere.</h1>
@@ -146,6 +261,44 @@
       </div>
     </section>
 
+    <section id="features" class="features-section">
+      <div class="wrap">
+        <div class="section-heading">
+          <p class="section-kicker">What it does</p>
+          <h2>Voice dictation, cleaned up by an on-device LLM.</h2>
+          <p class="section-lead">
+            OpenType is a macOS menu bar app for AI-powered voice input. Speak naturally and polished text is typed at your cursor in any app — with speech recognition and language model cleanup running locally on Apple Silicon.
+          </p>
+        </div>
+        <ul class="features-grid" role="list">
+          <li class="feature-card">
+            <h3>On-device speech recognition</h3>
+            <p>WhisperKit, Apple Speech, Qwen3-ASR, or MiMo run locally on Apple Silicon. No audio uploads required.</p>
+          </li>
+          <li class="feature-card">
+            <h3>LLM text cleanup</h3>
+            <p>Local MLX Qwen2.5/Qwen3 or a remote LLM removes fillers, fixes grammar, and formats lists based on context.</p>
+          </li>
+          <li class="feature-card">
+            <h3>Screen context OCR</h3>
+            <p>ScreenCaptureKit + Vision reads on-screen text so the LLM can pick the right homophone from what you are looking at.</p>
+          </li>
+          <li class="feature-card">
+            <h3>Voice command mode</h3>
+            <p>Speak a command; OpenType uses your screen as context to summarize, reply, translate, or rewrite.</p>
+          </li>
+          <li class="feature-card">
+            <h3>Works in any app</h3>
+            <p>A global hotkey plus Accessibility-based text insertion puts the result at your cursor everywhere.</p>
+          </li>
+          <li class="feature-card">
+            <h3>Bilingual &amp; private</h3>
+            <p>English and Simplified Chinese UI. Audio and transcription stay on-device by default; remote providers are optional.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
     <section class="privacy-section">
       <div class="wrap privacy">
         <div>
@@ -181,6 +334,49 @@
       </div>
     </section>
 
+    <section id="faq" class="faq-section">
+      <div class="wrap faq-wrap">
+        <div class="section-heading">
+          <p class="section-kicker">FAQ</p>
+          <h2>Questions, answered.</h2>
+        </div>
+        <div class="faq-list">
+          <details open>
+            <summary>What is OpenType?</summary>
+            <p>OpenType is a native macOS menu bar app that turns your voice into polished text in any app. Hold a hotkey, speak, and the transcribed, cleaned-up text is typed directly at your cursor. Speech recognition and language model cleanup run locally on Apple Silicon by default, with optional remote LLM providers.</p>
+          </details>
+          <details>
+            <summary>Does OpenType work offline?</summary>
+            <p>Yes. With the WhisperKit or Apple Speech engine plus a local MLX model such as Qwen3, OpenType transcribes and refines text entirely on-device — no audio leaves your Mac. Remote LLM providers are optional and only used if you configure them.</p>
+          </details>
+          <details>
+            <summary>Which macOS version and hardware does OpenType require?</summary>
+            <p>macOS 26 (Tahoe) or later on Apple Silicon (M1, M2, M3, or M4). Intel Macs are not supported.</p>
+          </details>
+          <details>
+            <summary>How is OpenType different from Apple's built-in dictation?</summary>
+            <p>OpenType adds on-device LLM cleanup (filler removal, grammar fixes, structured formatting), screen context via OCR to correct homophones, a voice command mode that acts on what is on screen, and works in any app from a global hotkey without switching context.</p>
+          </details>
+          <details>
+            <summary>Which apps does OpenType work in?</summary>
+            <p>Any macOS app that accepts text input. OpenType uses the Accessibility API to insert text at your cursor, with a clipboard-paste fallback.</p>
+          </details>
+          <details>
+            <summary>Is OpenType free and open source?</summary>
+            <p>Yes. OpenType is MIT-licensed and the full source is on GitHub. Prebuilt binaries are published on GitHub Releases.</p>
+          </details>
+          <details>
+            <summary>Which languages does OpenType support?</summary>
+            <p>Speech recognition supports many languages via WhisperKit and Apple Speech. The app UI is bilingual (English and Simplified Chinese). The LLM cleanup language is configurable independently of the recognition language.</p>
+          </details>
+          <details>
+            <summary>How does screen context help dictation?</summary>
+            <p>OpenType can capture on-screen text with ScreenCaptureKit and the Vision framework, then feed it to the LLM so it picks the correct homophone (for example, "there" vs "their") based on what you are looking at.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
     <section id="install" class="download-section">
       <div class="wrap download-wrap">
         <div>
@@ -209,6 +405,7 @@
       <a href="https://github.com/IchenDEV/opentype">GitHub</a>
       <a href="https://github.com/IchenDEV/opentype/releases/latest">Latest release</a>
       <a href="https://github.com/IchenDEV/opentype/issues">Issues</a>
+      <a href="https://github.com/IchenDEV/opentype/blob/main/README.md">Docs</a>
       <a href="https://github.com/IchenDEV/opentype/blob/main/LICENSE">MIT</a>
       <span>Built for Apple Silicon</span>
     </div>

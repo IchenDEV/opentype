@@ -1,0 +1,5 @@
+# https://opentype.idevlab.dev
+User-agent: *
+Allow: /
+
+Sitemap: https://opentype.idevlab.dev/sitemap.xml

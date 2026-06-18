@@ -18,7 +18,7 @@
 [![WhisperKit](https://img.shields.io/badge/Powered%20by-WhisperKit-blue?style=flat-square)](https://github.com/argmaxinc/WhisperKit)
 [![MLX](https://img.shields.io/badge/Powered%20by-MLX--LM-orange?style=flat-square)](https://github.com/ml-explore/mlx-swift-lm)
 
-[中文文档](README_zh.md)
+[Website](https://opentype.idevlab.dev) · [中文文档](README_zh.md)
 
 </div>
 
@@ -26,7 +26,7 @@
 
 ## Overview
 
-**OpenType** is a macOS menu bar app for AI-powered voice input. It supports both fully local on-device inference and remote LLM APIs. Press a hotkey to start recording, release to transcribe, and the result is typed directly into whatever app you're using.
+**OpenType** is a macOS menu bar app for AI-powered voice input and dictation. It supports both fully local on-device inference and remote LLM APIs. Press a hotkey to start recording, release to transcribe, and the result is typed directly into whatever app you're using.
 
 Three output modes are available:
 
