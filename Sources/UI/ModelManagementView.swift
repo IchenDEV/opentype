@@ -15,6 +15,7 @@ struct ModelManagementView: View {
     @State var showImportError = false
     @State var importErrorMessage = ""
     @State var selectedModelFamily: ModelCatalog.ModelFamily? = .qwen
+    @State var showLegacyModels = false
     let benchmarkEngine = LLMEngine()
 
     private var selectedASRAutoDownloadKey: String {

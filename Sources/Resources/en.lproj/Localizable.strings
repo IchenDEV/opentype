@@ -187,6 +187,7 @@
 "model.import_invalid_whisper" = "Invalid Whisper model directory: MelSpectrogram, AudioEncoder, and TextDecoder are required";
 "model.local" = "Local";
 "model.custom_local" = "Custom / Local";
+"model.legacy_group" = "Traditional Models";
 "model.local_missing" = "Local model folder missing";
 "model.storage.title" = "Model Storage";
 "model.storage.choose" = "Choose Folder…";
