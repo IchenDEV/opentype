@@ -44,6 +44,32 @@ final class UtilityTests: XCTestCase {
         XCTAssertTrue(suffix.hasSuffix("/models/XiaomiMiMo/MiMo-V2.5-ASR"))
     }
 
+    @MainActor
+    func testDownloadEstimateParsesModelHints() {
+        XCTAssertEqual(
+            ModelCatalog.estimatedDownloadBytes(from: "整理质量最佳 5-bit ~5.5 GB"),
+            5_500_000_000
+        )
+        XCTAssertEqual(
+            ModelCatalog.estimatedDownloadBytes(from: "Qwen3.5 极速 ~620 MB"),
+            620_000_000
+        )
+        XCTAssertNil(ModelCatalog.estimatedDownloadBytes(from: "本地语音识别模型 + audio tokenizer"))
+    }
+
+    func testDownloadSpeedHidesSubByteNoise() {
+        let info = DownloadProgressInfo(
+            fraction: 0.81,
+            elapsedSeconds: 1701,
+            completedBytes: 4_500_000_000,
+            totalBytes: 5_500_000_000,
+            speedBytesPerSecond: 0.4
+        )
+
+        XCTAssertEqual(info.remainingText, "1.0 GB")
+        XCTAssertEqual(info.speedText, L("download.unknown"))
+    }
+
     func testGzipRoundTripForTextAndBinaryData() throws {
         let text = Data("OpenType voice input. 你好，世界。".utf8)
         let compressedText = try XCTUnwrap(Gzip.compress(text))

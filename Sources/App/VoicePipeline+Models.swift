@@ -57,7 +57,11 @@ extension VoicePipeline {
             catalog.updateLLMStatus(model, status: .loading, detail: L("model.loading"))
         }
 
-        let loaded = await textProcessor.warmUpLLM(model: model) { [weak self] info in
+        let estimatedDownloadBytes = catalog.estimatedLLMDownloadBytes(model)
+        let loaded = await textProcessor.warmUpLLM(
+            model: model,
+            estimatedDownloadBytes: estimatedDownloadBytes
+        ) { [weak self] info in
             guard shouldShowDownload else { return }
             Task { @MainActor in
                 guard let self, self.appState.isDownloading else { return }

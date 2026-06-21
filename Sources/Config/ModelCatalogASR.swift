@@ -76,6 +76,7 @@ extension ModelCatalog {
             let repos = asrRequiredRepoIDs(for: id)
             let api = HubApi(downloadBase: Self.asrDownloadBase)
             let startedAt = Date()
+            let estimatedTotalBytes = estimatedASRDownloadBytes(id) ?? 0
             if asrProvider(for: id) == .mimo {
                 asrModels[idx].downloadDetail = L("model.asr_preparing_runtime")
                 try await ensureMimoRepository()
@@ -87,7 +88,12 @@ extension ModelCatalog {
                         Task { @MainActor in
                             guard let self, let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }
                             let fraction = (Double(repoIndex) + progress.fractionCompleted) / Double(repos.count)
-                            let info = tracker.update(progress: progress, fraction: fraction)
+                            let completedBytes = self.asrRepoSize(id)
+                            let info = tracker.update(
+                                completedBytes: completedBytes,
+                                totalBytes: estimatedTotalBytes,
+                                fraction: fraction
+                            )
                             self.asrModels[i].downloadProgress = info.fraction
                             self.asrModels[i].downloadDetail = info.detailText
                             onProgress?(info)

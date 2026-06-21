@@ -7,7 +7,11 @@ actor LLMEngine {
     private var container: ModelContainer?
     private var currentModelID: String?
 
-    func loadModel(id: String, progress: (@Sendable (DownloadProgressInfo) -> Void)? = nil) async throws {
+    func loadModel(
+        id: String,
+        estimatedDownloadBytes: Int64? = nil,
+        progress: (@Sendable (DownloadProgressInfo) -> Void)? = nil
+    ) async throws {
         if currentModelID == id, container != nil { return }
 
         Log.info("[LLMEngine] loading model: \(id)")
@@ -27,13 +31,20 @@ actor LLMEngine {
             ))
         } else {
             let tracker = DownloadProgressTracker()
+            let estimatedTotalBytes = estimatedDownloadBytes ?? 0
+            let repoDir = ModelStorage.hubModelRepoDir(id)
             let config = Self.modelConfiguration(for: id)
             container = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,
                 using: MLXModelLoading.tokenizerLoader,
                 configuration: config
             ) { p in
-                progress?(tracker.update(progress: p))
+                let completedBytes = ModelStorage.directorySize(at: repoDir)
+                progress?(tracker.update(
+                    completedBytes: completedBytes,
+                    totalBytes: estimatedTotalBytes,
+                    fraction: p.fractionCompleted
+                ))
             }
         }
 
