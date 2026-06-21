@@ -27,8 +27,8 @@ struct DownloadProgressInfo: Equatable, Sendable {
     }
 
     var speedText: String {
-        guard speedBytesPerSecond > 0 else { return L("download.unknown") }
-        return "\(Self.formatBytes(Int64(speedBytesPerSecond)))/s"
+        guard speedBytesPerSecond >= 1 else { return L("download.unknown") }
+        return "\(Self.formatBytes(Int64(speedBytesPerSecond.rounded())))/s"
     }
 
     var detailText: String {

@@ -280,6 +280,8 @@ final class ModelCatalog: ObservableObject {
 
         do {
             let tracker = DownloadProgressTracker()
+            let estimatedTotalBytes = estimatedLLMDownloadBytes(id) ?? 0
+            let repoDir = ModelStorage.hubModelRepoDir(id)
             let config = ModelConfiguration(id: id)
             _ = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,
@@ -288,7 +290,12 @@ final class ModelCatalog: ObservableObject {
             ) { [weak self] p in
                 Task { @MainActor in
                     guard let self, let i = self.llmModels.firstIndex(where: { $0.id == id }) else { return }
-                    let info = tracker.update(progress: p)
+                    let completedBytes = ModelStorage.directorySize(at: repoDir)
+                    let info = tracker.update(
+                        completedBytes: completedBytes,
+                        totalBytes: estimatedTotalBytes,
+                        fraction: p.fractionCompleted
+                    )
                     self.llmModels[i].downloadProgress = info.fraction
                     self.llmModels[i].downloadDetail = info.detailText
                 }
