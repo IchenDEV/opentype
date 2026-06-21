@@ -58,9 +58,8 @@ extension ModelCatalog {
         }
     }
 
-    func downloadASR(_ id: String) async {
-        guard let idx = asrModels.firstIndex(where: { $0.id == id }),
-              !asrModels[idx].status.isDownloading else { return }
+    func downloadASR(_ id: String, onProgress: ((DownloadProgressInfo) -> Void)? = nil) async {
+        guard let idx = asrModels.firstIndex(where: { $0.id == id }), !asrModels[idx].status.isDownloading else { return }
 
         if asrRepoIsComplete(id) {
             asrModels[idx].status = .downloaded
@@ -76,19 +75,22 @@ extension ModelCatalog {
         do {
             let repos = asrRequiredRepoIDs(for: id)
             let api = HubApi(downloadBase: Self.asrDownloadBase)
+            let startedAt = Date()
             if asrProvider(for: id) == .mimo {
                 asrModels[idx].downloadDetail = L("model.asr_preparing_runtime")
                 try await ensureMimoRepository()
             }
             if !asrModelFilesAreComplete(id) {
                 for (repoIndex, repoID) in repos.enumerated() {
+                    let tracker = DownloadProgressTracker(startDate: startedAt)
                     _ = try await api.snapshot(from: ModelStorage.hubModelRepo(repoID)) { [weak self] progress in
                         Task { @MainActor in
-                            guard let self,
-                                  let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }
+                            guard let self, let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }
                             let fraction = (Double(repoIndex) + progress.fractionCompleted) / Double(repos.count)
-                            self.asrModels[i].downloadProgress = fraction
-                            self.asrModels[i].downloadDetail = "\(Int(fraction * 100))%"
+                            let info = tracker.update(progress: progress, fraction: fraction)
+                            self.asrModels[i].downloadProgress = info.fraction
+                            self.asrModels[i].downloadDetail = info.detailText
+                            onProgress?(info)
                         }
                     }
                 }

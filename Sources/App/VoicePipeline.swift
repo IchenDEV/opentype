@@ -73,8 +73,10 @@ final class VoicePipeline {
         }
 
         guard currentEngine?.isReady ?? false else {
-            appState.phase = .error(L("pipeline.model_not_ready"))
-            appState.statusMessage = L("pipeline.model_load_failed")
+            let message = appState.statusMessage == L("pipeline.speech_model_download_required")
+                ? appState.statusMessage
+                : L("pipeline.model_load_failed")
+            showErrorHint(message)
             return
         }
 

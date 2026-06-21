@@ -58,6 +58,7 @@
 "pipeline.downloading" = "下载模型";
 "pipeline.compiling" = "编译模型中（首次约需 2-5 分钟）…";
 "pipeline.loading_model" = "加载模型到内存…";
+"pipeline.speech_model_download_required" = "请先在 设置 → 模型 中手动下载语音模型。";
 "pipeline.insert_failed_title" = "文本无法自动输入";
 "pipeline.insert_failed_body" = "文本已复制到剪贴板，请按 ⌘V 手动粘贴。\n\n原因：";
 "pipeline.mic_failed_permissions" = "麦克风启动失败，请检查权限";
@@ -145,7 +146,7 @@
 /* ── Model Management ── */
 "model.preload.title" = "启动预加载";
 "model.preload.speech" = "启动时预加载听写模型";
-"model.preload.speech_help" = "仅对 WhisperKit 生效。Apple 语音与豆包语音会在录音开始时按需准备。";
+"model.preload.speech_help" = "仅对已下载的 WhisperKit 模型生效。请先在模型页点击下载按钮。";
 "model.preload.formatting" = "启动时预加载修稿模型";
 "model.preload.formatting_help" = "仅对本地 MLX 模型生效。远程 LLM 会在整理开始时调用。";
 "model.speech_recognition" = "语音识别";
@@ -193,6 +194,11 @@
 "model.storage.choose" = "选择文件夹…";
 "model.storage.reveal" = "在 Finder 中显示";
 "model.storage.reset" = "使用默认位置";
+"download.elapsed_format" = "已用 %@";
+"download.progress_format" = "进度 %@";
+"download.remaining_format" = "剩余 %@";
+"download.speed_format" = "速度 %@";
+"download.unknown" = "--";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "原文直出";
@@ -333,8 +339,8 @@
 "local_asr.model_path" = "模型路径或 Hugging Face ID";
 "local_asr.repo_path" = "MiMo 仓库路径";
 "local_asr.tokenizer_path" = "音频 tokenizer 路径";
-"qwen_asr.config_hint" = "选择 Qwen3-ASR 后，OpenType 会自动下载本地模型，并准备对应的 Python 运行环境。";
-"mimo_asr.config_hint" = "选择 MiMo-V2.5-ASR 后，OpenType 会自动下载模型、音频 tokenizer 和运行文件，并自动寻找可用的 Python 3。";
+"qwen_asr.config_hint" = "选择 Qwen3-ASR 后，请点击下载按钮获取本地模型，并准备对应的 Python 运行环境。";
+"mimo_asr.config_hint" = "选择 MiMo-V2.5-ASR 后，请点击下载按钮获取模型、音频 tokenizer 和运行文件。";
 "model.qwen3_asr_quality" = "本地 MLX 语音识别，约 4 GB";
 "model.mimo_asr_quality" = "本地语音识别模型 + 音频 tokenizer";
 "model.asr_incomplete" = "下载不完整";

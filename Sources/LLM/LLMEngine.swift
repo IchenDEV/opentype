@@ -7,7 +7,7 @@ actor LLMEngine {
     private var container: ModelContainer?
     private var currentModelID: String?
 
-    func loadModel(id: String, progress: (@Sendable (Double) -> Void)? = nil) async throws {
+    func loadModel(id: String, progress: (@Sendable (DownloadProgressInfo) -> Void)? = nil) async throws {
         if currentModelID == id, container != nil { return }
 
         Log.info("[LLMEngine] loading model: \(id)")
@@ -18,15 +18,22 @@ actor LLMEngine {
                 from: localURL,
                 using: MLXModelLoading.tokenizerLoader
             )
-            progress?(1)
+            progress?(DownloadProgressInfo(
+                fraction: 1,
+                elapsedSeconds: CFAbsoluteTimeGetCurrent() - t0,
+                completedBytes: 0,
+                totalBytes: 0,
+                speedBytesPerSecond: 0
+            ))
         } else {
+            let tracker = DownloadProgressTracker()
             let config = Self.modelConfiguration(for: id)
             container = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,
                 using: MLXModelLoading.tokenizerLoader,
                 configuration: config
             ) { p in
-                progress?(p.fractionCompleted)
+                progress?(tracker.update(progress: p))
             }
         }
 

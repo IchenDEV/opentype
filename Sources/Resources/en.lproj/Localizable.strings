@@ -58,6 +58,7 @@
 "pipeline.downloading" = "Downloading";
 "pipeline.compiling" = "Compiling model (2-5 min on first run)…";
 "pipeline.loading_model" = "Loading model…";
+"pipeline.speech_model_download_required" = "Download the speech model in Settings → Models first.";
 "pipeline.insert_failed_title" = "Text could not be inserted automatically";
 "pipeline.insert_failed_body" = "The text has been copied to your clipboard. Press ⌘V to paste it manually.\n\nReason: ";
 "pipeline.mic_failed_permissions" = "Microphone failed — check permissions";
@@ -145,7 +146,7 @@
 /* ── Model Management ── */
 "model.preload.title" = "Startup Preload";
 "model.preload.speech" = "Preload dictation model on launch";
-"model.preload.speech_help" = "Applies to WhisperKit. Apple Speech and Doubao ASR are prepared when recording starts.";
+"model.preload.speech_help" = "Applies to already downloaded WhisperKit models. Use the Download button in Models first.";
 "model.preload.formatting" = "Preload formatting model on launch";
 "model.preload.formatting_help" = "Applies to local MLX models. Remote LLM providers are called when formatting starts.";
 "model.speech_recognition" = "Speech Recognition";
@@ -193,6 +194,11 @@
 "model.storage.choose" = "Choose Folder…";
 "model.storage.reveal" = "Show in Finder";
 "model.storage.reset" = "Use Default";
+"download.elapsed_format" = "Time %@";
+"download.progress_format" = "Progress %@";
+"download.remaining_format" = "Left %@";
+"download.speed_format" = "Speed %@";
+"download.unknown" = "--";
 
 /* ── Enum Labels ── */
 "mode.verbatim" = "Verbatim";
@@ -333,8 +339,8 @@
 "local_asr.model_path" = "Model path or Hugging Face ID";
 "local_asr.repo_path" = "MiMo repo path";
 "local_asr.tokenizer_path" = "Audio tokenizer path";
-"qwen_asr.config_hint" = "Choose Qwen3-ASR and OpenType downloads the local model and prepares its Python runtime automatically.";
-"mimo_asr.config_hint" = "Choose MiMo-V2.5-ASR and OpenType downloads the model, audio tokenizer, and runtime files automatically. Python 3 is detected on this Mac.";
+"qwen_asr.config_hint" = "Choose Qwen3-ASR, then click Download to fetch the local model and prepare its Python runtime.";
+"mimo_asr.config_hint" = "Choose MiMo-V2.5-ASR, then click Download to fetch the model, audio tokenizer, and runtime files.";
 "model.qwen3_asr_quality" = "Local ASR through MLX, ~4 GB";
 "model.mimo_asr_quality" = "Local ASR model plus audio tokenizer";
 "model.asr_incomplete" = "Download incomplete";

@@ -22,7 +22,10 @@ final class AppState: ObservableObject {
     @Published var llmModelReady = false
     @Published var downloadProgress: Double = 0
     @Published var downloadSizeText: String = ""
+    @Published var downloadElapsedText: String = ""
+    @Published var downloadRemainingText: String = ""
     @Published var downloadSpeedText: String = ""
+    @Published var downloadDetailText: String = ""
     @Published var statusMessage: String = L("status.ready")
     @Published var lastInsertedText: String = ""
     @Published var lastFormattingDurationSeconds: Double = 0
@@ -46,10 +49,29 @@ final class AppState: ObservableObject {
         processedText = ""
         audioLevel = 0
         statusMessage = L("status.ready")
+        resetDownloadProgress()
         pendingReplacement = nil
     }
 
     func clearPendingReplacement() {
         pendingReplacement = nil
+    }
+
+    func resetDownloadProgress() {
+        downloadProgress = 0
+        downloadSizeText = ""
+        downloadElapsedText = ""
+        downloadRemainingText = ""
+        downloadSpeedText = ""
+        downloadDetailText = ""
+    }
+
+    func updateDownloadProgress(_ info: DownloadProgressInfo) {
+        downloadProgress = info.fraction
+        downloadSizeText = info.transferredText
+        downloadElapsedText = info.elapsedText
+        downloadRemainingText = info.remainingText
+        downloadSpeedText = info.speedText
+        downloadDetailText = info.detailText
     }
 }

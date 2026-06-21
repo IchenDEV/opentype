@@ -188,7 +188,7 @@ struct MenuBarView: View {
     }
 
     private var downloadSection: some View {
-        VStack(spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             ProgressView(value: appState.downloadProgress)
                 .progressViewStyle(.linear)
             HStack {
@@ -197,11 +197,13 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer()
-                if !appState.downloadSpeedText.isEmpty {
-                    Text(appState.downloadSpeedText)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+            }
+            if !appState.downloadDetailText.isEmpty {
+                Text(appState.downloadDetailText)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

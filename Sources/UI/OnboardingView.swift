@@ -239,8 +239,9 @@ struct OnboardingView: View {
                             .progressViewStyle(.linear)
                         if !model.downloadDetail.isEmpty {
                             Text(model.downloadDetail)
-                                .font(.system(size: 10))
+                                .font(.system(size: 10, design: .monospaced))
                                 .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
                         Text(model.status == .downloaded || model.status == .ready
                              ? L("onboarding.model_ready")

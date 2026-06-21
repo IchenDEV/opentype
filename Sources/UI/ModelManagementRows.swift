@@ -92,15 +92,18 @@ extension ModelManagementView {
         VStack(alignment: .trailing, spacing: 2) {
             if model.status.isDownloading {
                 ProgressView(value: model.downloadProgress)
-                    .frame(width: 60)
+                    .frame(width: 86)
             } else {
                 ProgressView()
                     .controlSize(.small)
             }
             if !model.downloadDetail.isEmpty {
                 Text(model.downloadDetail)
-                    .font(.system(size: 9))
+                    .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 220, alignment: .trailing)
             }
         }
     }

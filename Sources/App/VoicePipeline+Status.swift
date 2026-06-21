@@ -44,6 +44,15 @@ extension VoicePipeline {
         }
     }
 
+    func showErrorHint(_ message: String) {
+        appState.phase = .error(message)
+        appState.statusMessage = message
+        appState.resetDownloadProgress()
+        soundPlayer.playStop()
+        overlay.show(appState: appState)
+        hideOverlayAfterDelay()
+    }
+
     func showInsertionFailedAlert(text: String, reason: String) {
         let alert = NSAlert()
         alert.messageText = L("pipeline.insert_failed_title")
