@@ -21,10 +21,13 @@ final class TextProcessor {
     }
 
     @discardableResult
-    func warmUpLLM(model: String) async -> Bool {
+    func warmUpLLM(
+        model: String,
+        progress: (@Sendable (DownloadProgressInfo) -> Void)? = nil
+    ) async -> Bool {
         if AppSettings.shared.useRemoteLLM { return true }
         do {
-            try await llm.loadModel(id: model)
+            try await llm.loadModel(id: model, progress: progress)
             return true
         } catch {
             Log.error("[TextProcessor] LLM warmup failed: \(error.localizedDescription)")

@@ -20,6 +20,8 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
         var completedBytes: Int64
         var totalBytes: Int64
         var speedBytesPerSec: Double
+        var elapsedSeconds: TimeInterval
+        var downloadFraction: Double
         var stage: Stage
 
         enum Stage: String {
@@ -29,25 +31,30 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
             case done = "完成"
         }
 
+        var info: DownloadProgressInfo {
+            DownloadProgressInfo(
+                fraction: downloadFraction,
+                elapsedSeconds: elapsedSeconds,
+                completedBytes: completedBytes,
+                totalBytes: totalBytes,
+                speedBytesPerSecond: speedBytesPerSec
+            )
+        }
+
         var sizeText: String {
-            guard totalBytes > 0 else { return "" }
-            return "\(Self.formatBytes(completedBytes)) / \(Self.formatBytes(totalBytes))"
+            info.transferredText
         }
 
         var speedText: String {
-            guard speedBytesPerSec > 0 else { return "" }
-            return Self.formatBytes(Int64(speedBytesPerSec)) + "/s"
+            info.speedText
         }
 
-        static func formatBytes(_ bytes: Int64) -> String {
-            if bytes >= 1_000_000_000 {
-                return String(format: "%.1f GB", Double(bytes) / 1_000_000_000)
-            } else if bytes >= 1_000_000 {
-                return String(format: "%.1f MB", Double(bytes) / 1_000_000)
-            } else if bytes >= 1_000 {
-                return String(format: "%.0f KB", Double(bytes) / 1_000)
-            }
-            return "\(bytes) B"
+        var remainingText: String {
+            info.remainingText
+        }
+
+        var detailText: String {
+            info.detailText
         }
     }
 
@@ -75,7 +82,7 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
 
             progress(dp(0.02, stage: .downloading))
 
-            let speedTracker = DownloadSpeedTracker()
+            let tracker = DownloadProgressTracker()
 
             let folder: URL
             if let localFolder {
@@ -88,12 +95,20 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                         progressCallback: { p in
                             let completed = p.completedUnitCount
                             let total = p.totalUnitCount
-                            let speed = speedTracker.speed(completedBytes: completed)
 
                             let frac = 0.02 + p.fractionCompleted * 0.58
+                            let info = tracker.update(
+                                completedBytes: completed,
+                                totalBytes: total,
+                                fraction: frac
+                            )
                             progress(DownloadProgress(
                                 fraction: frac, completedBytes: completed,
-                                totalBytes: total, speedBytesPerSec: speed, stage: .downloading
+                                totalBytes: total,
+                                speedBytesPerSec: info.speedBytesPerSecond,
+                                elapsedSeconds: info.elapsedSeconds,
+                                downloadFraction: p.fractionCompleted,
+                                stage: .downloading
                             ))
                         }
                     )
@@ -247,30 +262,15 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
     }
 
     private func dp(_ fraction: Double, stage: DownloadProgress.Stage) -> DownloadProgress {
-        DownloadProgress(fraction: fraction, completedBytes: 0, totalBytes: 0, speedBytesPerSec: 0, stage: stage)
-    }
-}
-
-private final class DownloadSpeedTracker: @unchecked Sendable {
-    private let lock = NSLock()
-    private var lastTime = Date()
-    private var lastBytes: Int64 = 0
-
-    func speed(completedBytes: Int64) -> Double {
-        lock.lock()
-        defer { lock.unlock() }
-
-        let now = Date()
-        let elapsed = now.timeIntervalSince(lastTime)
-        guard elapsed > 0.5 else { return 0 }
-
-        defer {
-            lastTime = now
-            lastBytes = completedBytes
-        }
-
-        let deltaBytes = completedBytes - lastBytes
-        return deltaBytes > 0 ? Double(deltaBytes) / elapsed : 0
+        DownloadProgress(
+            fraction: fraction,
+            completedBytes: 0,
+            totalBytes: 0,
+            speedBytesPerSec: 0,
+            elapsedSeconds: 0,
+            downloadFraction: fraction,
+            stage: stage
+        )
     }
 }
 

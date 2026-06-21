@@ -18,17 +18,6 @@ struct ModelManagementView: View {
     @State var showLegacyModels = false
     let benchmarkEngine = LLMEngine()
 
-    private var selectedASRAutoDownloadKey: String {
-        switch settings.speechEngine {
-        case .qwen3:
-            return "qwen3:\(settings.qwenASRModel)"
-        case .mimo:
-            return "mimo:\(settings.mimoASRModel)"
-        default:
-            return "none"
-        }
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -63,25 +52,5 @@ struct ModelManagementView: View {
         .onChange(of: settings.mimoASRRepoPath) { _, _ in onUnloadLocalASR?() }
         .onChange(of: settings.qwenASRModel) { _, _ in onUnloadLocalASR?() }
         .onChange(of: settings.mimoASRModel) { _, _ in onUnloadLocalASR?() }
-        .task(id: selectedASRAutoDownloadKey) {
-            await autoDownloadSelectedASRIfNeeded()
-        }
-    }
-
-    @MainActor
-    func autoDownloadSelectedASRIfNeeded() async {
-        let id: String
-        switch settings.speechEngine {
-        case .qwen3:
-            id = settings.qwenASRModel
-        case .mimo:
-            id = settings.mimoASRModel
-        default:
-            return
-        }
-
-        guard let model = catalog.asrModels.first(where: { $0.id == id }),
-              model.status == .notDownloaded || model.status.isError else { return }
-        await catalog.downloadASR(id)
     }
 }

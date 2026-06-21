@@ -59,6 +59,7 @@ final class ModelCatalog: ObservableObject {
         static func == (lhs: Self, rhs: Self) -> Bool {
             lhs.id == rhs.id && lhs.status == rhs.status &&
             lhs.cacheSize == rhs.cacheSize && lhs.downloadProgress == rhs.downloadProgress &&
+            lhs.downloadDetail == rhs.downloadDetail &&
             lhs.benchmarkTPS == rhs.benchmarkTPS && lhs.isBenchmarking == rhs.isBenchmarking
         }
     }
@@ -209,8 +210,7 @@ final class ModelCatalog: ObservableObject {
         whisperModels[idx].downloadProgress = 0
 
         do {
-            var lastTime = Date()
-            var lastBytes: Int64 = 0
+            let tracker = DownloadProgressTracker()
 
             _ = try await WhisperKit.download(
                 variant: id,
@@ -218,18 +218,9 @@ final class ModelCatalog: ObservableObject {
                 progressCallback: { [weak self] p in
                     Task { @MainActor in
                         guard let self, let i = self.whisperModels.firstIndex(where: { $0.id == id }) else { return }
-                        let now = Date()
-                        let elapsed = now.timeIntervalSince(lastTime)
-                        var speedStr = ""
-                        if elapsed > 0.5 {
-                            let delta = p.completedUnitCount - lastBytes
-                            if delta > 0 { speedStr = Self.formatBytes(Int64(Double(delta) / elapsed)) + "/s" }
-                            lastTime = now
-                            lastBytes = p.completedUnitCount
-                        }
-                        self.whisperModels[i].downloadProgress = p.fractionCompleted
-                        let sz = "\(Self.formatBytes(p.completedUnitCount))/\(Self.formatBytes(p.totalUnitCount))"
-                        self.whisperModels[i].downloadDetail = speedStr.isEmpty ? sz : "\(sz) \(speedStr)"
+                        let info = tracker.update(progress: p)
+                        self.whisperModels[i].downloadProgress = info.fraction
+                        self.whisperModels[i].downloadDetail = info.detailText
                     }
                 }
             )
@@ -288,6 +279,7 @@ final class ModelCatalog: ObservableObject {
         llmModels[idx].downloadProgress = 0
 
         do {
+            let tracker = DownloadProgressTracker()
             let config = ModelConfiguration(id: id)
             _ = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,
@@ -296,8 +288,9 @@ final class ModelCatalog: ObservableObject {
             ) { [weak self] p in
                 Task { @MainActor in
                     guard let self, let i = self.llmModels.firstIndex(where: { $0.id == id }) else { return }
-                    self.llmModels[i].downloadProgress = p.fractionCompleted
-                    self.llmModels[i].downloadDetail = "\(Int(p.fractionCompleted * 100))%"
+                    let info = tracker.update(progress: p)
+                    self.llmModels[i].downloadProgress = info.fraction
+                    self.llmModels[i].downloadDetail = info.detailText
                 }
             }
             if let i = llmModels.firstIndex(where: { $0.id == id }) {

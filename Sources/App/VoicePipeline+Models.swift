@@ -43,19 +43,45 @@ extension VoicePipeline {
         let model = appState.settings.llmModel.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !model.isEmpty else { return }
 
-        appState.statusMessage = L("pipeline.loading_llm")
         let catalog = ModelCatalog.shared
-        catalog.updateLLMStatus(model, status: .loading, detail: L("model.loading"))
+        catalog.refreshStatus()
+        let modelStatus = catalog.llmModels.first(where: { $0.id == model })?.status
+        let shouldShowDownload = !(modelStatus == .downloaded || modelStatus == .ready)
+        if shouldShowDownload {
+            appState.phase = .downloading
+            appState.statusMessage = L("pipeline.downloading")
+            appState.resetDownloadProgress()
+            catalog.updateLLMStatus(model, status: .downloading)
+        } else {
+            appState.statusMessage = L("pipeline.loading_llm")
+            catalog.updateLLMStatus(model, status: .loading, detail: L("model.loading"))
+        }
 
-        let loaded = await textProcessor.warmUpLLM(model: model)
+        let loaded = await textProcessor.warmUpLLM(model: model) { [weak self] info in
+            guard shouldShowDownload else { return }
+            Task { @MainActor in
+                guard let self, self.appState.isDownloading else { return }
+                self.appState.updateDownloadProgress(info)
+                self.appState.statusMessage = L("pipeline.downloading") + " \(info.percentText)"
+                catalog.updateLLMDownloadProgress(model, info: info)
+            }
+        }
         let ready = await textProcessor.isLLMReady
         appState.llmModelReady = loaded && ready
 
         if appState.llmModelReady {
+            if shouldShowDownload {
+                appState.phase = .idle
+                appState.resetDownloadProgress()
+            }
             catalog.updateLLMStatus(model, status: .ready)
             Log.info("[VoicePipeline] LLM model loaded into memory, ready for instant inference")
             appState.statusMessage = L("status.ready")
         } else {
+            if shouldShowDownload {
+                appState.phase = .idle
+                appState.resetDownloadProgress()
+            }
             catalog.updateLLMStatus(model, status: .error(L("pipeline.model_load_failed")))
             Log.info("[VoicePipeline] LLM warmup failed, will retry on demand")
             appState.statusMessage = showFailureInStatus ? L("pipeline.model_load_failed") : L("status.ready")
@@ -65,7 +91,7 @@ extension VoicePipeline {
     func ensureEngineLoaded(requestPermission: Bool = true) async {
         switch appState.settings.speechEngine {
         case .whisper:
-            await ensureWhisperLoaded()
+            await ensureWhisperLoaded(showMissingModelError: requestPermission)
         case .apple:
             if appleSpeechEngine == nil {
                 let locale = Locale(identifier: appState.settings.inputLanguage.localeIdentifier)
@@ -85,7 +111,11 @@ extension VoicePipeline {
         case .qwen3:
             let settings = appState.settings
             let catalog = ModelCatalog.shared
-            await ensureLocalASRAvailable(modelID: settings.qwenASRModel)
+            guard localASRIsAvailable(settings.qwenASRModel) else {
+                qwenSpeechEngine = nil
+                markSpeechModelDownloadRequired(showInStatus: requestPermission)
+                return
+            }
             qwenSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
                 provider: .qwen3,
                 pythonPath: settings.localASRPythonPath,
@@ -96,6 +126,11 @@ extension VoicePipeline {
         case .mimo:
             let settings = appState.settings
             let catalog = ModelCatalog.shared
+            guard localASRIsAvailable(settings.mimoASRModel) else {
+                mimoSpeechEngine = nil
+                markSpeechModelDownloadRequired(showInStatus: requestPermission)
+                return
+            }
             mimoSpeechEngine = LocalASREngine(configuration: LocalASRConfiguration(
                 provider: .mimo,
                 pythonPath: settings.localASRPythonPath,
@@ -106,45 +141,37 @@ extension VoicePipeline {
         }
     }
 
-    private func ensureLocalASRAvailable(modelID: String) async {
-        let catalog = ModelCatalog.shared
-        catalog.refreshASRStatus(recheckingErrors: true)
-        guard !localASRIsAvailable(modelID) else { return }
-
-        appState.phase = .downloading
-        appState.statusMessage = L("pipeline.preparing_model")
-        appState.downloadProgress = 0
-        await catalog.downloadASR(modelID)
-        appState.downloadProgress = 0
-        appState.phase = .idle
-        appState.statusMessage = localASRIsAvailable(modelID) ? L("status.ready") : L("pipeline.model_load_failed")
-    }
-
     private func localASRIsAvailable(_ modelID: String) -> Bool {
+        ModelCatalog.shared.refreshASRStatus(recheckingErrors: true)
         guard let status = ModelCatalog.shared.asrModels.first(where: { $0.id == modelID })?.status else {
             return false
         }
         return status == .downloaded || status == .ready
     }
 
-    private func ensureWhisperLoaded() async {
+    private func ensureWhisperLoaded(showMissingModelError: Bool) async {
         if let engine = whisperEngine {
             if engine.isReady || engine.isLoading { return }
         }
 
         let modelID = appState.settings.whisperModel
-        let engine = WhisperEngine(modelName: modelID)
-        whisperEngine = engine
         let catalog = ModelCatalog.shared
+        catalog.refreshStatus(recheckingErrors: true)
 
         let alreadyDownloaded = catalog.isWhisperDownloaded(modelID)
+        guard alreadyDownloaded else {
+            whisperEngine = nil
+            appState.whisperModelReady = false
+            markSpeechModelDownloadRequired(showInStatus: showMissingModelError)
+            return
+        }
+
+        let engine = WhisperEngine(modelName: modelID)
+        whisperEngine = engine
         appState.phase = .downloading
         appState.statusMessage = L("pipeline.preparing_model")
-        appState.downloadProgress = 0
+        appState.resetDownloadProgress()
         catalog.updateWhisperStatus(modelID, status: .downloading)
-
-        var lastSpeedText = ""
-        var lastSizeText = ""
 
         do {
             try await engine.loadModel { [weak self] progress in
@@ -152,33 +179,32 @@ extension VoicePipeline {
                     guard let self else { return }
                     self.appState.downloadProgress = progress.fraction
 
-                    if !progress.sizeText.isEmpty { lastSizeText = progress.sizeText }
-                    if !progress.speedText.isEmpty { lastSpeedText = progress.speedText }
-
                     switch progress.stage {
                     case .downloading:
                         if alreadyDownloaded {
                             self.appState.statusMessage = L("pipeline.loading_model")
-                            self.appState.downloadSizeText = ""
-                            self.appState.downloadSpeedText = ""
+                            self.appState.resetDownloadProgress()
+                            self.appState.downloadProgress = progress.fraction
                             catalog.updateWhisperStatus(modelID, status: .loading, detail: L("model.loading"))
                         } else {
-                            let pct = Int(min(progress.fraction / 0.6, 1.0) * 100)
-                            let speed = lastSpeedText.isEmpty ? "" : " · \(lastSpeedText)"
-                            self.appState.statusMessage = L("pipeline.downloading") + " \(pct)%\(speed)"
-                            self.appState.downloadSizeText = lastSizeText
-                            self.appState.downloadSpeedText = lastSpeedText
-                            catalog.updateWhisperStatus(modelID, status: .downloading, detail: "\(pct)%")
+                            self.appState.updateDownloadProgress(progress.info)
+                            self.appState.downloadProgress = progress.fraction
+                            self.appState.statusMessage = L("pipeline.downloading") + " \(progress.info.percentText)"
+                            catalog.updateWhisperStatus(
+                                modelID,
+                                status: .downloading,
+                                detail: progress.detailText
+                            )
                         }
                     case .compiling:
                         self.appState.statusMessage = L("pipeline.loading_model")
-                        self.appState.downloadSizeText = ""
-                        self.appState.downloadSpeedText = ""
+                        self.appState.resetDownloadProgress()
+                        self.appState.downloadProgress = progress.fraction
                         catalog.updateWhisperStatus(modelID, status: .compiling, detail: L("model.loading"))
                     case .loading:
                         self.appState.statusMessage = L("pipeline.loading_model")
-                        self.appState.downloadSizeText = ""
-                        self.appState.downloadSpeedText = ""
+                        self.appState.resetDownloadProgress()
+                        self.appState.downloadProgress = progress.fraction
                         catalog.updateWhisperStatus(modelID, status: .loading, detail: L("model.loading"))
                     case .done:
                         break
@@ -187,15 +213,13 @@ extension VoicePipeline {
             }
 
             appState.whisperModelReady = true
-            appState.downloadSizeText = ""
-            appState.downloadSpeedText = ""
+            appState.resetDownloadProgress()
             appState.phase = .idle
             appState.statusMessage = L("status.ready")
             catalog.updateWhisperStatus(modelID, status: .ready)
         } catch let error as WhisperError {
             appState.whisperModelReady = false
-            appState.downloadSizeText = ""
-            appState.downloadSpeedText = ""
+            appState.resetDownloadProgress()
 
             let message: String
             switch error {
@@ -213,12 +237,19 @@ extension VoicePipeline {
             catalog.updateWhisperStatus(modelID, status: .error(message))
         } catch {
             appState.whisperModelReady = false
-            appState.downloadSizeText = ""
-            appState.downloadSpeedText = ""
+            appState.resetDownloadProgress()
             let message = L("pipeline.model_load_failed_prefix") + error.localizedDescription
             appState.phase = .error(message)
             appState.statusMessage = message
             catalog.updateWhisperStatus(modelID, status: .error(message))
         }
+    }
+
+    private func markSpeechModelDownloadRequired(showInStatus: Bool) {
+        guard showInStatus else { return }
+        appState.resetDownloadProgress()
+        let message = L("pipeline.speech_model_download_required")
+        appState.phase = .error(message)
+        appState.statusMessage = message
     }
 }

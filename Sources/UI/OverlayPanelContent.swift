@@ -47,6 +47,15 @@ struct OverlayLayout: Equatable {
             topPadding = 16
             bottomPadding = 14
             stackSpacing = 10
+        case .error:
+            width = 372
+            height = 76
+            outerCornerRadius = 24
+            innerCornerRadius = 18
+            horizontalPadding = 18
+            topPadding = 16
+            bottomPadding = 14
+            stackSpacing = 10
         default:
             width = 324
             height = 60
@@ -85,6 +94,11 @@ struct OverlayContentView: View {
 
     private var layout: OverlayLayout {
         OverlayLayout(appState: appState)
+    }
+
+    private var isError: Bool {
+        if case .error = appState.phase { return true }
+        return false
     }
 
     var body: some View {
@@ -151,7 +165,8 @@ struct OverlayContentView: View {
             Text(appState.statusMessage)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.96))
-                .lineLimit(1)
+                .lineLimit(isError ? 2 : 1)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 0)
 
