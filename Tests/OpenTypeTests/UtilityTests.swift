@@ -54,7 +54,54 @@ final class UtilityTests: XCTestCase {
             ModelCatalog.estimatedDownloadBytes(from: "Qwen3.5 极速 ~620 MB"),
             620_000_000
         )
+        XCTAssertEqual(
+            ModelCatalog.estimatedDownloadBytes(from: "MiMo tokenizer ~1,024 MB"),
+            1_024_000_000
+        )
+        XCTAssertEqual(
+            ModelCatalog.estimatedDownloadBytes(from: "compact model ~750MiB"),
+            786_432_000
+        )
+        XCTAssertEqual(
+            ModelCatalog.estimatedDownloadBytes(from: "about 2.5G download"),
+            2_500_000_000
+        )
         XCTAssertNil(ModelCatalog.estimatedDownloadBytes(from: "本地语音识别模型 + audio tokenizer"))
+    }
+
+    @MainActor
+    func testDefaultDownloadEstimatesUseRepositoryMetadata() {
+        XCTAssertEqual(
+            ModelCatalog.defaultDownloadEstimateBytes(for: "mlx-community/Qwen3.5-9B-5bit"),
+            7_096_163_574
+        )
+        XCTAssertEqual(
+            ModelCatalog.defaultDownloadEstimateBytes(
+                for: "mlx-community/Llama-4-Maverick-17B-128E-Instruct-4bit"
+            ),
+            225_923_469_800
+        )
+        XCTAssertEqual(
+            ModelCatalog.defaultDownloadEstimateBytes(for: LocalASRConfiguration.mimoDefaultModel),
+            35_997_080_271
+        )
+    }
+
+    @MainActor
+    func testDefaultModelHintsStayCloseToDownloadEstimates() {
+        let llmHints = ModelCatalog.defaultLLMModels.map { (id: $0.0, hint: $0.2) }
+        let asrHints = ModelCatalog.defaultASRModels.map { (id: $0.id, hint: $0.hint) }
+
+        for entry in llmHints + asrHints {
+            guard let exactBytes = ModelCatalog.defaultDownloadEstimateBytes(for: entry.id),
+                  let hintBytes = ModelCatalog.estimatedDownloadBytes(from: entry.hint) else {
+                XCTFail("Missing displayed download estimate for \(entry.id)")
+                continue
+            }
+
+            let delta = abs(Double(hintBytes - exactBytes)) / Double(exactBytes)
+            XCTAssertLessThanOrEqual(delta, 0.05, "\(entry.id) hint is too far from exact estimate")
+        }
     }
 
     func testDownloadSpeedHidesSubByteNoise() {
@@ -67,6 +114,53 @@ final class UtilityTests: XCTestCase {
         )
 
         XCTAssertEqual(info.remainingText, "1.0 GB")
+        XCTAssertEqual(info.speedText, L("download.unknown"))
+    }
+
+    func testDownloadProgressInfoSanitizesInvalidValues() {
+        let info = DownloadProgressInfo(
+            fraction: .infinity,
+            elapsedSeconds: -.infinity,
+            completedBytes: -42,
+            totalBytes: -1,
+            speedBytesPerSecond: .nan
+        )
+
+        XCTAssertEqual(info.fraction, 0)
+        XCTAssertEqual(info.elapsedSeconds, 0)
+        XCTAssertEqual(info.completedBytes, 0)
+        XCTAssertEqual(info.totalBytes, 0)
+        XCTAssertEqual(info.speedBytesPerSecond, 0)
+    }
+
+    func testDownloadProgressTrackerUsesInitialBytesForSpeed() {
+        let start = Date(timeIntervalSince1970: 10)
+        let tracker = DownloadProgressTracker(startDate: start, initialBytes: 1_000)
+
+        let info = tracker.update(
+            completedBytes: 1_500,
+            totalBytes: 2_000,
+            at: start.addingTimeInterval(1)
+        )
+
+        XCTAssertEqual(info.fraction, 0.75)
+        XCTAssertEqual(info.speedBytesPerSecond, 500)
+    }
+
+    func testDownloadProgressTrackerClearsSpeedWhenBytesReset() {
+        let start = Date(timeIntervalSince1970: 10)
+        let tracker = DownloadProgressTracker(startDate: start)
+        _ = tracker.update(completedBytes: 1_500, totalBytes: 2_000, at: start.addingTimeInterval(1))
+
+        let info = tracker.update(
+            completedBytes: 200,
+            totalBytes: 2_000,
+            fraction: 0.1,
+            at: start.addingTimeInterval(2)
+        )
+
+        XCTAssertEqual(info.fraction, 0.1)
+        XCTAssertEqual(info.speedBytesPerSecond, 0)
         XCTAssertEqual(info.speedText, L("download.unknown"))
     }
 

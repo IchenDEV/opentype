@@ -82,7 +82,8 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
 
             progress(dp(0.02, stage: .downloading))
 
-            let tracker = DownloadProgressTracker()
+            let modelDir = ModelStorage.whisperVariantDir(selectedModel)
+            let tracker = DownloadProgressTracker(initialBytes: ModelStorage.directorySize(at: modelDir))
 
             let folder: URL
             if let localFolder {
@@ -93,7 +94,8 @@ final class WhisperEngine: SpeechEngine, @unchecked Sendable {
                         variant: selectedModel,
                         downloadBase: ModelCatalog.whisperDownloadBase,
                         progressCallback: { p in
-                            let completed = p.completedUnitCount
+                            let downloadedBytes = ModelStorage.directorySize(at: modelDir)
+                            let completed = downloadedBytes > 0 ? downloadedBytes : p.completedUnitCount
                             let total = p.totalUnitCount
 
                             let frac = 0.02 + p.fractionCompleted * 0.58
