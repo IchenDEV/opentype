@@ -86,6 +86,13 @@ struct SettingsView: View {
                     Text(L("settings.screen_context"))
                 }
                 .help(L("settings.screen_context_help"))
+                Picker(L("settings.screen_context_mode"), selection: $settings.screenContextMode) {
+                    ForEach(ScreenContextMode.allCases, id: \.self) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .help(L("settings.screen_context_mode_help"))
                 Toggle(isOn: $settings.playSounds) {
                     Text(L("settings.sound_cues"))
                 }

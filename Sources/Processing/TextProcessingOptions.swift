@@ -10,6 +10,7 @@ struct TextProcessingOptions {
     var remoteAPIKey: String
     var remoteModel: String
     var remoteProvider: RemoteProvider
+    var screenContextMode: ScreenContextMode
 
     init(settings: AppSettings, inputLanguage: InputLanguage? = nil) {
         self.inputLanguage = inputLanguage ?? settings.inputLanguage
@@ -21,5 +22,6 @@ struct TextProcessingOptions {
         self.remoteAPIKey = settings.remoteAPIKey
         self.remoteModel = settings.remoteModel
         self.remoteProvider = settings.remoteProvider
+        self.screenContextMode = settings.screenContextMode
     }
 }

@@ -12,23 +12,22 @@ extension VoicePipeline {
             return
         }
 
-        guard ScreenOCR.hasScreenCapturePermission else {
-            Log.info("[VoicePipeline] screen capture permission not granted, skipping OCR")
-            cancelScreenContextCapture()
-            return
-        }
-
         screenOCRStartedAt = CFAbsoluteTimeGetCurrent()
+        let mode = ScreenContextMode.effectiveCaptureMode(
+            preference: appState.settings.screenContextMode,
+            useRemoteLLM: appState.settings.useRemoteLLM,
+            modelID: appState.settings.llmModel
+        )
         screenOCRTask = Task.detached(priority: .utility) {
-            await ScreenOCR.captureAndRecognize()
+            await ScreenOCR.capture(mode: mode)
         }
     }
 
-    func finishScreenContextCapture() async -> String {
-        let context = await screenOCRTask?.value ?? ""
+    func finishScreenContextCapture() async -> ScreenContextSnapshot {
+        let context = await screenOCRTask?.value ?? .empty
         if let screenOCRStartedAt {
             let elapsed = CFAbsoluteTimeGetCurrent() - screenOCRStartedAt
-            Log.info("[VoicePipeline] OCR stage finished in \(String(format: "%.2f", elapsed))s")
+            Log.info("[VoicePipeline] screen context stage finished in \(String(format: "%.2f", elapsed))s")
         }
         screenOCRTask = nil
         screenOCRStartedAt = nil

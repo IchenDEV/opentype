@@ -14,7 +14,7 @@ extension InputSessionCoordinator {
             text = textProcessor.basicClean(text: raw)
         case .processed:
             let screenContext = await screenContext(from: active)
-            context = inputContext(for: active, screenContext: screenContext, mode: .processed)
+            context = inputContext(for: active, screenContext: screenContext.text, mode: .processed)
             let memoryContext = VoicePipelinePolicy.memoryContext(
                 for: .processed,
                 settings: settings,
@@ -23,12 +23,13 @@ extension InputSessionCoordinator {
             text = await textProcessor.process(
                 text: raw,
                 options: options,
-                screenContext: screenContext,
+                screenContext: screenContext.text,
+                screenImage: screenContext.image,
                 memoryContext: memoryContext
             )
         case .command:
             let screenContext = await screenContext(from: active)
-            context = inputContext(for: active, screenContext: screenContext, mode: .command)
+            context = inputContext(for: active, screenContext: screenContext.text, mode: .command)
             let memoryContext = VoicePipelinePolicy.memoryContext(
                 for: .command,
                 settings: settings,
@@ -37,7 +38,8 @@ extension InputSessionCoordinator {
             text = await textProcessor.processCommand(
                 text: raw,
                 options: options,
-                screenContext: screenContext,
+                screenContext: screenContext.text,
+                screenImage: screenContext.image,
                 memoryContext: memoryContext
             )
         }
@@ -66,7 +68,7 @@ extension InputSessionCoordinator {
         )
     }
 
-    private func screenContext(from active: ActiveSession) async -> String {
-        await active.screenContextTask?.value ?? ""
+    private func screenContext(from active: ActiveSession) async -> ScreenContextSnapshot {
+        await active.screenContextTask?.value ?? .empty
     }
 }

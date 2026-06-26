@@ -1,8 +1,10 @@
+import CoreGraphics
 import Foundation
 
 final class TextProcessor {
-    private let llm = LLMEngine()
-    private let remoteLLMClient = RemoteLLMClient()
+    let llm = LLMEngine()
+    let vlm = VLMEngine()
+    let remoteLLMClient = RemoteLLMClient()
     private let dictionary = PersonalDictionary.shared
     struct GenerationOptions {
         let maxTokens: Int
@@ -18,6 +20,7 @@ final class TextProcessor {
 
     func unloadLLM() async {
         await llm.unload()
+        await vlm.unload()
     }
 
     @discardableResult
@@ -54,18 +57,32 @@ final class TextProcessor {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func process(text: String, stylePrompt: String, model: String, screenContext: String = "", memoryContext: String = "") async -> String {
+    func process(
+        text: String,
+        stylePrompt: String,
+        model: String,
+        screenContext: String = "",
+        screenImage: CGImage? = nil,
+        memoryContext: String = ""
+    ) async -> String {
         let settings = AppSettings.shared
         var options = TextProcessingOptions(settings: settings)
         options.customStylePrompt = stylePrompt
         options.llmModel = model
-        return await process(text: text, options: options, screenContext: screenContext, memoryContext: memoryContext)
+        return await process(
+            text: text,
+            options: options,
+            screenContext: screenContext,
+            screenImage: screenImage,
+            memoryContext: memoryContext
+        )
     }
 
     func process(
         text: String,
         options: TextProcessingOptions,
         screenContext: String = "",
+        screenImage: CGImage? = nil,
         memoryContext: String = ""
     ) async -> String {
         let preCleanStarted = CFAbsoluteTimeGetCurrent()
@@ -77,6 +94,7 @@ final class TextProcessor {
             style: options.languageStyle,
             stylePrompt: options.customStylePrompt,
             screenContext: screenContext,
+            screenImageAvailable: shouldUseScreenImage(options: options, image: screenImage),
             memoryContext: memoryContext,
             inputLanguage: options.inputLanguage
         )
@@ -93,22 +111,31 @@ final class TextProcessor {
         do {
             var result: String
             let llmStarted = CFAbsoluteTimeGetCurrent()
-            if options.useRemoteLLM {
-                result = try await remoteLLMClient.generate(
-                    prompt: userPrompt,
-                    systemPrompt: systemPrompt,
-                    baseURL: options.remoteBaseURL,
-                    apiKey: options.remoteAPIKey,
-                    model: options.remoteModel,
-                    provider: options.remoteProvider,
-                    maxTokens: generationOptions.maxTokens,
-                    temperature: generationOptions.temperature
-                )
+            if let screenImage, shouldUseScreenImage(options: options, image: screenImage) {
+                do {
+                    result = try await generateWithScreenImage(
+                        prompt: userPrompt,
+                        systemPrompt: systemPrompt,
+                        model: options.llmModel,
+                        image: screenImage,
+                        maxTokens: generationOptions.maxTokens,
+                        temperature: generationOptions.temperature
+                    )
+                } catch {
+                    Log.error("[TextProcessor] VLM failed, falling back to text LLM: \(error.localizedDescription)")
+                    result = try await generateText(
+                        prompt: userPrompt,
+                        systemPrompt: systemPrompt,
+                        options: options,
+                        maxTokens: generationOptions.maxTokens,
+                        temperature: generationOptions.temperature
+                    )
+                }
             } else {
-                await ensureModelLoaded(options.llmModel)
-                result = try await llm.generate(
+                result = try await generateText(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,
+                    options: options,
                     maxTokens: generationOptions.maxTokens,
                     temperature: generationOptions.temperature
                 )
@@ -126,21 +153,35 @@ final class TextProcessor {
     }
 
     /// Command mode: uses voice command system prompt, higher max tokens.
-    func processCommand(text: String, model: String, screenContext: String, memoryContext: String = "") async -> String {
+    func processCommand(
+        text: String,
+        model: String,
+        screenContext: String,
+        screenImage: CGImage? = nil,
+        memoryContext: String = ""
+    ) async -> String {
         let settings = AppSettings.shared
         var options = TextProcessingOptions(settings: settings)
         options.llmModel = model
-        return await processCommand(text: text, options: options, screenContext: screenContext, memoryContext: memoryContext)
+        return await processCommand(
+            text: text,
+            options: options,
+            screenContext: screenContext,
+            screenImage: screenImage,
+            memoryContext: memoryContext
+        )
     }
 
     func processCommand(
         text: String,
         options: TextProcessingOptions,
         screenContext: String,
+        screenImage: CGImage? = nil,
         memoryContext: String = ""
     ) async -> String {
         let systemPrompt = PromptBuilder.buildCommandSystemPrompt(
             screenContext: screenContext,
+            screenImageAvailable: shouldUseScreenImage(options: options, image: screenImage),
             memoryContext: memoryContext,
             inputLanguage: options.inputLanguage
         )
@@ -148,22 +189,33 @@ final class TextProcessor {
 
         do {
             var result: String
-            if options.useRemoteLLM {
-                result = try await remoteLLMClient.generate(
-                    prompt: userPrompt,
-                    systemPrompt: systemPrompt,
-                    baseURL: options.remoteBaseURL,
-                    apiKey: options.remoteAPIKey,
-                    model: options.remoteModel,
-                    provider: options.remoteProvider,
-                    maxTokens: 4096
-                )
+            if let screenImage, shouldUseScreenImage(options: options, image: screenImage) {
+                do {
+                    result = try await generateWithScreenImage(
+                        prompt: userPrompt,
+                        systemPrompt: systemPrompt,
+                        model: options.llmModel,
+                        image: screenImage,
+                        maxTokens: 4096,
+                        temperature: 0.3
+                    )
+                } catch {
+                    Log.error("[TextProcessor] Command VLM failed, falling back to text LLM: \(error.localizedDescription)")
+                    result = try await generateText(
+                        prompt: userPrompt,
+                        systemPrompt: systemPrompt,
+                        options: options,
+                        maxTokens: 4096,
+                        temperature: 0.3
+                    )
+                }
             } else {
-                await ensureModelLoaded(options.llmModel)
-                result = try await llm.generate(
+                result = try await generateText(
                     prompt: userPrompt,
                     systemPrompt: systemPrompt,
-                    maxTokens: 4096
+                    options: options,
+                    maxTokens: 4096,
+                    temperature: 0.3
                 )
             }
 
@@ -173,15 +225,6 @@ final class TextProcessor {
         } catch {
             Log.error("[TextProcessor] Command LLM failed, falling back to basicClean: \(error.localizedDescription)")
             return basicClean(text: text)
-        }
-    }
-
-    private func ensureModelLoaded(_ model: String) async {
-        guard !(await llm.isLoaded) else { return }
-        do {
-            try await llm.loadModel(id: model)
-        } catch {
-            Log.error("[TextProcessor] on-demand model load failed: \(error.localizedDescription)")
         }
     }
 

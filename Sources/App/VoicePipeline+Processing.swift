@@ -122,7 +122,7 @@ extension VoicePipeline {
         let screenContext = await finishScreenContextCapture()
         let inputContext = InputContext.capture(
             targetApp: targetApp,
-            screenContext: screenContext,
+            screenContext: screenContext.text,
             outputMode: .processed,
             inputLanguage: settings.inputLanguage,
             source: .menuBar
@@ -138,7 +138,8 @@ extension VoicePipeline {
             text: raw,
             stylePrompt: settings.customStylePrompt,
             model: settings.llmModel,
-            screenContext: screenContext,
+            screenContext: screenContext.text,
+            screenImage: screenContext.image,
             memoryContext: memoryContext
         )
         recordFormattingDuration(started, label: "Smart Format")
@@ -157,7 +158,7 @@ extension VoicePipeline {
         let screenContext = await finishScreenContextCapture()
         let inputContext = InputContext.capture(
             targetApp: targetApp,
-            screenContext: screenContext,
+            screenContext: screenContext.text,
             outputMode: .command,
             inputLanguage: settings.inputLanguage,
             source: .menuBar
@@ -172,7 +173,8 @@ extension VoicePipeline {
         let text = await textProcessor.processCommand(
             text: raw,
             model: settings.llmModel,
-            screenContext: screenContext,
+            screenContext: screenContext.text,
+            screenImage: screenContext.image,
             memoryContext: memoryContext
         )
         recordFormattingDuration(started, label: "Voice Command formatting")

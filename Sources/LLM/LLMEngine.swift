@@ -136,7 +136,7 @@ actor LLMEngine {
         return "/no_think\n\(prompt)"
     }
 
-    private static func modelConfiguration(for id: String) -> ModelConfiguration {
+    static func modelConfiguration(for id: String) -> ModelConfiguration {
         let extraEOSTokens: Set<String> = id.lowercased().contains("gemma-4") ? ["<turn|>"] : []
         return ModelConfiguration(id: id, extraEOSTokens: extraEOSTokens)
     }

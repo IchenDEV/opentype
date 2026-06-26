@@ -250,6 +250,7 @@ final class AppSettings: ObservableObject {
     @Published var enableStreamingRecognitionBeta: Bool
     @Published var inputLanguage: InputLanguage
     @Published var useScreenContext: Bool
+    @Published var screenContextMode: ScreenContextMode
     @Published var enableInstantInsert: Bool
     @Published var hasCompletedOnboarding: Bool
     @Published var uiLanguage: UILanguage {
@@ -290,7 +291,7 @@ final class AppSettings: ObservableObject {
         case hotkeyType, activationMode, tapInterval, speechEngine, whisperModel, llmModel
         case microphoneID, outputMode, languageStyle, customStylePrompt, playSounds
         case enableStreamingRecognitionBeta
-        case inputLanguage, useScreenContext, enableInstantInsert, hasCompletedOnboarding, uiLanguage, historyRetention
+        case inputLanguage, useScreenContext, screenContextMode, enableInstantInsert, hasCompletedOnboarding, uiLanguage, historyRetention
         case enableMemory, memoryWindowMinutes
         case useCustomSystemPrompt, customSystemPrompt
         case useRemoteLLM, remoteProvider, remoteAPIKey, remoteBaseURL, remoteModel
@@ -338,6 +339,7 @@ final class AppSettings: ObservableObject {
         enableStreamingRecognitionBeta = ud.object(forKey: Key.enableStreamingRecognitionBeta.rawValue) as? Bool ?? true
         inputLanguage = InputLanguage(rawValue: ud.string(forKey: Key.inputLanguage.rawValue) ?? "") ?? .chinese
         useScreenContext = ud.object(forKey: Key.useScreenContext.rawValue) as? Bool ?? false
+        screenContextMode = ScreenContextMode(rawValue: ud.string(forKey: Key.screenContextMode.rawValue) ?? "") ?? .ocr
         enableInstantInsert = ud.object(forKey: Key.enableInstantInsert.rawValue) as? Bool ?? false
         hasCompletedOnboarding = ud.bool(forKey: Key.hasCompletedOnboarding.rawValue)
         uiLanguage = loadedUILanguage
@@ -397,6 +399,7 @@ final class AppSettings: ObservableObject {
         $enableStreamingRecognitionBeta.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableStreamingRecognitionBeta.rawValue) }.store(in: &cancellables)
         $inputLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.inputLanguage.rawValue) }.store(in: &cancellables)
         $useScreenContext.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.useScreenContext.rawValue) }.store(in: &cancellables)
+        $screenContextMode.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.screenContextMode.rawValue) }.store(in: &cancellables)
         $enableInstantInsert.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.enableInstantInsert.rawValue) }.store(in: &cancellables)
         $hasCompletedOnboarding.dropFirst().sink { [defaults] in defaults.set($0, forKey: Key.hasCompletedOnboarding.rawValue) }.store(in: &cancellables)
         $uiLanguage.dropFirst().sink { [defaults] in defaults.set($0.rawValue, forKey: Key.uiLanguage.rawValue) }.store(in: &cancellables)
