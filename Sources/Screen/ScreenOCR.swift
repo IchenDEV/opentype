@@ -5,28 +5,37 @@ import ScreenCaptureKit
 
 enum ScreenOCR {
 
-    /// Captures the main screen and runs OCR, returning extracted text (truncated to `maxLength`).
-    /// Silently returns empty if screen capture permission has not been granted.
-    static func captureAndRecognize(maxLength: Int = 2000) async -> String {
-        guard hasScreenCapturePermission else { return "" }
+    static func capture(mode: ScreenContextMode, maxLength: Int = 2000) async -> ScreenContextSnapshot {
+        guard await checkScreenCapturePermission() else {
+            Log.info("[ScreenOCR] screen capture permission not granted")
+            return .empty
+        }
 
         guard let image = await captureMainScreen() else {
             Log.info("[ScreenOCR] screen capture failed")
-            return ""
+            return .empty
         }
 
-        let text = await recognizeText(in: image)
-        Log.info("[ScreenOCR] OCR extracted \(text.count) chars")
-        return String(text.prefix(maxLength))
+        switch mode {
+        case .ocr:
+            let text = await recognizeText(in: image)
+            Log.info("[ScreenOCR] OCR extracted \(text.count) chars")
+            return ScreenContextSnapshot(text: String(text.prefix(maxLength)), image: nil)
+        case .multimodal:
+            Log.info("[ScreenOCR] captured screen image for multimodal context")
+            return ScreenContextSnapshot(text: "", image: image)
+        }
     }
 
-    static var hasScreenCapturePermission: Bool {
-        CGPreflightScreenCaptureAccess()
+    /// Captures the main screen and runs OCR, returning extracted text (truncated to `maxLength`).
+    /// Silently returns empty if screen capture permission has not been granted.
+    static func captureAndRecognize(maxLength: Int = 2000) async -> String {
+        await capture(mode: .ocr, maxLength: maxLength).text
     }
 
     static func checkScreenCapturePermission() async -> Bool {
         do {
-            _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            _ = try await SCShareableContent.current
             return true
         } catch {
             return false

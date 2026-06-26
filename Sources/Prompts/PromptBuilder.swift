@@ -5,6 +5,7 @@ enum PromptBuilder {
         style: LanguageStyle,
         stylePrompt: String,
         screenContext: String = "",
+        screenImageAvailable: Bool = false,
         memoryContext: String = "",
         inputLanguage: InputLanguage = .chinese
     ) -> String {
@@ -17,6 +18,7 @@ enum PromptBuilder {
         )
         parts.append(contentsOf: PromptCatalog.processingContextSections(
             screenContext: screenContext,
+            screenImageAvailable: screenImageAvailable,
             memoryContext: memoryContext,
             inputLanguage: inputLanguage
         ))
@@ -28,10 +30,16 @@ enum PromptBuilder {
         PromptCatalog.userPrompt(text: text, inputLanguage: inputLanguage)
     }
 
-    static func buildCommandSystemPrompt(screenContext: String, memoryContext: String = "", inputLanguage: InputLanguage = .chinese) -> String {
+    static func buildCommandSystemPrompt(
+        screenContext: String,
+        screenImageAvailable: Bool = false,
+        memoryContext: String = "",
+        inputLanguage: InputLanguage = .chinese
+    ) -> String {
         var parts = [PromptCatalog.commandSystemPrompt(inputLanguage: inputLanguage)]
         parts.append(contentsOf: PromptCatalog.commandContextSections(
             screenContext: screenContext,
+            screenImageAvailable: screenImageAvailable,
             memoryContext: memoryContext,
             inputLanguage: inputLanguage
         ))

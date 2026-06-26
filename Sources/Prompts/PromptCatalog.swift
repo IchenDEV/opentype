@@ -19,11 +19,13 @@ enum PromptCatalog {
 
     static func processingContextSections(
         screenContext: String,
+        screenImageAvailable: Bool,
         memoryContext: String,
         inputLanguage: InputLanguage
     ) -> [String] {
         compactSections(
             processingScreenContext(screenContext, inputLanguage: inputLanguage),
+            processingScreenImageContext(inputLanguage: inputLanguage, isAvailable: screenImageAvailable),
             processingMemoryContext(memoryContext, inputLanguage: inputLanguage)
         )
     }
@@ -60,11 +62,13 @@ enum PromptCatalog {
 
     static func commandContextSections(
         screenContext: String,
+        screenImageAvailable: Bool,
         memoryContext: String,
         inputLanguage: InputLanguage
     ) -> [String] {
         compactSections(
             commandScreenContext(screenContext, inputLanguage: inputLanguage),
+            commandScreenImageContext(inputLanguage: inputLanguage, isAvailable: screenImageAvailable),
             commandMemoryContext(memoryContext, inputLanguage: inputLanguage)
         )
     }
@@ -92,6 +96,15 @@ private extension PromptCatalog {
         \(screenContext)
         ---
         """
+    }
+
+    static func processingScreenImageContext(inputLanguage: InputLanguage, isAvailable: Bool) -> String? {
+        guard isAvailable else { return nil }
+        if inputLanguage == .chinese {
+            return "屏幕截图已随本次请求提供。请直接观察截图，仅用于纠错、识别专有名词和理解当前上下文，不要把截图内容无关地混入输出。"
+        }
+
+        return "A screen image is attached to this request. Inspect it directly for corrections, proper nouns, and current context only. Do not copy unrelated screen content into the output."
     }
 
     static func processingMemoryContext(_ memoryContext: String, inputLanguage: InputLanguage) -> String? {
@@ -124,6 +137,15 @@ private extension PromptCatalog {
         \(screenContext)
         ---
         """
+    }
+
+    static func commandScreenImageContext(inputLanguage: InputLanguage, isAvailable: Bool) -> String? {
+        guard isAvailable else { return nil }
+        if inputLanguage == .chinese {
+            return "用户当前屏幕截图已随本次请求提供。需要回复、总结、翻译或解释屏幕内容时，请直接依据截图。"
+        }
+
+        return "The user's current screen image is attached. Use it directly when the command asks you to reply, summarize, translate, or explain visible screen content."
     }
 
     static func commandMemoryContext(_ memoryContext: String, inputLanguage: InputLanguage) -> String? {

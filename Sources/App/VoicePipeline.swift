@@ -14,7 +14,7 @@ final class VoicePipeline {
     var volcSpeechEngine: VolcSpeechEngine?
     var qwenSpeechEngine: LocalASREngine?
     var mimoSpeechEngine: LocalASREngine?
-    var screenOCRTask: Task<String, Never>?
+    var screenOCRTask: Task<ScreenContextSnapshot, Never>?
     var screenOCRStartedAt: CFAbsoluteTime?
     var processingTask: Task<Void, Never>?
     var replacementTask: Task<Void, Never>?

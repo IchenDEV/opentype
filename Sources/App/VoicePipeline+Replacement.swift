@@ -147,14 +147,14 @@ extension VoicePipeline {
         replacementID: UUID,
         raw: String,
         settings: AppSettings,
-        ocrTask: Task<String, Never>?,
+        ocrTask: Task<ScreenContextSnapshot, Never>?,
         ocrStartedAt: CFAbsoluteTime?
     ) async {
         let started = CFAbsoluteTimeGetCurrent()
-        let screenContext = await ocrTask?.value ?? ""
+        let screenContext = await ocrTask?.value ?? .empty
         if let ocrStartedAt {
             let elapsed = CFAbsoluteTimeGetCurrent() - ocrStartedAt
-            Log.info("[VoicePipeline] OCR stage finished in \(String(format: "%.2f", elapsed))s")
+            Log.info("[VoicePipeline] screen context stage finished in \(String(format: "%.2f", elapsed))s")
         }
 
         guard !Task.isCancelled else { return }
@@ -164,7 +164,7 @@ extension VoicePipeline {
             appName: currentReplacement.targetAppName,
             bundleIdentifier: currentReplacement.targetBundleIdentifier,
             windowTitle: currentReplacement.context?.windowTitle,
-            screenContext: screenContext,
+            screenContext: screenContext.text,
             outputMode: .processed,
             inputLanguage: settings.inputLanguage,
             source: .menuBar
@@ -179,7 +179,8 @@ extension VoicePipeline {
             text: raw,
             stylePrompt: settings.customStylePrompt,
             model: settings.llmModel,
-            screenContext: screenContext,
+            screenContext: screenContext.text,
+            screenImage: screenContext.image,
             memoryContext: memoryContext
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - started

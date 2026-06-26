@@ -96,7 +96,9 @@
 "settings.memory_window" = "记忆时间窗口";
 "settings.memory_minutes_fmt" = "%d 分钟";
 "settings.screen_context" = "屏幕上下文辅助";
-"settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限，仅智能整理模式生效）";
+"settings.screen_context_help" = "录音时截取屏幕文字辅助 LLM 纠正同音字（需屏幕录制权限；开关用于智能整理，语音命令会自动使用）";
+"settings.screen_context_mode" = "读屏幕方式";
+"settings.screen_context_mode_help" = "OCR 会先提取屏幕文字。多模态会在本地模型支持时把截图交给 VLM；远程 LLM 和不支持截图的本地模型会回退到 OCR。";
 "settings.voice_language" = "语音与语言";
 "settings.ui_language" = "界面语言";
 "settings.app_icon" = "应用图标";
@@ -221,6 +223,8 @@
 "engine.volc_asr" = "豆包语音识别";
 "engine.qwen3_asr" = "Qwen3-ASR（本地）";
 "engine.mimo_asr" = "MiMo-V2.5-ASR（本地）";
+"screen_context_mode.ocr" = "OCR";
+"screen_context_mode.multimodal" = "多模态";
 "style.prompt.concise" = "极简。只保留核心信息，删掉修饰、重复和过渡，长句拆短。";
 "style.prompt.formal" = "正式书面。用规范表达，减少口语感，保持句子完整、逻辑顺畅。";
 "style.prompt.professional" = "专业整理。更主动纠正错别字、同音词、识别错误和专有名词，整理成完整自然的书面句子；只有原文明显是步骤或待办时才用编号。";

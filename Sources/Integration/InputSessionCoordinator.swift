@@ -12,7 +12,7 @@ final class InputSessionCoordinator {
         let inputLanguage: InputLanguage
         let useScreenContext: Bool
         let streamingEnabled: Bool
-        let screenContextTask: Task<String, Never>?
+        let screenContextTask: Task<ScreenContextSnapshot, Never>?
         let client: IntegrationClient?
     }
 
@@ -213,19 +213,20 @@ final class InputSessionCoordinator {
     func startScreenContextCaptureIfNeeded(
         mode: OutputMode,
         useScreenContext: Bool
-    ) -> Task<String, Never>? {
+    ) -> Task<ScreenContextSnapshot, Never>? {
         guard VoicePipelinePolicy.shouldCaptureScreenContext(
             outputMode: mode,
             useScreenContext: useScreenContext
         ) else {
             return nil
         }
-        guard ScreenOCR.hasScreenCapturePermission else {
-            Log.info("[InputSessionCoordinator] screen capture permission not granted, skipping OCR")
-            return nil
-        }
+        let contextMode = ScreenContextMode.effectiveCaptureMode(
+            preference: settings.screenContextMode,
+            useRemoteLLM: settings.useRemoteLLM,
+            modelID: settings.llmModel
+        )
         return Task.detached(priority: .utility) {
-            await ScreenOCR.captureAndRecognize()
+            await ScreenOCR.capture(mode: contextMode)
         }
     }
 

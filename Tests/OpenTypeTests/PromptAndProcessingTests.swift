@@ -106,6 +106,33 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
+    func testSystemPromptIncludesScreenImageContextOnlyWhenAvailable() {
+        withCleanSettings {
+            let withoutImage = PromptBuilder.buildSystemPrompt(
+                style: .professional,
+                stylePrompt: "",
+                inputLanguage: .chinese
+            )
+            XCTAssertFalse(withoutImage.contains("屏幕截图已随本次请求提供"))
+
+            let chinese = PromptBuilder.buildSystemPrompt(
+                style: .professional,
+                stylePrompt: "",
+                screenImageAvailable: true,
+                inputLanguage: .chinese
+            )
+            XCTAssertTrue(chinese.contains("屏幕截图已随本次请求提供"))
+
+            let english = PromptBuilder.buildSystemPrompt(
+                style: .professional,
+                stylePrompt: "",
+                screenImageAvailable: true,
+                inputLanguage: .english
+            )
+            XCTAssertTrue(english.contains("A screen image is attached to this request"))
+        }
+    }
+
     func testCasualStylePromptStillRequiresCorrection() {
         withCleanSettings {
             let chinese = PromptBuilder.buildSystemPrompt(
@@ -167,6 +194,28 @@ final class PromptAndProcessingTests: XCTestCase {
         XCTAssertTrue(english.contains("Screen content below"))
         XCTAssertTrue(english.contains("email body"))
         XCTAssertFalse(english.contains("Recent input history"))
+    }
+
+    func testCommandPromptIncludesScreenImageContextOnlyWhenAvailable() {
+        let withoutImage = PromptBuilder.buildCommandSystemPrompt(
+            screenContext: "",
+            inputLanguage: .chinese
+        )
+        XCTAssertFalse(withoutImage.contains("用户当前屏幕截图已随本次请求提供"))
+
+        let chinese = PromptBuilder.buildCommandSystemPrompt(
+            screenContext: "",
+            screenImageAvailable: true,
+            inputLanguage: .chinese
+        )
+        XCTAssertTrue(chinese.contains("用户当前屏幕截图已随本次请求提供"))
+
+        let english = PromptBuilder.buildCommandSystemPrompt(
+            screenContext: "",
+            screenImageAvailable: true,
+            inputLanguage: .english
+        )
+        XCTAssertTrue(english.contains("current screen image is attached"))
     }
 
     func testPersonalDictionaryReplacementsAndRules() {
