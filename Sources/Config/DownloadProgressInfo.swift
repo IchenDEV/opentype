@@ -7,6 +7,21 @@ struct DownloadProgressInfo: Equatable, Sendable {
     let totalBytes: Int64
     let speedBytesPerSecond: Double
 
+    init(
+        fraction: Double,
+        elapsedSeconds: TimeInterval,
+        completedBytes: Int64,
+        totalBytes: Int64,
+        speedBytesPerSecond: Double
+    ) {
+        let completedBytes = max(completedBytes, 0)
+        self.fraction = Self.clampFraction(fraction)
+        self.elapsedSeconds = elapsedSeconds.isFinite ? max(elapsedSeconds, 0) : 0
+        self.completedBytes = completedBytes
+        self.totalBytes = totalBytes > 0 ? max(totalBytes, completedBytes) : 0
+        self.speedBytesPerSecond = speedBytesPerSecond.isFinite ? max(speedBytesPerSecond, 0) : 0
+    }
+
     var percentText: String {
         "\(Int(clampedFraction * 100))%"
     }
@@ -78,7 +93,7 @@ final class DownloadProgressTracker: @unchecked Sendable {
     init(startDate: Date = Date(), initialBytes: Int64 = 0) {
         self.startDate = startDate
         lastTime = startDate
-        lastBytes = initialBytes
+        lastBytes = max(initialBytes, 0)
     }
 
     func update(progress: Progress, fraction: Double? = nil) -> DownloadProgressInfo {
@@ -90,17 +105,27 @@ final class DownloadProgressTracker: @unchecked Sendable {
     }
 
     func update(completedBytes rawCompleted: Int64, totalBytes rawTotal: Int64, fraction: Double? = nil) -> DownloadProgressInfo {
+        update(completedBytes: rawCompleted, totalBytes: rawTotal, fraction: fraction, at: Date())
+    }
+
+    func update(
+        completedBytes rawCompleted: Int64,
+        totalBytes rawTotal: Int64,
+        fraction: Double? = nil,
+        at now: Date
+    ) -> DownloadProgressInfo {
         lock.lock()
         defer { lock.unlock() }
 
         let completedBytes = max(rawCompleted, 0)
-        let totalBytes = max(rawTotal, 0)
-        let now = Date()
+        let totalBytes = rawTotal > 0 ? max(rawTotal, completedBytes) : 0
         let sampleElapsed = now.timeIntervalSince(lastTime)
         if sampleElapsed > 0.5 {
             let deltaBytes = completedBytes - lastBytes
             if deltaBytes >= 0 {
                 lastSpeedBytesPerSecond = Double(deltaBytes) / sampleElapsed
+            } else {
+                lastSpeedBytesPerSecond = 0
             }
             lastTime = now
             lastBytes = completedBytes

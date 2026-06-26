@@ -82,8 +82,8 @@ extension ModelCatalog {
                 try await ensureMimoRepository()
             }
             if !asrModelFilesAreComplete(id) {
+                let tracker = DownloadProgressTracker(startDate: startedAt, initialBytes: asrRepoSize(id))
                 for (repoIndex, repoID) in repos.enumerated() {
-                    let tracker = DownloadProgressTracker(startDate: startedAt)
                     _ = try await api.snapshot(from: ModelStorage.hubModelRepo(repoID)) { [weak self] progress in
                         Task { @MainActor in
                             guard let self, let i = self.asrModels.firstIndex(where: { $0.id == id }) else { return }

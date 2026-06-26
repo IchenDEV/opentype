@@ -30,9 +30,9 @@ actor LLMEngine {
                 speedBytesPerSecond: 0
             ))
         } else {
-            let tracker = DownloadProgressTracker()
             let estimatedTotalBytes = estimatedDownloadBytes ?? 0
             let repoDir = ModelStorage.hubModelRepoDir(id)
+            let tracker = DownloadProgressTracker(initialBytes: ModelStorage.directorySize(at: repoDir))
             let config = Self.modelConfiguration(for: id)
             container = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,

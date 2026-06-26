@@ -210,7 +210,8 @@ final class ModelCatalog: ObservableObject {
         whisperModels[idx].downloadProgress = 0
 
         do {
-            let tracker = DownloadProgressTracker()
+            let modelDir = ModelStorage.whisperVariantDir(id)
+            let tracker = DownloadProgressTracker(initialBytes: ModelStorage.directorySize(at: modelDir))
 
             _ = try await WhisperKit.download(
                 variant: id,
@@ -218,7 +219,12 @@ final class ModelCatalog: ObservableObject {
                 progressCallback: { [weak self] p in
                     Task { @MainActor in
                         guard let self, let i = self.whisperModels.firstIndex(where: { $0.id == id }) else { return }
-                        let info = tracker.update(progress: p)
+                        let completedBytes = ModelStorage.directorySize(at: modelDir)
+                        let info = tracker.update(
+                            completedBytes: completedBytes > 0 ? completedBytes : p.completedUnitCount,
+                            totalBytes: p.totalUnitCount,
+                            fraction: p.fractionCompleted
+                        )
                         self.whisperModels[i].downloadProgress = info.fraction
                         self.whisperModels[i].downloadDetail = info.detailText
                     }
@@ -279,9 +285,9 @@ final class ModelCatalog: ObservableObject {
         llmModels[idx].downloadProgress = 0
 
         do {
-            let tracker = DownloadProgressTracker()
             let estimatedTotalBytes = estimatedLLMDownloadBytes(id) ?? 0
             let repoDir = ModelStorage.hubModelRepoDir(id)
+            let tracker = DownloadProgressTracker(initialBytes: ModelStorage.directorySize(at: repoDir))
             let config = ModelConfiguration(id: id)
             _ = try await LLMModelFactory.shared.loadContainer(
                 from: MLXModelLoading.downloader,
