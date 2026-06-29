@@ -12,6 +12,15 @@ enum VoicePipelinePolicy {
         }
     }
 
+    static func shouldResolveEditCommandWithLLMFirst(outputMode: OutputMode) -> Bool {
+        outputMode == .command
+    }
+
+    static func editCommand(from resolution: SpokenEditCommandLLMResolution?) -> SpokenEditCommand? {
+        guard case .command(let command) = resolution else { return nil }
+        return command
+    }
+
     @MainActor
     static func memoryContext(
         for outputMode: OutputMode,

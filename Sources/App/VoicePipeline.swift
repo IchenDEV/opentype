@@ -98,7 +98,10 @@ final class VoicePipeline {
             currentEngine?.startListening(language: language) { [weak self] partialText in
                 Task { @MainActor in
                     guard let self, self.appState.isRecording else { return }
-                    self.appState.rawTranscription = TranscriptionSanitizer.previewText(partialText)
+                    self.appState.rawTranscription = TranscriptionSanitizer.previewText(
+                        partialText,
+                        inputLanguage: self.appState.settings.inputLanguage
+                    )
                 }
             }
         }

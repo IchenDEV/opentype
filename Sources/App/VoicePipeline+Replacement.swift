@@ -181,7 +181,9 @@ extension VoicePipeline {
             model: settings.llmModel,
             screenContext: screenContext.text,
             screenImage: screenContext.image,
-            memoryContext: memoryContext
+            memoryContext: memoryContext,
+            inputContext: inputContext,
+            allowsPreparedFallback: false
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - started
         appState.lastFormattingDurationSeconds = elapsed
@@ -189,6 +191,15 @@ extension VoicePipeline {
 
         guard !Task.isCancelled else { return }
         guard var replacement = appState.pendingReplacement, replacement.id == replacementID else { return }
+
+        guard !formattedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            Log.info("[VoicePipeline] deferred Smart Format produced no LLM output")
+            replacement.state = .failed
+            replacement.message = L("pipeline.formatting_failed")
+            replacement.context = inputContext
+            appState.pendingReplacement = replacement
+            return
+        }
 
         replacement.formattedText = formattedText
         replacement.state = .ready
@@ -198,8 +209,8 @@ extension VoicePipeline {
     }
 
     private func immediateInsertText(from raw: String, settings: AppSettings) -> String {
-        let cleaned = textProcessor.preCleanForFormatting(text: raw, inputLanguage: settings.inputLanguage)
-        let fallback = textProcessor.basicClean(text: raw)
+        let cleaned = textProcessor.prepareForFormatting(text: raw, inputLanguage: settings.inputLanguage)
+        let fallback = textProcessor.basicClean(text: raw, inputLanguage: settings.inputLanguage)
         if !cleaned.isEmpty { return cleaned }
         if !fallback.isEmpty { return fallback }
         return raw.trimmingCharacters(in: .whitespacesAndNewlines)

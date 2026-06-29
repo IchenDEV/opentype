@@ -30,6 +30,10 @@ extension VoicePipeline {
                 return
             }
 
+            if await handleSpokenEditCommandIfNeeded(raw: preparedRaw, settings: settings, targetApp: targetApp) {
+                return
+            }
+
             if DeferredReplacementPolicy.shouldUseDeferredReplacement(
                 outputMode: settings.outputMode,
                 enableInstantInsert: settings.enableInstantInsert
@@ -106,7 +110,10 @@ extension VoicePipeline {
                 inputLanguage: settings.inputLanguage,
                 source: .menuBar
             )
-            return VoicePipelineOutput(text: textProcessor.basicClean(text: raw), context: context)
+            return VoicePipelineOutput(
+                text: textProcessor.basicClean(text: raw, inputLanguage: settings.inputLanguage),
+                context: context
+            )
         }
     }
 
@@ -140,7 +147,8 @@ extension VoicePipeline {
             model: settings.llmModel,
             screenContext: screenContext.text,
             screenImage: screenContext.image,
-            memoryContext: memoryContext
+            memoryContext: memoryContext,
+            inputContext: inputContext
         )
         recordFormattingDuration(started, label: "Smart Format")
         return VoicePipelineOutput(text: text, context: inputContext)
@@ -175,7 +183,8 @@ extension VoicePipeline {
             model: settings.llmModel,
             screenContext: screenContext.text,
             screenImage: screenContext.image,
-            memoryContext: memoryContext
+            memoryContext: memoryContext,
+            inputContext: inputContext
         )
         recordFormattingDuration(started, label: "Voice Command formatting")
         return VoicePipelineOutput(text: text, context: inputContext)
@@ -194,6 +203,12 @@ extension VoicePipeline {
         targetApp: NSRunningApplication?
     ) async {
         let finalText = output.text
+        guard !finalText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            Log.info("[VoicePipeline] skipping empty final text")
+            showErrorHint(L("error.operation_failed"))
+            return
+        }
+
         appState.processedText = finalText
         appState.phase = .inserting
         appState.statusMessage = L("pipeline.inserting")

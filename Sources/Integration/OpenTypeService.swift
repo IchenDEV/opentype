@@ -115,14 +115,16 @@ final class OpenTypeService {
         guard !session.state.isTerminal else {
             throw IntegrationError.invalidSessionState
         }
+        guard let finalText = finalText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !finalText.isEmpty else {
+            throw IntegrationError.operationFailed
+        }
 
         let now = Date()
         session.state = .completed
         session.updatedAt = now
         sessions[sessionID] = session
-        if let finalText, !finalText.isEmpty {
-            appendEvent(.textFinal, sessionID: sessionID, at: now, text: finalText)
-        }
+        appendEvent(.textFinal, sessionID: sessionID, at: now, text: finalText)
         appendEvent(.sessionCompleted, sessionID: sessionID, at: now)
     }
 

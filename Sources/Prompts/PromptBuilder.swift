@@ -7,6 +7,7 @@ enum PromptBuilder {
         screenContext: String = "",
         screenImageAvailable: Bool = false,
         memoryContext: String = "",
+        inputContext: InputContext? = nil,
         inputLanguage: InputLanguage = .chinese
     ) -> String {
         let settings = AppSettings.shared
@@ -20,6 +21,7 @@ enum PromptBuilder {
             screenContext: screenContext,
             screenImageAvailable: screenImageAvailable,
             memoryContext: memoryContext,
+            inputContext: inputContext,
             inputLanguage: inputLanguage
         ))
 
@@ -30,10 +32,27 @@ enum PromptBuilder {
         PromptCatalog.userPrompt(text: text, inputLanguage: inputLanguage)
     }
 
+    static func buildCommandUserPrompt(text: String, inputLanguage: InputLanguage = .chinese) -> String {
+        PromptCatalog.commandUserPrompt(text: text, inputLanguage: inputLanguage)
+    }
+
+    static func buildEditCommandResolverSystemPrompt(inputLanguage: InputLanguage = .chinese) -> String {
+        PromptCatalog.editCommandResolverSystemPrompt(inputLanguage: inputLanguage)
+    }
+
+    static func buildEditCommandResolverUserPrompt(
+        text: String,
+        inputLanguage: InputLanguage = .chinese,
+        context: SpokenEditCommandResolutionContext = .unknown
+    ) -> String {
+        PromptCatalog.editCommandResolverUserPrompt(text: text, inputLanguage: inputLanguage, context: context)
+    }
+
     static func buildCommandSystemPrompt(
         screenContext: String,
         screenImageAvailable: Bool = false,
         memoryContext: String = "",
+        inputContext: InputContext? = nil,
         inputLanguage: InputLanguage = .chinese
     ) -> String {
         var parts = [PromptCatalog.commandSystemPrompt(inputLanguage: inputLanguage)]
@@ -41,6 +60,7 @@ enum PromptBuilder {
             screenContext: screenContext,
             screenImageAvailable: screenImageAvailable,
             memoryContext: memoryContext,
+            inputContext: inputContext,
             inputLanguage: inputLanguage
         ))
         return parts.joined(separator: "\n\n")
@@ -54,8 +74,12 @@ private extension PromptBuilder {
         stylePrompt: String,
         inputLanguage: InputLanguage
     ) -> [String] {
-        if settings.useCustomSystemPrompt, !settings.customSystemPrompt.isEmpty {
-            return [settings.customSystemPrompt]
+        let customSystemPrompt = settings.customSystemPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if settings.useCustomSystemPrompt, !customSystemPrompt.isEmpty {
+            return [
+                customSystemPrompt,
+                PromptCatalog.customSystemPromptOutputContract(inputLanguage: inputLanguage),
+            ]
         }
 
         var parts = [PromptCatalog.baseSystemPrompt(inputLanguage: inputLanguage)]

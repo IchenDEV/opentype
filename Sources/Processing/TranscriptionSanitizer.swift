@@ -8,16 +8,15 @@ enum TranscriptionSanitizer {
         let collapsed = collapseRepeatedTranscript(trimmed)
         guard !isNonSpeechArtifact(collapsed) else { return nil }
 
-        if audioActivity?.hasWeakSpeechEvidence == true, isLowContentUtterance(collapsed) {
-            return nil
-        }
-
         return collapsed
     }
 
-    static func previewText(_ text: String) -> String {
+    static func previewText(_ text: String, inputLanguage: InputLanguage = .auto) -> String {
         let collapsed = collapseRepeatedTranscript(text)
-        return isNonSpeechArtifact(collapsed) ? "" : collapsed
+        guard !isNonSpeechArtifact(collapsed) else { return "" }
+
+        let normalized = FormattingHeuristics.normalizeInput(collapsed)
+        return isNonSpeechArtifact(normalized) ? "" : normalized
     }
 
     static func isNonSpeechArtifact(_ text: String) -> Bool {
@@ -32,7 +31,7 @@ enum TranscriptionSanitizer {
         if meaningfulScalars.isEmpty { return true }
 
         let cleaned = normalizedPhrase(trimmed)
-        return artifactFragments.contains { cleaned.contains($0) }
+        return cleaned.isEmpty
     }
 
     static func collapseRepeatedTranscript(_ text: String) -> String {
@@ -53,36 +52,6 @@ enum TranscriptionSanitizer {
         }
 
         return bestMatch ?? normalized
-    }
-
-    private static let lowContentTokens: Set<String> = [
-        "嗯", "啊", "呃", "额", "哦", "唉", "哈", "哎", "诶",
-        "um", "uh", "uhh", "uhm", "hmm", "ah", "eh", "oh", "mm", "mhm",
-        "ok", "okay", "yes", "no",
-    ]
-
-    private static let artifactFragments: [String] = [
-        "字幕志愿者", "字幕由", "字幕组",
-        "请不吝点赞", "点赞订阅", "订阅转发", "订阅本频道", "点赞分享",
-        "请订阅", "请关注", "请按赞", "敬请订阅", "感谢观看",
-        "下集再见", "下期再见", "我们下期再见", "我们下集再见",
-        "明镜与点点栏目", "明镜新闻",
-        "中文字幕由", "中文字幕志愿者",
-        "subscribe to", "thanks for watching", "thank you for watching",
-        "please subscribe", "like and subscribe", "see you next",
-        "mbc news", "bbc news",
-        "as an ai", "i cannot assist", "i cant assist", "i cannot help",
-        "i cant help", "i am unable to", "im unable to",
-        "抱歉我无法", "抱歉不能", "我无法帮助", "我不能帮助", "无法提供帮助",
-    ]
-
-    private static func isLowContentUtterance(_ text: String) -> Bool {
-        let normalized = normalizedPhrase(text)
-        if lowContentTokens.contains(normalized) { return true }
-
-        let canonical = canonicalText(text)
-        let wordCount = text.split(whereSeparator: \.isWhitespace).count
-        return wordCount <= 1 && canonical.count <= 3
     }
 
     private static func isRepeatCandidate(_ text: String) -> Bool {

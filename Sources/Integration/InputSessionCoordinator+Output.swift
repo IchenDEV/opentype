@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 extension InputSessionCoordinator {
-    func outputText(for raw: String, active: ActiveSession) async -> String {
+    func outputText(for raw: String, active: ActiveSession) async throws -> String {
         let options = TextProcessingOptions(settings: settings, inputLanguage: active.inputLanguage)
         let text: String
         let context: InputContext
@@ -11,7 +11,7 @@ extension InputSessionCoordinator {
         case .direct:
             active.screenContextTask?.cancel()
             context = inputContext(for: active, screenContext: "", mode: .direct)
-            text = textProcessor.basicClean(text: raw)
+            text = textProcessor.basicClean(text: raw, inputLanguage: active.inputLanguage)
         case .processed:
             let screenContext = await screenContext(from: active)
             context = inputContext(for: active, screenContext: screenContext.text, mode: .processed)
@@ -25,7 +25,8 @@ extension InputSessionCoordinator {
                 options: options,
                 screenContext: screenContext.text,
                 screenImage: screenContext.image,
-                memoryContext: memoryContext
+                memoryContext: memoryContext,
+                inputContext: context
             )
         case .command:
             let screenContext = await screenContext(from: active)
@@ -40,8 +41,14 @@ extension InputSessionCoordinator {
                 options: options,
                 screenContext: screenContext.text,
                 screenImage: screenContext.image,
-                memoryContext: memoryContext
+                memoryContext: memoryContext,
+                inputContext: context
             )
+        }
+
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            Log.info("[InputSessionCoordinator] refusing to complete session with empty output")
+            throw IntegrationError.operationFailed
         }
 
         InputHistory.shared.addRecord(

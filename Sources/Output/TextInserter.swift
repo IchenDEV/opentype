@@ -10,7 +10,6 @@ enum InsertResult {
 
 @MainActor
 struct TextInserter {
-
     func insert(text: String, targetApp: NSRunningApplication? = nil) async -> InsertResult {
         guard AXIsProcessTrusted() else {
             Log.error("[TextInserter] no AX trust")
@@ -36,20 +35,8 @@ struct TextInserter {
     }
 
     func replaceRecentInsertion(text: String, targetApp: NSRunningApplication? = nil) async -> InsertResult {
-        guard AXIsProcessTrusted() else {
-            Log.error("[TextInserter] no AX trust")
-            return .probablyFailed(reason: "Accessibility permission not granted")
-        }
-
-        await activateTarget(targetApp)
-
-        let front = NSWorkspace.shared.frontmostApplication
-        let targetPID = targetApp?.processIdentifier
-        let activated = targetPID == nil || front?.processIdentifier == targetPID
-        guard activated else {
-            let reason = "Could not activate target application"
-            Log.info("[TextInserter] replacement probably failed: \(reason)")
-            return .probablyFailed(reason: reason)
+        if let failure = await prepareTargetOperation(targetApp: targetApp, logContext: "replacement") {
+            return failure
         }
 
         let undoOK = await simulateCommandShortcut(keyCode: CGKeyCode(kVK_ANSI_Z), scriptKey: "z")
@@ -71,6 +58,67 @@ struct TextInserter {
         return .success
     }
 
+    func undoRecentInsertion(targetApp: NSRunningApplication? = nil) async -> InsertResult {
+        if let failure = await prepareTargetOperation(targetApp: targetApp, logContext: "undo") {
+            return failure
+        }
+
+        let undoOK = await simulateCommandShortcut(keyCode: CGKeyCode(kVK_ANSI_Z), scriptKey: "z")
+        guard undoOK else {
+            let reason = "Could not undo the previous insertion"
+            Log.info("[TextInserter] undo probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        return .success
+    }
+
+    func replaceSelectedText(text: String, targetApp: NSRunningApplication? = nil) async -> InsertResult {
+        if let failure = await prepareSelectedTextOperation(
+            targetApp: targetApp,
+            logContext: "selection replacement"
+        ) {
+            return failure
+        }
+
+        let pasted = await insertViaClipboard(text: text)
+        guard pasted else {
+            let reason = "Could not paste replacement text"
+            Log.info("[TextInserter] selection replacement probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        return .success
+    }
+
+    func deleteSelectedText(targetApp: NSRunningApplication? = nil) async -> InsertResult {
+        if let failure = await prepareSelectedTextOperation(
+            targetApp: targetApp,
+            logContext: "selection deletion"
+        ) {
+            return failure
+        }
+
+        let deleted = await simulateKeyPress(keyCode: CGKeyCode(kVK_Delete), scriptKeyCode: 51)
+        guard deleted else {
+            let reason = "Could not delete selected text"
+            Log.info("[TextInserter] selection deletion probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        return .success
+    }
+
+    func selectedText(targetApp: NSRunningApplication? = nil) async -> String? {
+        guard AXIsProcessTrusted() else {
+            Log.error("[TextInserter] no AX trust")
+            return nil
+        }
+
+        await activateTarget(targetApp)
+        return selectedTextInFrontmostApplication()
+    }
+
     // MARK: - Activate target
 
     private func activateTarget(_ app: NSRunningApplication?) async {
@@ -86,6 +134,71 @@ struct TextInserter {
             }
         }
         try? await Task.sleep(nanoseconds: 100_000_000)
+    }
+
+    private func selectedTextInFrontmostApplication() -> String? {
+        guard let front = NSWorkspace.shared.frontmostApplication else { return nil }
+        let appElement = AXUIElementCreateApplication(front.processIdentifier)
+
+        var focusedValue: CFTypeRef?
+        let focusedResult = AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedValue
+        )
+        guard focusedResult == .success, let focusedElement = focusedValue else { return nil }
+        guard CFGetTypeID(focusedElement) == AXUIElementGetTypeID() else { return nil }
+        let focusedAXElement = focusedElement as! AXUIElement
+
+        var selectedValue: CFTypeRef?
+        let selectedResult = AXUIElementCopyAttributeValue(
+            focusedAXElement,
+            kAXSelectedTextAttribute as CFString,
+            &selectedValue
+        )
+        guard selectedResult == .success else { return nil }
+
+        return selectedValue as? String
+    }
+
+    private func prepareSelectedTextOperation(
+        targetApp: NSRunningApplication?,
+        logContext: String
+    ) async -> InsertResult? {
+        if let failure = await prepareTargetOperation(targetApp: targetApp, logContext: logContext) {
+            return failure
+        }
+
+        guard selectedTextInFrontmostApplication()?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            let reason = L("pipeline.no_selected_text_to_replace")
+            Log.info("[TextInserter] \(logContext) probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        return nil
+    }
+
+    private func prepareTargetOperation(
+        targetApp: NSRunningApplication?,
+        logContext: String
+    ) async -> InsertResult? {
+        guard AXIsProcessTrusted() else {
+            Log.error("[TextInserter] no AX trust")
+            return .probablyFailed(reason: "Accessibility permission not granted")
+        }
+
+        await activateTarget(targetApp)
+
+        let front = NSWorkspace.shared.frontmostApplication
+        let targetPID = targetApp?.processIdentifier
+        let activated = targetPID == nil || front?.processIdentifier == targetPID
+        guard activated else {
+            let reason = "Could not activate target application"
+            Log.info("[TextInserter] \(logContext) probably failed: \(reason)")
+            return .probablyFailed(reason: reason)
+        }
+
+        return nil
     }
 
     // MARK: - Clipboard + Cmd+V
@@ -119,47 +232,6 @@ struct TextInserter {
         }
 
         return pasteOK
-    }
-
-    @discardableResult
-    private func simulatePaste() async -> Bool {
-        await simulateCommandShortcut(keyCode: CGKeyCode(kVK_ANSI_V), scriptKey: "v")
-    }
-
-    @discardableResult
-    private func simulateCommandShortcut(keyCode: CGKeyCode, scriptKey: String) async -> Bool {
-        guard AXIsProcessTrusted() else { return false }
-
-        let source = CGEventSource(stateID: .combinedSessionState)
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else {
-            return simulateCommandShortcutViaAppleScript(scriptKey)
-        }
-
-        keyDown.flags = .maskCommand
-        keyDown.post(tap: .cgAnnotatedSessionEventTap)
-        try? await Task.sleep(nanoseconds: 12_000_000)
-        keyUp.flags = .maskCommand
-        keyUp.post(tap: .cgAnnotatedSessionEventTap)
-
-        return true
-    }
-
-    private func pasteViaAppleScript() -> Bool {
-        simulateCommandShortcutViaAppleScript("v")
-    }
-
-    private func simulateCommandShortcutViaAppleScript(_ key: String) -> Bool {
-        let script = NSAppleScript(source: """
-        tell application "System Events" to keystroke "\(key)" using command down
-        """)
-        var errInfo: NSDictionary?
-        script?.executeAndReturnError(&errInfo)
-        if let errInfo {
-            Log.error("[TextInserter] AppleScript error: \(errInfo)")
-            return false
-        }
-        return true
     }
 
     /// Place text on the clipboard so the user can manually Cmd+V.
