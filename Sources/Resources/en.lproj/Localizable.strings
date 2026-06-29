@@ -43,17 +43,21 @@
 "pipeline.formatting" = "Formatting…";
 "pipeline.inserting" = "Inserting…";
 "pipeline.replacing" = "Replacing…";
+"pipeline.undoing" = "Undoing…";
 "pipeline.error_prefix" = "Error: ";
 "pipeline.whisper_unloaded" = "Whisper unloaded";
 "pipeline.llm_unloaded" = "LLM unloaded";
 "pipeline.background_formatting" = "Inserted quickly. Formatting in background…";
 "pipeline.formatted_ready" = "Formatted version ready";
+"pipeline.formatting_failed" = "Formatting did not produce a replacement";
 "pipeline.replacement_not_ready" = "Formatted version is still on the way";
 "pipeline.replacement_expired" = "Replace window expired. You can still copy the formatted text.";
 "pipeline.replacement_copied_expired" = "Replace window expired. The formatted text was copied instead.";
 "pipeline.replacement_copied_missing_target" = "Could not find the original app. The formatted text was copied instead.";
 "pipeline.replacement_copied_app_changed" = "You switched apps. The formatted text was copied instead.";
 "pipeline.replacement_copied_failed" = "Could not safely replace the text. The formatted text was copied instead.";
+"pipeline.no_previous_insert_to_replace" = "No previous OpenType insertion to replace";
+"pipeline.no_selected_text_to_replace" = "No selected text found";
 "pipeline.preparing_model" = "Preparing speech model…";
 "pipeline.downloading" = "Downloading";
 "pipeline.compiling" = "Compiling model (2-5 min on first run)…";
@@ -87,7 +91,7 @@
 "settings.output" = "Output";
 "settings.output_mode" = "Output mode";
 "settings.instant_insert" = "Insert quickly, format in background";
-"settings.instant_insert_help" = "Only applies to Smart Format. Insert a locally cleaned draft first, then let you replace it with the formatted version.";
+"settings.instant_insert_help" = "Only applies to Smart Format. Insert a normalized raw draft first, then let you replace it with the LLM-formatted version.";
 "settings.beta" = "Beta";
 "settings.streaming_beta" = "Enable streaming recognition";
 "settings.streaming_beta_help" = "Show live transcription while recording and prefer the live result after stop to reduce waiting. Experimental and may be slightly less accurate on long audio.";
@@ -233,8 +237,8 @@
 
 /* ── Custom System Prompt ── */
 "custom_prompt.title" = "Custom System Prompt";
-"custom_prompt.desc" = "When enabled, completely overrides the built-in system prompt and style presets with your own prompt for processing voice text.";
-"custom_prompt.hint" = "This prompt is sent directly as the LLM System Prompt. Screen context and input memory are still appended automatically.";
+"custom_prompt.desc" = "When enabled, uses your own prompt for voice-text style and processing while keeping OpenType's final-output contract.";
+"custom_prompt.hint" = "Your prompt is included in the LLM System Prompt. Screen context, input memory, and output-only guardrails are still appended automatically.";
 
 /* ── Style & Dictionary ── */
 "style.title" = "Language Style";

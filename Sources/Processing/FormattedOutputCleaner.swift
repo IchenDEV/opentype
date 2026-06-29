@@ -3,7 +3,7 @@ import Foundation
 enum FormattedOutputCleaner {
     static func clean(_ text: String) -> String {
         let cleaned = removeScaffolding(from: text)
-        let lines = promoteStructuredBreaks(in: cleaned)
+        let lines = cleaned
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
             .components(separatedBy: "\n")
@@ -33,22 +33,22 @@ private extension FormattedOutputCleaner {
     static func removeScaffolding(from text: String) -> String {
         let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if let markedSection = finalTextSection(in: result) {
-            return markedSection
+            return stripWrappingCodeFence(from: markedSection)
         }
 
-        return removeLeadingLabel(from: explanationStrippedSection(result))
+        let section = removeLeadingLabel(from: explanationStrippedSection(result))
+        return stripWrappingCodeFence(from: section)
     }
 
     static func finalTextSection(in text: String) -> String? {
         let lines = text.components(separatedBy: .newlines)
         for (index, line) in lines.enumerated() {
             guard let remainder = finalTextHeadingRemainder(in: line) else { continue }
+            guard !hasMeaningfulContent(Array(lines.prefix(index))) else { continue }
 
-            var section: [String] = []
-            if !remainder.isEmpty {
-                section.append(remainder)
-            }
-            section.append(contentsOf: lines.dropFirst(index + 1))
+            let following = Array(lines.dropFirst(index + 1))
+            let section = remainder.isEmpty ? following : [remainder] + following
+            guard remainder.isEmpty || hasTrailingExplanationScaffolding(section) else { continue }
             return trimSection(explanationStrippedLines(section))
         }
         return nil
@@ -61,15 +61,21 @@ private extension FormattedOutputCleaner {
     static func explanationStrippedLines(_ lines: [String]) -> [String] {
         var result: [String] = []
         for (index, line) in lines.enumerated() {
-            if isExplanationHeading(line) {
+            if hasMeaningfulContent(result), isExplanationHeading(line) {
                 break
             }
-            if isRule(line), nextMeaningfulLine(after: index, in: lines).map(isExplanationHeading) == true {
+            if hasMeaningfulContent(result),
+               isRule(line),
+               nextMeaningfulLine(after: index, in: lines).map(isExplanationHeading) == true {
                 break
             }
             result.append(line)
         }
         return result
+    }
+
+    static func hasMeaningfulContent(_ lines: [String]) -> Bool {
+        lines.contains { !isRule($0) && !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 
     static func nextMeaningfulLine(after index: Int, in lines: [String]) -> String? {
@@ -81,35 +87,80 @@ private extension FormattedOutputCleaner {
         return nil
     }
 
+    static func hasTrailingExplanationScaffolding(_ lines: [String]) -> Bool {
+        for (index, line) in lines.enumerated() {
+            guard hasMeaningfulContent(Array(lines.prefix(index))) else { continue }
+            if isExplanationHeading(line) {
+                return true
+            }
+            if isRule(line),
+               nextMeaningfulLine(after: index, in: lines).map(isExplanationHeading) == true {
+                return true
+            }
+        }
+        return false
+    }
+
     static func removeLeadingLabel(from text: String) -> String {
-        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = result.components(separatedBy: .newlines)
+        guard let firstIndex = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            return result
+        }
+        guard isStandaloneLeadingLabel(lines[firstIndex]) else { return result }
+        return trimSection(Array(lines.dropFirst(firstIndex + 1)))
+    }
+
+    static func isStandaloneLeadingLabel(_ line: String) -> Bool {
+        let heading = normalizedHeading(line)
+        if finalTextHeadingRemainder(in: heading) == "" {
+            return true
+        }
+
         let scaffoldingPatterns = [
-            "^(整理后文本|整理后|最终文本|润色后|输出结果)[：:]\\s*",
-            "^(Final text|Rewritten text|Output)[:：]\\s*",
+            "^(整理后文本|整理后|最终文本|润色后|输出结果)[：:]$",
+            "^(以下是|下面是)(?:整理后|润色后|最终|改写后|处理后)?(?:的)?(?:文本|结果|内容)[：:]$",
+            "^(Final text|Rewritten text|Output)[:：]$",
+            "^(Here(?: is|'s) (?:the )?(?:final |rewritten |polished |edited )?(?:text|version|output|result))[:：]$",
+            "^(以下|こちら)(?:が|は)?(?:整えた|修正した|最終|書き換え後)?(?:テキスト|文章|結果)[：:]$",
+            "^(다음은|아래는)\\s*(?:정리된|수정된|최종)?\\s*(?:텍스트|문장|결과|출력)(?:입니다)?[:：]$",
         ]
 
-        for pattern in scaffoldingPatterns {
-            result = result.replacingOccurrences(
-                of: pattern,
-                with: "",
-                options: [.regularExpression, .caseInsensitive]
-            )
+        return scaffoldingPatterns.contains { pattern in
+            heading.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
         }
-        return result
     }
 
     static func finalTextHeadingRemainder(in line: String) -> String? {
         headingRemainder(
             in: line,
-            markers: ["整理后文本", "整理后", "最终文本", "润色后", "输出结果", "Final text", "Rewritten text", "Output"]
+            markers: finalTextMarkers
         )
     }
 
     static func isExplanationHeading(_ line: String) -> Bool {
         headingRemainder(
             in: line,
-            markers: ["说明", "解释", "处理说明", "纠错说明", "纠错与同音词修正", "Reasoning", "Explanation", "Notes"]
+            markers: explanationMarkers
         ) != nil
+    }
+
+    static var finalTextMarkers: [String] {
+        [
+            "整理后文本", "整理后", "最终文本", "润色后", "输出结果",
+            "Final text", "Rewritten text", "Output",
+            "最終テキスト", "出力", "書き換え後", "修正後",
+            "최종 텍스트", "출력", "수정된 텍스트", "정리된 텍스트",
+        ]
+    }
+
+    static var explanationMarkers: [String] {
+        [
+            "说明", "解释", "处理说明", "纠错说明", "纠错与同音词修正",
+            "Reasoning", "Explanation", "Notes",
+            "説明", "理由", "注釈", "補足", "解説",
+            "설명", "이유", "비고", "메모", "처리 설명", "수정 설명",
+        ]
     }
 
     static func headingRemainder(in line: String, markers: [String]) -> String? {
@@ -159,31 +210,29 @@ private extension FormattedOutputCleaner {
         return trimmed.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    static func stripWrappingCodeFence(from text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = trimmed.components(separatedBy: .newlines)
+        guard lines.count >= 2,
+              isOpeningCodeFence(lines[0]),
+              isClosingCodeFence(lines[lines.count - 1]) else {
+            return trimmed
+        }
+
+        return trimSection(Array(lines.dropFirst().dropLast()))
+    }
+
+    static func isOpeningCodeFence(_ line: String) -> Bool {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed == "```" || trimmed.range(of: #"^```[A-Za-z0-9_-]+$"#, options: .regularExpression) != nil
+    }
+
+    static func isClosingCodeFence(_ line: String) -> Bool {
+        line.trimmingCharacters(in: .whitespacesAndNewlines) == "```"
+    }
+
     static func isRule(_ line: String) -> Bool {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed == "---" || trimmed == "***" || trimmed == "___"
-    }
-
-    static func promoteStructuredBreaks(in text: String) -> String {
-        guard !text.contains("\n"), text.count >= 48 else { return text }
-
-        let chineseMarkers = ["首先", "其次", "再次", "然后", "最后", "另外", "还有", "第一", "第二", "第三", "第四", "第五"]
-        let englishMarkers = ["First", "Second", "Third", "Fourth", "Finally", "Next"]
-        let markerCount = chineseMarkers.reduce(0) { $0 + text.components(separatedBy: $1).count - 1 }
-            + englishMarkers.reduce(0) { $0 + text.components(separatedBy: $1).count - 1 }
-
-        guard markerCount >= 2 else { return text }
-
-        var result = text
-        let patterns = [
-            "(?<!^)(?=(首先|其次|再次|然后|最后|另外|还有|第一|第二|第三|第四|第五))",
-            "(?<!^)(?=(First\\b|Second\\b|Third\\b|Fourth\\b|Finally\\b|Next\\b))",
-        ]
-
-        for pattern in patterns {
-            result = result.replacingOccurrences(of: pattern, with: "\n", options: .regularExpression)
-        }
-
-        return result
     }
 }

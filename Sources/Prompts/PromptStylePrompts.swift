@@ -5,23 +5,46 @@ enum PromptStylePrompts {
         guard !stylePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
-        return inputLanguage == .chinese
-            ? "自定义风格：\(stylePrompt)"
-            : "Custom style: \(stylePrompt)"
+        switch inputLanguage {
+        case .auto, .chinese, .cantonese:
+            return "自定义风格：\(stylePrompt)"
+        case .english:
+            return "Custom style: \(stylePrompt)"
+        case .japanese:
+            return "カスタムスタイル：\(stylePrompt)"
+        case .korean:
+            return "사용자 지정 스타일: \(stylePrompt)"
+        }
     }
 
     static func section(style: LanguageStyle, inputLanguage: InputLanguage) -> String {
         switch (inputLanguage, style) {
-        case (.auto, .casual), (.chinese, .casual), (.cantonese, .casual):
+        case (.auto, .casual):
+            return "风格：自动语言、自然直接。先判断原文主要语言并保持；保留自然混排。主动修正明显误识别、同音词、断句和语序小问题，但不要过度书面化，也不要无故翻译。"
+        case (.chinese, .casual):
             return "风格：自然、直接。保留口语感，但仍要主动修正明显错别字、同音词、断句和语序小问题；不要把明显识别错误原样留下，也不要过度书面化。"
-        case (.auto, .professional), (.chinese, .professional), (.cantonese, .professional):
+        case (.cantonese, .casual):
+            return "风格：自然粤语、直接。保留粤语口语感和必要语气词，主动修正明显粤语误识别、断句和专有名词；不要默认改成普通话书面中文。"
+        case (.auto, .professional):
+            return "风格：自动语言专业整理。先判断原文主要语言和混排方式，再做纠错和表达整理。保持原语言；中文、英文、日文、韩文、粤语和中英日韩混排都要自然。只有原文明显是步骤、清单或待办时，才输出 1. 2. 3.。"
+        case (.chinese, .professional):
             return "风格：专业整理。先做纠错，再整理表达。对明显同音错字、近音错字、漏字、多字、专有名词大小写和中英混排要更主动；把口语碎片改成完整、自然的书面句子。语义完整、结构清楚；只有原文明显是步骤、清单或待办时，才输出 1. 2. 3.。"
+        case (.cantonese, .professional):
+            return "风格：粤语专业整理。先做粤语误识别纠错，再整理表达。保留自然粤语书面表达、必要语气词和中英混排；对专有名词、技术词和英文大小写要更主动。只有原文明显是步骤、清单或待办时，才输出 1. 2. 3.。"
         case (.auto, .custom), (.chinese, .custom), (.cantonese, .custom):
             return ""
-        case (.english, .professional), (.japanese, .professional), (.korean, .professional):
+        case (.english, .professional):
             return "Style: professional cleanup. Correct first, then rewrite. Be more active with obvious homophones, ASR substitutions, missing words, extra words, proper nouns, capitalization, and mixed-language terms. Turn spoken fragments into complete natural written sentences. Keep the meaning complete and the structure crisp. Use 1. 2. 3. only when the raw text is clearly a list, steps, or action items."
-        case (.english, .casual), (.japanese, .casual), (.korean, .casual):
+        case (.english, .casual):
             return "Style: natural and direct. Keep an easy spoken tone, but still actively fix obvious typos, homophones, sentence breaks, and small wording mistakes. Do not leave clear ASR errors in place."
+        case (.japanese, .professional):
+            return "スタイル：専門的に整理。先に誤認識を直し、その後で表現を整える。固有名詞、英字表記、抜けた語、余分な語、言い直しを積極的に補正し、自然で明確な日本語にする。原文が明らかに手順、リスト、TODO の場合だけ 1. 2. 3. を使う。"
+        case (.japanese, .casual):
+            return "スタイル：自然で直接的。話し言葉の軽さは残しつつ、明らかな誤認識、同音語、句読点、文の区切りは積極的に直す。"
+        case (.korean, .professional):
+            return "스타일: 전문적으로 정리. 먼저 오인식을 바로잡고 그다음 표현을 다듬는다. 고유명사, 영문 표기, 빠진 단어, 불필요한 단어, 말 바꿈을 적극적으로 보정해 자연스럽고 명확한 한국어로 만든다. 원문이 명확히 단계, 목록, 할 일일 때만 1. 2. 3.을 사용한다."
+        case (.korean, .casual):
+            return "스타일: 자연스럽고 직접적으로. 말의 편안함은 유지하되 명백한 오인식, 동음이의어, 문장 부호, 문장 경계는 적극적으로 바로잡는다."
         case (.english, .custom), (.japanese, .custom), (.korean, .custom):
             return ""
         }
@@ -29,7 +52,22 @@ enum PromptStylePrompts {
 
     static func fewShotSection(style: LanguageStyle, inputLanguage: InputLanguage) -> String {
         switch (inputLanguage, style) {
-        case (.auto, .professional), (.chinese, .professional), (.cantonese, .professional):
+        case (.auto, .professional):
+            return """
+            自动语言专业整理补充示例：
+            原文：um we're meeting Thursday sorry Friday afternoon
+            Output: We're meeting Friday afternoon.
+
+            原文：えっと木曜じゃなくて金曜の午後に会議
+            出力：金曜の午後に会議します。
+
+            原文：啱啱講錯咗唔係星期四係星期五下晝開會
+            输出：啱啱講錯咗，唔係星期四，係星期五下晝開會。
+
+            原文：把 open type 的 hot key 文案改一下不要影响菜单蓝
+            输出：把 OpenType 的 hotkey 文案改一下，不要影响菜单栏。
+            """
+        case (.chinese, .professional):
             return """
             专业整理补充示例：
             原文：今天有三件事第一把需求对齐第二把排期确认第三把预算更新一下
@@ -54,7 +92,23 @@ enum PromptStylePrompts {
             原文：这次发版先看登录留成有没有问题再看数据库前一有没有慢查询
             输出：这次发版先看登录流程有没有问题，再看数据库迁移有没有慢查询。
             """
-        case (.english, .professional), (.japanese, .professional), (.korean, .professional):
+        case (.cantonese, .professional):
+            return """
+            粤语专业整理补充示例：
+            原文：啱啱講錯咗唔係星期四係星期五下晝開會
+            输出：啱啱講錯咗，唔係星期四，係星期五下晝開會。
+
+            原文：第一先對需求第二 confirm 個時間第三 update budget
+            输出：
+            1. 先對需求。
+            2. Confirm 個時間。
+            3. Update budget。
+
+            粤语强纠错示例：
+            原文：幫我將 open type 個 hot key 文案改一改唔好影響 menu bar
+            输出：幫我將 OpenType 個 hotkey 文案改一改，唔好影響 menu bar。
+            """
+        case (.english, .professional):
             return """
             Professional cleanup examples:
             Raw: there are three things today first align the requirements second confirm the schedule third update the budget
@@ -78,6 +132,32 @@ enum PromptStylePrompts {
 
             Raw: check the log in floor before release and then check whether the database migration has slow queries
             Output: Check the login flow before release, then check whether the database migration has slow queries.
+            """
+        case (.japanese, .professional):
+            return """
+            専門整理の補足例：
+            原文：今日やることは第一に仕様確認第二に日程調整第三に予算更新
+            出力：
+            1. 仕様を確認する。
+            2. 日程を調整する。
+            3. 予算を更新する。
+
+            強い誤認識補正の例：
+            原文：オープンタイプのホットキー文言を直してメニューバーに影響しないように
+            出力：OpenType の hotkey 文言を直して、メニューバーに影響しないようにする。
+            """
+        case (.korean, .professional):
+            return """
+            전문 정리 보충 예시:
+            원문：오늘 할 일은 첫째 요구사항 확인 둘째 일정 조율 셋째 예산 업데이트
+            출력：
+            1. 요구사항을 확인한다.
+            2. 일정을 조율한다.
+            3. 예산을 업데이트한다.
+
+            강한 오인식 보정 예시:
+            원문：오픈 타입 핫키 문구를 고치고 메뉴 바에는 영향 없게 해줘
+            출력：OpenType hotkey 문구를 고치고, 메뉴 바에는 영향이 없게 해줘.
             """
         case (.auto, .casual), (.chinese, .casual), (.cantonese, .casual),
              (.auto, .custom), (.chinese, .custom), (.cantonese, .custom),

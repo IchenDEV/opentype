@@ -37,200 +37,22 @@ final class PromptAndProcessingTests: XCTestCase {
         try body()
     }
 
-    func testBuildUserPromptUsesLanguageSpecificWrappers() {
-        XCTAssertEqual(PromptBuilder.buildUserPrompt(
-            text: "嗯 今天开会",
-            inputLanguage: .chinese
-        ), "以下是语音识别原文。请先在内部判断错别字、同音词、误识别词、漏字、多字和专有名词，再直接输出整理后的最终文本：\n<<<\n嗯 今天开会\n>>>")
-        XCTAssertEqual(PromptBuilder.buildUserPrompt(
-            text: "um hello",
-            inputLanguage: .english
-        ), "Raw ASR transcript. Internally check typos, homophones, ASR substitutions, missing words, extra words, and proper nouns, then output only the final rewritten text:\n<<<\num hello\n>>>")
-        XCTAssertEqual(PromptBuilder.buildUserPrompt(
-            text: "こんにちは",
-            inputLanguage: .japanese
-        ), "Raw ASR transcript. Internally check typos, homophones, ASR substitutions, missing words, extra words, and proper nouns, then output only the final rewritten text:\n<<<\nこんにちは\n>>>")
-    }
-
-    func testSystemPromptIncludesChineseStyleScreenAndMemoryContext() {
-        withCleanSettings {
-            let prompt = PromptBuilder.buildSystemPrompt(
-                style: .professional,
-                stylePrompt: "更正式",
-                screenContext: "OpenType 设置",
-                memoryContext: "刚才提到了快捷键",
-                inputLanguage: .chinese
-            )
-
-            XCTAssertTrue(prompt.contains("力度要高于轻度润色"))
-            XCTAssertTrue(prompt.contains("风格：专业整理"))
-            XCTAssertTrue(prompt.contains("同音错字、近音错字、漏字、多字"))
-            XCTAssertTrue(prompt.contains("普通说明、状态同步和判断句不要强行改成编号列表"))
-            XCTAssertTrue(prompt.contains("只有原文明显是步骤、清单或待办时，才输出 1. 2. 3."))
-            XCTAssertTrue(prompt.contains("专业整理补充示例："))
-            XCTAssertTrue(prompt.contains("原文：今天主要是把登录问题修掉然后回归一遍没问题的话明天发版"))
-            XCTAssertTrue(prompt.contains("专业整理强纠错示例："))
-            XCTAssertTrue(prompt.contains("输出：把 OpenType 的 hotkey 文案改一下，不要影响菜单栏。"))
-            XCTAssertTrue(prompt.contains("屏幕文字，仅供纠错和专有名词参考"))
-            XCTAssertTrue(prompt.contains("OpenType 设置"))
-            XCTAssertTrue(prompt.contains("最近输入，仅供语境和专有名词参考"))
-            XCTAssertTrue(prompt.contains("刚才提到了快捷键"))
-            XCTAssertTrue(prompt.contains("原文：嗯那个我们周四，不对，周五下午开会"))
-        }
-    }
-
-    func testSystemPromptIncludesEnglishStyleScreenAndMemoryContext() {
-        withCleanSettings {
-            let prompt = PromptBuilder.buildSystemPrompt(
-                style: .professional,
-                stylePrompt: "professional",
-                screenContext: "Meeting notes",
-                memoryContext: "previous dictation",
-                inputLanguage: .english
-            )
-
-            XCTAssertTrue(prompt.contains("Do not lightly polish raw ASR"))
-            XCTAssertTrue(prompt.contains("Style: professional cleanup"))
-            XCTAssertTrue(prompt.contains("homophones, ASR substitutions, missing words, extra words"))
-            XCTAssertTrue(prompt.contains("do not force normal explanations or status updates into numbered lists"))
-            XCTAssertTrue(prompt.contains("Use 1. 2. 3. only when the raw text is clearly a list"))
-            XCTAssertTrue(prompt.contains("Professional cleanup examples:"))
-            XCTAssertTrue(prompt.contains("Raw: today the main thing is fixing the login issue and then running regression"))
-            XCTAssertTrue(prompt.contains("Strong correction examples:"))
-            XCTAssertTrue(prompt.contains("Output: Update the OpenType hotkey copy, and do not affect the menu bar."))
-            XCTAssertTrue(prompt.contains("On-screen text for correction and proper nouns only"))
-            XCTAssertTrue(prompt.contains("Meeting notes"))
-            XCTAssertTrue(prompt.contains("Recent input for context and proper nouns only"))
-            XCTAssertTrue(prompt.contains("previous dictation"))
-            XCTAssertTrue(prompt.contains("Raw: um we're meeting Thursday, sorry, Friday afternoon"))
-        }
-    }
-
-    func testSystemPromptIncludesScreenImageContextOnlyWhenAvailable() {
-        withCleanSettings {
-            let withoutImage = PromptBuilder.buildSystemPrompt(
-                style: .professional,
-                stylePrompt: "",
-                inputLanguage: .chinese
-            )
-            XCTAssertFalse(withoutImage.contains("屏幕截图已随本次请求提供"))
-
-            let chinese = PromptBuilder.buildSystemPrompt(
-                style: .professional,
-                stylePrompt: "",
-                screenImageAvailable: true,
-                inputLanguage: .chinese
-            )
-            XCTAssertTrue(chinese.contains("屏幕截图已随本次请求提供"))
-
-            let english = PromptBuilder.buildSystemPrompt(
-                style: .professional,
-                stylePrompt: "",
-                screenImageAvailable: true,
-                inputLanguage: .english
-            )
-            XCTAssertTrue(english.contains("A screen image is attached to this request"))
-        }
-    }
-
-    func testCasualStylePromptStillRequiresCorrection() {
-        withCleanSettings {
-            let chinese = PromptBuilder.buildSystemPrompt(
-                style: .casual,
-                stylePrompt: "",
-                inputLanguage: .chinese
-            )
-            XCTAssertTrue(chinese.contains("主动修正明显错别字、同音词"))
-            XCTAssertTrue(chinese.contains("不要把明显识别错误原样留下"))
-            XCTAssertFalse(chinese.contains("专业整理补充示例："))
-
-            let english = PromptBuilder.buildSystemPrompt(
-                style: .casual,
-                stylePrompt: "",
-                inputLanguage: .english
-            )
-            XCTAssertTrue(english.contains("actively fix obvious typos, homophones"))
-            XCTAssertTrue(english.contains("Do not leave clear ASR errors in place"))
-            XCTAssertFalse(english.contains("Professional cleanup examples:"))
-        }
-    }
-
-    func testCustomSystemPromptOverridesBaseAndStyleOnly() {
-        withCleanSettings {
-            AppSettings.shared.useCustomSystemPrompt = true
-            AppSettings.shared.customSystemPrompt = "Only normalize names."
-
-            let prompt = PromptBuilder.buildSystemPrompt(
-                style: .professional,
-                stylePrompt: "ignored",
-                screenContext: "visible text",
-                memoryContext: "",
-                inputLanguage: .english
-            )
-
-            XCTAssertTrue(prompt.hasPrefix("Only normalize names."))
-            XCTAssertFalse(prompt.contains("Style: ignored"))
-            XCTAssertTrue(prompt.contains("visible text"))
-        }
-    }
-
-    func testCommandSystemPromptUsesLanguageSpecificRules() {
-        let chinese = PromptBuilder.buildCommandSystemPrompt(
-            screenContext: "邮件正文",
-            memoryContext: "上一句",
-            inputLanguage: .chinese
-        )
-        XCTAssertTrue(chinese.contains("你是一个语音助手"))
-        XCTAssertTrue(chinese.contains("以下是用户当前屏幕上的文字内容"))
-        XCTAssertTrue(chinese.contains("邮件正文"))
-        XCTAssertTrue(chinese.contains("以下是用户最近的输入历史"))
-
-        let english = PromptBuilder.buildCommandSystemPrompt(
-            screenContext: "email body",
-            memoryContext: "",
-            inputLanguage: .english
-        )
-        XCTAssertTrue(english.contains("You are a voice assistant"))
-        XCTAssertTrue(english.contains("Screen content below"))
-        XCTAssertTrue(english.contains("email body"))
-        XCTAssertFalse(english.contains("Recent input history"))
-    }
-
-    func testCommandPromptIncludesScreenImageContextOnlyWhenAvailable() {
-        let withoutImage = PromptBuilder.buildCommandSystemPrompt(
-            screenContext: "",
-            inputLanguage: .chinese
-        )
-        XCTAssertFalse(withoutImage.contains("用户当前屏幕截图已随本次请求提供"))
-
-        let chinese = PromptBuilder.buildCommandSystemPrompt(
-            screenContext: "",
-            screenImageAvailable: true,
-            inputLanguage: .chinese
-        )
-        XCTAssertTrue(chinese.contains("用户当前屏幕截图已随本次请求提供"))
-
-        let english = PromptBuilder.buildCommandSystemPrompt(
-            screenContext: "",
-            screenImageAvailable: true,
-            inputLanguage: .english
-        )
-        XCTAssertTrue(english.contains("current screen image is attached"))
-    }
-
     func testPersonalDictionaryReplacementsAndRules() {
         withCleanSettings {
             let dictionary = PersonalDictionary.shared
             dictionary.entries = [
                 DictionaryEntry(original: "open type", replacement: "OpenType", enabled: true),
+                DictionaryEntry(original: "blank replacement", replacement: "", enabled: true),
                 DictionaryEntry(original: "skip me", replacement: "wrong", enabled: false),
             ]
             dictionary.editRules = [
-                EditRule(description: "Keep product names exact.", enabled: true),
+                EditRule(description: " Keep product names exact. ", enabled: true),
+                EditRule(description: "   ", enabled: true),
                 EditRule(description: "Disabled rule.", enabled: false),
             ]
 
             XCTAssertEqual(dictionary.applyReplacements(to: "open type should not skip me"), "OpenType should not skip me")
+            XCTAssertEqual(dictionary.activeEntriesDescription(), "open type -> OpenType")
             XCTAssertEqual(dictionary.activeRulesDescription(), "Keep product names exact.")
         }
     }
@@ -246,68 +68,135 @@ final class PromptAndProcessingTests: XCTestCase {
         }
     }
 
-    func testFormattedOutputCleanerKeepsOnlyMarkedFinalText() {
-        let llmOutput = """
-        ---
-
-        **整理后文本：**
-
-        接下来，将整个系统的十八 n 语言 Flow 全部重新做了。
-        所有十八 n 文案维护在一个单独的 package 里头，叫 ec at ec 杠 i 幺八 n。
-
-        ---
-
-        **说明：**
-        1. **纠错与同音词修正**：
-        * 原文“十八 n”在上下文中多次出现。
-        """
+    func testBasicCleanDoesNotInterpretSpokenFormattingIntent() {
+        let processor = TextProcessor()
 
         XCTAssertEqual(
-            FormattedOutputCleaner.clean(llmOutput),
-            """
-            接下来，将整个系统的十八 n 语言 Flow 全部重新做了。
-            所有十八 n 文案维护在一个单独的 package 里头，叫 ec at ec 杠 i 幺八 n。
-            """
+            processor.basicClean(
+                text: "open type no space cli comma all caps api key",
+                inputLanguage: .english
+            ),
+            "open type no space cli comma all caps api key"
         )
     }
 
-    func testFormattedOutputCleanerRemovesUnmarkedExplanationSection() {
-        let llmOutput = """
-        接下来，将 i18n 文案迁移到 @ec/i18n。
-
-        说明：
-        这里是解释，不应该进入最终输出。
-        """
+    func testGeneratedOutputFallsBackWhenLLMReturnsOnlyThinking() {
+        let processor = TextProcessor()
 
         XCTAssertEqual(
-            FormattedOutputCleaner.clean(llmOutput),
-            "接下来，将 i18n 文案迁移到 @ec/i18n。"
+            processor.cleanGeneratedOutput(
+                "<think>working through the rewrite</think>",
+                inputLanguage: .english,
+                fallback: "raw transcript"
+            ),
+            "raw transcript"
         )
     }
 
-    func testPreCleanRemovesChineseFillers() {
+    func testGeneratedOutputCanRejectEmptyLLMResultWithoutFallback() {
+        let processor = TextProcessor()
+
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput(
+                "<think>working through the rewrite</think>",
+                inputLanguage: .english
+            ),
+            ""
+        )
+    }
+
+    func testCommandGeneratedOutputDoesNotFallBackToRawVoiceCommand() {
+        let processor = TextProcessor()
+
+        XCTAssertEqual(
+            processor.cleanCommandGeneratedOutput(
+                "<think>deciding what to do</think>",
+                inputLanguage: .english
+            ),
+            ""
+        )
+    }
+
+    func testCommandGeneratedOutputPreservesReplacementPunctuation() {
+        let processor = TextProcessor()
+
+        XCTAssertEqual(
+            processor.cleanCommandGeneratedOutput("  OK!  ", inputLanguage: .english),
+            "OK!"
+        )
+        XCTAssertEqual(
+            processor.cleanCommandGeneratedOutput("真的吗？", inputLanguage: .chinese),
+            "真的吗？"
+        )
+    }
+
+    func testSystemPromptWithPersonalContextUsesDictionaryAndRulesForLLM() {
+        withCleanSettings {
+            PersonalDictionary.shared.entries = [
+                DictionaryEntry(original: "open type", replacement: "OpenType", enabled: true),
+                DictionaryEntry(original: "disabled", replacement: "Disabled", enabled: false),
+            ]
+            PersonalDictionary.shared.editRules = [
+                EditRule(description: "Always keep OpenType capitalized.", enabled: true),
+                EditRule(description: "Ignore disabled rules.", enabled: false),
+            ]
+
+            let processor = TextProcessor()
+            let chinese = processor.systemPromptWithPersonalContext(
+                "基础提示",
+                inputLanguage: .chinese
+            )
+            let english = processor.systemPromptWithPersonalContext(
+                "Base prompt",
+                inputLanguage: .english
+            )
+
+            XCTAssertTrue(chinese.contains("个人词库："))
+            XCTAssertTrue(chinese.contains("open type -> OpenType"))
+            XCTAssertTrue(chinese.contains("额外编辑规则："))
+            XCTAssertTrue(chinese.contains("Always keep OpenType capitalized."))
+            XCTAssertFalse(chinese.contains("Disabled"))
+            XCTAssertFalse(chinese.contains("Ignore disabled rules."))
+            XCTAssertTrue(english.contains("Personal dictionary:"))
+            XCTAssertTrue(english.contains("open type -> OpenType"))
+            XCTAssertTrue(english.contains("Extra edit rules:"))
+            XCTAssertTrue(english.contains("Always keep OpenType capitalized."))
+        }
+    }
+
+    func testPrepareForFormattingKeepsSemanticCleanupForLLM() {
         withCleanSettings {
             let processor = TextProcessor()
-            let cleaned = processor.preCleanForFormatting(
+            let cleaned = processor.prepareForFormatting(
                 text: "嗯 那个 今天下午开会",
                 inputLanguage: .chinese
             )
 
-            XCTAssertEqual(cleaned, "今天下午开会")
+            XCTAssertEqual(cleaned, "嗯 那个 今天下午开会")
         }
     }
 
-    func testPreCleanStructuresOrdinalLists() {
+    func testPrepareForFormattingLeavesListIntentForLLM() {
         withCleanSettings {
             let processor = TextProcessor()
-            let cleaned = processor.preCleanForFormatting(
+            let cleaned = processor.prepareForFormatting(
                 text: "第一先把需求过一下 第二确认时间 第三把预算拉出来",
                 inputLanguage: .chinese
             )
 
-            XCTAssertTrue(cleaned.contains("1. 先把需求过一下"))
-            XCTAssertTrue(cleaned.contains("2. 确认时间"))
-            XCTAssertTrue(cleaned.contains("3. 把预算拉出来"))
+            XCTAssertEqual(cleaned, "第一先把需求过一下 第二确认时间 第三把预算拉出来")
+        }
+    }
+
+    func testPrepareForFormattingLeavesStandaloneDeleteCommandForLLMOrCommandPath() {
+        withCleanSettings {
+            let processor = TextProcessor()
+            let cleaned = processor.prepareForFormatting(
+                text: "delete that",
+                inputLanguage: .english
+            )
+
+            XCTAssertEqual(cleaned, "delete that")
         }
     }
 

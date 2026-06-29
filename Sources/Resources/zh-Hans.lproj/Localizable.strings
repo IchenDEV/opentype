@@ -43,17 +43,21 @@
 "pipeline.formatting" = "整理中…";
 "pipeline.inserting" = "输入中…";
 "pipeline.replacing" = "替换中…";
+"pipeline.undoing" = "撤销中…";
 "pipeline.error_prefix" = "错误: ";
 "pipeline.whisper_unloaded" = "Whisper 已卸载";
 "pipeline.llm_unloaded" = "LLM 已卸载";
 "pipeline.background_formatting" = "已快速插入，后台继续整理…";
 "pipeline.formatted_ready" = "整理版已就绪";
+"pipeline.formatting_failed" = "未生成可替换的整理版";
 "pipeline.replacement_not_ready" = "整理版还没生成完";
 "pipeline.replacement_expired" = "替换窗口已过期，你仍然可以复制整理版。";
 "pipeline.replacement_copied_expired" = "替换窗口已过期，已改为复制整理版。";
 "pipeline.replacement_copied_missing_target" = "找不到原来的目标应用，已改为复制整理版。";
 "pipeline.replacement_copied_app_changed" = "你已经切换到别的应用，已改为复制整理版。";
 "pipeline.replacement_copied_failed" = "无法安全替换，已改为复制整理版。";
+"pipeline.no_previous_insert_to_replace" = "没有可替换的上一段 OpenType 输入";
+"pipeline.no_selected_text_to_replace" = "未找到选中文本";
 "pipeline.preparing_model" = "准备下载语音模型…";
 "pipeline.downloading" = "下载模型";
 "pipeline.compiling" = "编译模型中（首次约需 2-5 分钟）…";
@@ -87,7 +91,7 @@
 "settings.output" = "输出";
 "settings.output_mode" = "输出模式";
 "settings.instant_insert" = "快速插入，后台整理";
-"settings.instant_insert_help" = "仅在智能整理模式生效。先插入本地快速清理后的文本，整理完成后可一键替换。";
+"settings.instant_insert_help" = "仅在智能整理模式生效。先插入规整后的原文草稿，LLM 整理完成后可一键替换。";
 "settings.beta" = "Beta 功能";
 "settings.streaming_beta" = "启用流式语音识别";
 "settings.streaming_beta_help" = "录音时实时显示识别内容，停止后优先使用实时结果，减少等待。该功能仍在测试中，长音频可能略有误差。";
@@ -233,8 +237,8 @@
 
 /* ── Custom System Prompt ── */
 "custom_prompt.title" = "自定义系统提示词";
-"custom_prompt.desc" = "开启后将完全覆盖内置的系统提示词和风格预设，使用你自己编写的提示词来处理语音文本。";
-"custom_prompt.hint" = "提示词将直接作为 LLM 的 System Prompt 使用。屏幕上下文和输入记忆仍会自动附加。";
+"custom_prompt.desc" = "开启后使用你自己的提示词控制语音文本的风格和处理方式，同时保留 OpenType 的最终输出契约。";
+"custom_prompt.hint" = "你的提示词会加入 LLM System Prompt。屏幕上下文、输入记忆和只输出最终文本的约束仍会自动附加。";
 
 /* ── Style & Dictionary ── */
 "style.title" = "语言风格";

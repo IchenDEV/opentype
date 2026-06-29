@@ -48,7 +48,7 @@ extension InputSessionCoordinator {
                 ),
                 client: service.integrationClient(id: clientID)
             )
-            let text = await outputText(for: transcript, active: active)
+            let text = try await outputText(for: transcript, active: active)
             try await service.completeSession(sessionID: sessionID, clientID: clientID, finalText: text)
             guard let completed = try service.session(sessionID, clientID: clientID) else {
                 throw IntegrationError.sessionNotFound

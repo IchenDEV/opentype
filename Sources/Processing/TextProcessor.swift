@@ -2,15 +2,12 @@ import CoreGraphics
 import Foundation
 
 final class TextProcessor {
+    static let defaultAllowsPreparedFallback = false
+
     let llm = LLMEngine()
     let vlm = VLMEngine()
     let remoteLLMClient = RemoteLLMClient()
     private let dictionary = PersonalDictionary.shared
-    struct GenerationOptions {
-        let maxTokens: Int
-        let temperature: Double
-    }
-
     var isLLMReady: Bool {
         get async {
             if AppSettings.shared.useRemoteLLM { return true }
@@ -43,17 +40,15 @@ final class TextProcessor {
         }
     }
 
-    func basicClean(text: String) -> String {
-        var result = text
-        result = dictionary.applyReplacements(to: result)
+    func basicClean(text: String, inputLanguage: InputLanguage = .auto) -> String {
+        var result = dictionary.applyReplacements(to: text)
         result = normalizeWhitespace(result)
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    func preCleanForFormatting(text: String, inputLanguage: InputLanguage) -> String {
-        var result = text
-        result = dictionary.applyReplacements(to: result)
-        result = FormattingHeuristics.preClean(text: result, inputLanguage: inputLanguage)
+    func prepareForFormatting(text: String, inputLanguage: InputLanguage) -> String {
+        var result = dictionary.applyReplacements(to: text)
+        result = FormattingHeuristics.normalizeInput(result)
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
@@ -63,7 +58,9 @@ final class TextProcessor {
         model: String,
         screenContext: String = "",
         screenImage: CGImage? = nil,
-        memoryContext: String = ""
+        memoryContext: String = "",
+        inputContext: InputContext? = nil,
+        allowsPreparedFallback: Bool = TextProcessor.defaultAllowsPreparedFallback
     ) async -> String {
         let settings = AppSettings.shared
         var options = TextProcessingOptions(settings: settings)
@@ -74,7 +71,9 @@ final class TextProcessor {
             options: options,
             screenContext: screenContext,
             screenImage: screenImage,
-            memoryContext: memoryContext
+            memoryContext: memoryContext,
+            inputContext: inputContext,
+            allowsPreparedFallback: allowsPreparedFallback
         )
     }
 
@@ -83,27 +82,28 @@ final class TextProcessor {
         options: TextProcessingOptions,
         screenContext: String = "",
         screenImage: CGImage? = nil,
-        memoryContext: String = ""
+        memoryContext: String = "",
+        inputContext: InputContext? = nil,
+        allowsPreparedFallback: Bool = TextProcessor.defaultAllowsPreparedFallback
     ) async -> String {
-        let preCleanStarted = CFAbsoluteTimeGetCurrent()
-        let cleanedText = preCleanForFormatting(text: text, inputLanguage: options.inputLanguage)
-        let preCleanElapsed = CFAbsoluteTimeGetCurrent() - preCleanStarted
-        Log.info("[TextProcessor] pre-cleaned \(text.count) chars to \(cleanedText.count) chars in \(String(format: "%.2f", preCleanElapsed))s")
+        let prepareStarted = CFAbsoluteTimeGetCurrent()
+        let cleanedText = prepareForFormatting(text: text, inputLanguage: options.inputLanguage)
+        let prepareElapsed = CFAbsoluteTimeGetCurrent() - prepareStarted
+        Log.info("[TextProcessor] prepared LLM input \(text.count) chars to \(cleanedText.count) chars in \(String(format: "%.2f", prepareElapsed))s")
+        guard !cleanedText.isEmpty else { return "" }
 
-        var systemPrompt = PromptBuilder.buildSystemPrompt(
-            style: options.languageStyle,
-            stylePrompt: options.customStylePrompt,
-            screenContext: screenContext,
-            screenImageAvailable: shouldUseScreenImage(options: options, image: screenImage),
-            memoryContext: memoryContext,
+        let systemPrompt = systemPromptWithPersonalContext(
+            PromptBuilder.buildSystemPrompt(
+                style: options.languageStyle,
+                stylePrompt: options.customStylePrompt,
+                screenContext: screenContext,
+                screenImageAvailable: shouldUseScreenImage(options: options, image: screenImage),
+                memoryContext: memoryContext,
+                inputContext: inputContext,
+                inputLanguage: options.inputLanguage
+            ),
             inputLanguage: options.inputLanguage
         )
-
-        let rulesDesc = dictionary.activeRulesDescription()
-        if !rulesDesc.isEmpty {
-            let rulesPrefix = options.inputLanguage == .english ? "Extra edit rules:" : "额外编辑规则："
-            systemPrompt += "\n\n\(rulesPrefix)\n\(rulesDesc)"
-        }
 
         let userPrompt = PromptBuilder.buildUserPrompt(text: cleanedText, inputLanguage: options.inputLanguage)
         let generationOptions = formattingOptions(for: cleanedText, style: options.languageStyle)
@@ -143,12 +143,15 @@ final class TextProcessor {
             let llmElapsed = CFAbsoluteTimeGetCurrent() - llmStarted
             Log.info("[TextProcessor] formatting LLM completed in \(String(format: "%.2f", llmElapsed))s with budget \(generationOptions.maxTokens) tokens")
 
-            result = stripThinkingTags(result)
-            result = dictionary.applyReplacements(to: result)
-            return FormattedOutputCleaner.clean(result)
+            let fallback = allowsPreparedFallback ? cleanedText : ""
+            return cleanGeneratedOutput(result, inputLanguage: options.inputLanguage, fallback: fallback)
         } catch {
-            Log.error("[TextProcessor] LLM failed, falling back to pre-cleaned text: \(error.localizedDescription)")
-            return FormattedOutputCleaner.clean(cleanedText)
+            if allowsPreparedFallback {
+                Log.error("[TextProcessor] LLM failed, falling back to prepared raw text: \(error.localizedDescription)")
+                return FormattedOutputCleaner.clean(cleanedText)
+            }
+            Log.error("[TextProcessor] LLM failed with prepared fallback disabled: \(error.localizedDescription)")
+            return ""
         }
     }
 
@@ -158,7 +161,8 @@ final class TextProcessor {
         model: String,
         screenContext: String,
         screenImage: CGImage? = nil,
-        memoryContext: String = ""
+        memoryContext: String = "",
+        inputContext: InputContext? = nil
     ) async -> String {
         let settings = AppSettings.shared
         var options = TextProcessingOptions(settings: settings)
@@ -168,7 +172,8 @@ final class TextProcessor {
             options: options,
             screenContext: screenContext,
             screenImage: screenImage,
-            memoryContext: memoryContext
+            memoryContext: memoryContext,
+            inputContext: inputContext
         )
     }
 
@@ -177,15 +182,23 @@ final class TextProcessor {
         options: TextProcessingOptions,
         screenContext: String,
         screenImage: CGImage? = nil,
-        memoryContext: String = ""
+        memoryContext: String = "",
+        inputContext: InputContext? = nil
     ) async -> String {
-        let systemPrompt = PromptBuilder.buildCommandSystemPrompt(
-            screenContext: screenContext,
-            screenImageAvailable: shouldUseScreenImage(options: options, image: screenImage),
-            memoryContext: memoryContext,
+        let systemPrompt = systemPromptWithPersonalContext(
+            PromptBuilder.buildCommandSystemPrompt(
+                screenContext: screenContext,
+                screenImageAvailable: shouldUseScreenImage(options: options, image: screenImage),
+                memoryContext: memoryContext,
+                inputContext: inputContext,
+                inputLanguage: options.inputLanguage
+            ),
             inputLanguage: options.inputLanguage
         )
-        let userPrompt = text
+        let userPrompt = PromptBuilder.buildCommandUserPrompt(
+            text: text,
+            inputLanguage: options.inputLanguage
+        )
 
         do {
             var result: String
@@ -219,82 +232,43 @@ final class TextProcessor {
                 )
             }
 
-            result = stripThinkingTags(result)
-            result = dictionary.applyReplacements(to: result)
-            return FormattedOutputCleaner.clean(result)
+            return cleanCommandGeneratedOutput(result, inputLanguage: options.inputLanguage)
         } catch {
-            Log.error("[TextProcessor] Command LLM failed, falling back to basicClean: \(error.localizedDescription)")
-            return basicClean(text: text)
+            Log.error("[TextProcessor] Command LLM failed: \(error.localizedDescription)")
+            return ""
         }
     }
 
-    private static let thinkTagNames = [
-        "think", "thinking", "thought",
-        "reason", "reasoning",
-        "reflect", "reflection",
-        "inner_monologue", "scratchpad",
-    ]
+    func cleanGeneratedOutput(_ text: String, inputLanguage: InputLanguage, fallback: String = "") -> String {
+        var result = stripThinkingTags(text)
+        result = dictionary.applyReplacements(to: result)
+        result = FormattedOutputCleaner.clean(result)
+        if result.isEmpty { return FormattedOutputCleaner.clean(fallback) }
+        return result
+    }
 
-    private static let thinkTagPattern: String = {
-        let names = thinkTagNames.joined(separator: "|")
-        return "<(?:\(names))>"
-    }()
+    func cleanCommandGeneratedOutput(_ text: String, inputLanguage: InputLanguage) -> String {
+        cleanGeneratedOutput(text, inputLanguage: inputLanguage)
+    }
 
-    private func stripThinkingTags(_ text: String) -> String {
-        var result = text
-        for tag in Self.thinkTagNames {
-            // Closed pair: <tag>…</tag>
-            result = result.replacingOccurrences(
-                of: "<\(tag)>[\\s\\S]*?</\(tag)>",
-                with: "",
-                options: .regularExpression
-            )
-        }
-        // Unclosed opening tag → strip from tag to end
-        result = result.replacingOccurrences(
-            of: "\(Self.thinkTagPattern)[\\s\\S]*$",
-            with: "",
-            options: .regularExpression
-        )
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    func systemPromptWithPersonalContext(_ systemPrompt: String, inputLanguage: InputLanguage) -> String {
+        let extraSections = [
+            PromptCatalog.activePersonalDictionarySection(
+                dictionary.activeEntriesDescription(),
+                inputLanguage: inputLanguage
+            ),
+            PromptCatalog.activeEditRulesSection(
+                dictionary.activeRulesDescription(),
+                inputLanguage: inputLanguage
+            ),
+        ].compactMap { $0 }
+
+        guard !extraSections.isEmpty else { return systemPrompt }
+        return ([systemPrompt] + extraSections).joined(separator: "\n\n")
     }
 
     private func normalizeWhitespace(_ text: String) -> String {
         FormattingHeuristics.normalizeInput(text)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     }
-
-    func formattingOptions(for text: String, style: LanguageStyle) -> GenerationOptions {
-        let characterCount = text.trimmingCharacters(in: .whitespacesAndNewlines).count
-
-        let maxTokens: Int
-        switch (style, characterCount) {
-        case (.professional, 0...80), (.custom, 0...80):
-            maxTokens = 224
-        case (.professional, 81...220), (.custom, 81...220):
-            maxTokens = 384
-        case (.professional, _), (.custom, _):
-            maxTokens = 640
-        case (.casual, 0...80):
-            maxTokens = 160
-        case (.casual, 81...220):
-            maxTokens = 256
-        case (.casual, _):
-            maxTokens = 384
-        }
-
-        let temperature: Double
-        switch style {
-        case .casual:
-            temperature = 0.08
-        case .professional, .custom:
-            temperature = 0.10
-        }
-
-        return GenerationOptions(
-            maxTokens: maxTokens,
-            temperature: temperature
-        )
-    }
-
 }

@@ -57,7 +57,10 @@ final class InputSessionCoordinator {
         if effective.streamingEnabled, engine.supportsStreaming {
             engine.startListening(language: effective.languageCode) { [weak service] partialText in
                 Task { @MainActor in
-                    let preview = TranscriptionSanitizer.previewText(partialText)
+                    let preview = TranscriptionSanitizer.previewText(
+                        partialText,
+                        inputLanguage: effective.inputLanguage
+                    )
                     guard !preview.isEmpty else { return }
                     try? service?.emitTranscriptPartial(
                         sessionID: sessionID,
@@ -173,7 +176,7 @@ final class InputSessionCoordinator {
             text: transcript
         )
 
-        let text = await outputText(for: transcript, active: active)
+        let text = try await outputText(for: transcript, active: active)
         return (transcript, text)
     }
 

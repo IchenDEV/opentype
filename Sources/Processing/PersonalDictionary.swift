@@ -40,10 +40,23 @@ final class PersonalDictionary: ObservableObject {
         return result
     }
 
+    func activeEntriesDescription() -> String {
+        entries
+            .filter(\.enabled)
+            .compactMap { entry -> String? in
+                let original = entry.original.trimmingCharacters(in: .whitespacesAndNewlines)
+                let replacement = entry.replacement.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !original.isEmpty, !replacement.isEmpty else { return nil }
+                return "\(original) -> \(replacement)"
+            }
+            .joined(separator: "\n")
+    }
+
     func activeRulesDescription() -> String {
         editRules
             .filter(\.enabled)
-            .map(\.description)
+            .map { $0.description.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
             .joined(separator: "\n")
     }
 

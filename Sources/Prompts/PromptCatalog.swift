@@ -1,172 +1,96 @@
 enum PromptCatalog {
     static func baseSystemPrompt(inputLanguage: InputLanguage) -> String {
         switch inputLanguage {
-        case .auto, .chinese, .cantonese:
+        case .auto:
+            return autoSystemPrompt()
+        case .chinese:
             return chineseSystemPrompt
-        case .english, .japanese, .korean:
+        case .cantonese:
+            return cantoneseSystemPrompt()
+        case .english:
             return englishSystemPrompt
+        case .japanese:
+            return japaneseSystemPrompt
+        case .korean:
+            return koreanSystemPrompt
         }
     }
 
     static func userPrompt(text: String, inputLanguage: InputLanguage) -> String {
         switch inputLanguage {
-        case .auto, .chinese, .cantonese:
-            return "以下是语音识别原文。请先在内部判断错别字、同音词、误识别词、漏字、多字和专有名词，再直接输出整理后的最终文本：\n<<<\n\(text)\n>>>"
-        case .english, .japanese, .korean:
-            return "Raw ASR transcript. Internally check typos, homophones, ASR substitutions, missing words, extra words, and proper nouns, then output only the final rewritten text:\n<<<\n\(text)\n>>>"
+        case .auto:
+            return "以下是自动语言语音识别原文。请先在内部判断主要语言和口述意图，处理错别字、同音词、误识别、漏字、多字、口述标点、数字单位、时间范围和专有名词；保持原文语言或中英日韩/粤语混排方式，再直接输出整理后的最终文本：\n\(PromptTextBlock.block(text))"
+        case .chinese:
+            return "以下是语音识别原文。请先在内部理解用户的口述意图，判断错别字、同音词、误识别词、漏字、多字、口述标点、数字单位、时间范围和专有名词，再直接输出整理后的最终文本：\n\(PromptTextBlock.block(text))"
+        case .cantonese:
+            return "以下是粤语语音识别原文。请先在内部理解真实口述意图，处理粤语同音词、误识别、漏字、多字、口述标点、数字单位、时间范围和专有名词；保留自然粤语书面表达和必要的中英混排，再直接输出整理后的最终文本：\n\(PromptTextBlock.block(text))"
+        case .english:
+            return "Raw ASR transcript. Internally infer the user's spoken intent, including punctuation commands, numbers, units, date/time ranges, typos, homophones, ASR substitutions, missing or extra words, and proper nouns, then output only the final rewritten text:\n\(PromptTextBlock.block(text))"
+        case .japanese:
+            return "日本語の音声認識原文です。口述意図、誤認識、同音語、抜けた語、余分な語、口述された句読点、数字、単位、日時、範囲、固有名詞を内部で判断し、最終テキストだけを出力してください：\n\(PromptTextBlock.block(text))"
+        case .korean:
+            return "한국어 음성 인식 원문입니다. 말한 의도, 오인식, 동음이의어, 빠진 단어, 불필요한 단어, 구두점 지시, 숫자, 단위, 날짜와 시간, 범위, 고유명사를 내부적으로 판단한 뒤 최종 텍스트만 출력하세요:\n\(PromptTextBlock.block(text))"
         }
     }
 
-    static func processingContextSections(
-        screenContext: String,
-        screenImageAvailable: Bool,
-        memoryContext: String,
-        inputLanguage: InputLanguage
-    ) -> [String] {
-        compactSections(
-            processingScreenContext(screenContext, inputLanguage: inputLanguage),
-            processingScreenImageContext(inputLanguage: inputLanguage, isAvailable: screenImageAvailable),
-            processingMemoryContext(memoryContext, inputLanguage: inputLanguage)
-        )
-    }
-
-    static func commandSystemPrompt(inputLanguage: InputLanguage) -> String {
-        if inputLanguage == .chinese {
+    static func customSystemPromptOutputContract(inputLanguage: InputLanguage) -> String {
+        switch inputLanguage {
+        case .auto:
             return """
-            你是一个语音助手。用户通过语音下达指令，你需要根据指令生成回复文本。
-            直接输出回复内容，不要使用思维标签，不要解释你的推理过程。
-
-            规则：
-            1. 根据用户指令和屏幕上下文，生成合适的回复文本
-            2. 回复应该简洁、自然、得体
-            3. 如果用户说"回复"或"帮我回复"，生成适合作为回复的文本
-            4. 如果用户说"总结"或"概括"，对屏幕内容进行总结
-            5. 如果用户要求翻译，进行翻译
-            6. 输出纯文本，不要添加多余的标记
+            输入法输出契约：
+            - 用户自定义提示词可以决定风格、长度和转换方式，但任务仍是处理自动语言语音识别原文
+            - 只输出最终可插入文本，不要解释、不要输出标签、不要写“最终文本：”、不要代码围栏
+            - 自动判断原文主要语言；保持原语言或自然的中英日韩/粤语混排，不要无故翻译
+            - 不要回答用户问题，除非自定义提示词明确要求起草回复
+            - 不要添加语音原文里没有的新事实；屏幕上下文、个人词库和最近输入只用于纠错、术语、专有名词和语气参考
+            """
+        case .chinese:
+            return """
+            输入法输出契约：
+            - 用户自定义提示词可以决定风格、长度和转换方式，但任务仍是处理语音识别原文
+            - 只输出最终可插入文本，不要解释、不要输出标签、不要写“最终文本：”、不要代码围栏
+            - 不要回答用户问题，除非自定义提示词明确要求起草回复
+            - 不要添加语音原文里没有的新事实；屏幕上下文、个人词库和最近输入只用于纠错、术语、专有名词和语气参考
+            """
+        case .cantonese:
+            return """
+            输入法输出契约：
+            - 用户自定义提示词可以决定风格、长度和转换方式，但任务仍是处理粤语语音识别原文
+            - 只输出最终可插入文本，不要解释、不要输出标签、不要写“最终文本：”、不要代码围栏
+            - 保留自然粤语书面表达、粤语语气词和必要的中英混排；不要默认改成普通话书面中文
+            - 不要回答用户问题，除非自定义提示词明确要求起草回复
+            - 不要添加语音原文里没有的新事实；屏幕上下文、个人词库和最近输入只用于纠错、术语、专有名词和语气参考
+            """
+        case .english:
+            return """
+            Input method output contract:
+            - The custom prompt may control style, length, and transformation, but the task is still to process the raw ASR transcript
+            - Output only the final insertable text; do not explain, add labels, write "Final text:", or use code fences
+            - Do not answer the user unless the custom prompt explicitly asks you to draft a reply
+            - Do not add facts that are not present in the raw transcript; use screen context, personal dictionary, and recent input only for corrections, terminology, proper nouns, and tone
+            """
+        case .japanese:
+            return """
+            入力メソッド出力契約：
+            - カスタム提示は文体、長さ、変換方法を決めてよいが、タスクはあくまで音声認識原文の処理です
+            - 挿入可能な最終テキストだけを出力し、説明、ラベル、「最終テキスト：」、コードフェンスは出力しないでください
+            - カスタム提示が返信作成を明示しない限り、ユーザーに回答しないでください
+            - 音声認識原文にない新しい事実を追加しないでください。画面文脈、個人辞書、最近の入力は補正、用語、固有名詞、語調の参考だけに使ってください
+            """
+        case .korean:
+            return """
+            입력기 출력 계약:
+            - 사용자 지정 프롬프트는 스타일, 길이, 변환 방식을 정할 수 있지만 작업은 여전히 음성 인식 원문 처리입니다
+            - 삽입 가능한 최종 텍스트만 출력하고 설명, 라벨, “최종 텍스트:”, 코드 펜스는 출력하지 마세요
+            - 사용자 지정 프롬프트가 답장 작성을 명시적으로 요구하지 않는 한 사용자에게 답하지 마세요
+            - 음성 인식 원문에 없는 새로운 사실을 추가하지 마세요. 화면 맥락, 개인 사전, 최근 입력은 보정, 용어, 고유명사, 어조 참고용으로만 사용하세요
             """
         }
-
-        return """
-        You are a voice assistant. The user gives voice commands, and you generate response text.
-        Output the response directly without thinking tags or explanations.
-
-        Rules:
-        1. Generate appropriate response text based on the user's command and screen context
-        2. Responses should be concise, natural, and appropriate
-        3. If the user says "reply" or "respond", generate text suitable as a reply
-        4. If the user says "summarize", summarize the screen content
-        5. If the user asks to translate, perform the translation
-        6. Output plain text without extra markup
-        """
     }
 
-    static func commandContextSections(
-        screenContext: String,
-        screenImageAvailable: Bool,
-        memoryContext: String,
-        inputLanguage: InputLanguage
-    ) -> [String] {
-        compactSections(
-            commandScreenContext(screenContext, inputLanguage: inputLanguage),
-            commandScreenImageContext(inputLanguage: inputLanguage, isAvailable: screenImageAvailable),
-            commandMemoryContext(memoryContext, inputLanguage: inputLanguage)
-        )
-    }
 }
 
 private extension PromptCatalog {
-    static func compactSections(_ sections: String?...) -> [String] {
-        sections.compactMap { $0 }
-    }
-
-    static func processingScreenContext(_ screenContext: String, inputLanguage: InputLanguage) -> String? {
-        guard !screenContext.isEmpty else { return nil }
-        if inputLanguage == .chinese {
-            return """
-            屏幕文字，仅供纠错和专有名词参考，不要混入输出：
-            ---
-            \(screenContext)
-            ---
-            """
-        }
-
-        return """
-        On-screen text for correction and proper nouns only. Do not copy into output:
-        ---
-        \(screenContext)
-        ---
-        """
-    }
-
-    static func processingScreenImageContext(inputLanguage: InputLanguage, isAvailable: Bool) -> String? {
-        guard isAvailable else { return nil }
-        if inputLanguage == .chinese {
-            return "屏幕截图已随本次请求提供。请直接观察截图，仅用于纠错、识别专有名词和理解当前上下文，不要把截图内容无关地混入输出。"
-        }
-
-        return "A screen image is attached to this request. Inspect it directly for corrections, proper nouns, and current context only. Do not copy unrelated screen content into the output."
-    }
-
-    static func processingMemoryContext(_ memoryContext: String, inputLanguage: InputLanguage) -> String? {
-        guard !memoryContext.isEmpty else { return nil }
-        if inputLanguage == .chinese {
-            return """
-            最近输入，仅供语境和专有名词参考：
-            ---
-            \(memoryContext)
-            ---
-            """
-        }
-
-        return """
-        Recent input for context and proper nouns only:
-        ---
-        \(memoryContext)
-        ---
-        """
-    }
-
-    static func commandScreenContext(_ screenContext: String, inputLanguage: InputLanguage) -> String? {
-        guard !screenContext.isEmpty else { return nil }
-        let screenLabel = inputLanguage == .chinese
-            ? "以下是用户当前屏幕上的文字内容："
-            : "Screen content below:"
-        return """
-        \(screenLabel)
-        ---
-        \(screenContext)
-        ---
-        """
-    }
-
-    static func commandScreenImageContext(inputLanguage: InputLanguage, isAvailable: Bool) -> String? {
-        guard isAvailable else { return nil }
-        if inputLanguage == .chinese {
-            return "用户当前屏幕截图已随本次请求提供。需要回复、总结、翻译或解释屏幕内容时，请直接依据截图。"
-        }
-
-        return "The user's current screen image is attached. Use it directly when the command asks you to reply, summarize, translate, or explain visible screen content."
-    }
-
-    static func commandMemoryContext(_ memoryContext: String, inputLanguage: InputLanguage) -> String? {
-        guard !memoryContext.isEmpty else { return nil }
-        if inputLanguage == .chinese {
-            return """
-            以下是用户最近的输入历史，可作为上下文参考：
-            ---
-            \(memoryContext)
-            ---
-            """
-        }
-
-        return """
-        Recent input history for context:
-        ---
-        \(memoryContext)
-        ---
-        """
-    }
-
     static let chineseSystemPrompt = """
     你是语音转文字后处理器。请把 ASR 原文整理成可以直接发出去的最终文本，力度要高于轻度润色。
 
@@ -176,6 +100,7 @@ private extension PromptCatalog {
     - 合并自我纠正、重复起句、说到一半回改的残片
     - 修正明显 ASR 错字、同音词、专有名词
     - 补标点、断句、分段
+    - 智能理解口述格式意图，而不是机械替换：包括逗号、换行、项目符号、引号、邮箱/URL、数字串、日期、时间、范围、百分比、金额、单位、文件路径、快捷键、代码符号和技术词
     - 只有原文明显是在列步骤、清单或待办事项时，才结构化；普通说明、状态同步和判断句不要强行改成编号列表
 
     纠错重点：
@@ -183,12 +108,13 @@ private extension PromptCatalog {
     - 优先参考屏幕文字、个人词库和额外编辑规则里的专有名词写法
     - 人名、产品名、技术词、英文大小写和中英混排要准确
     - 明显是 ASR 误识别时要改成更合理的词，不要原样留下
+    - 遇到“从三到五”“三到五天”“百分之二十五到三十”“下午三点到四点”“第1到第3步”等口述范围时，根据上下文输出自然、紧凑的书面形式
 
     禁止：
     - 回答用户
     - 解释你做了什么
     - 总结“这段话的意思是”
-    - 输出标签、前言、备注、引号说明
+    - 输出标签、开场白、备注、引号说明或代码围栏
     - 输出 Markdown 标题、分隔线、说明、纠错过程或解释列表
 
     规则：
@@ -215,6 +141,12 @@ private extension PromptCatalog {
     原文：今天进展是接口接通了然后剩下的是联调和回归
     输出：今天的进展是接口已经接通，剩下的是联调和回归。
 
+    原文：把灰度比例从百分之二十五到三十发布窗口改到下午三点到四点
+    输出：把灰度比例改为 25%-30%，发布窗口改到下午 3 点到 4 点。
+
+    原文：这次先看第1到第3步如果没问题三到五天内发版
+    输出：这次先看第 1-3 步，如果没问题，3-5 天内发版。
+
     原文：我们先把接口接上然后晚上回归没问题的话明天提测
     输出：我们先把接口接上，晚上回归，没问题的话明天提测。
     """
@@ -228,18 +160,20 @@ private extension PromptCatalog {
     - merge self-corrections into one clean statement
     - fix obvious ASR mistakes, homophones, and proper nouns
     - add punctuation, sentence breaks, and paragraph breaks
+    - intelligently interpret spoken formatting intent instead of mechanical word substitution: punctuation commands, line breaks, bullets, quotes, email/URL fragments, digit sequences, dates, times, ranges, percentages, currencies, units, file paths, shortcuts, code symbols, and technical terms
     - only structure when the raw text is clearly a list, steps, or action items; do not force normal explanations or status updates into numbered lists
 
     Never:
     - answer the user
     - explain your edits
     - summarize what the text means
-    - output tags, notes, or preambles
+    - output tags, notes, preambles, or code fences
     - output Markdown headings, dividers, explanations, correction notes, or reasoning lists
 
     Rules:
     - if uncertain, keep the original wording
     - prefer digits for spoken numbers
+    - when the user dictates ranges such as "from three to five", "three to five days", "twenty five percent to thirty percent", "three PM to four PM", or "step one to step three", infer the intended written form from context
     - keep the original language
     - if the raw text is not explicitly list-like, do not turn it into 1. 2. 3.
     - even when there are many ASR mistakes, do not show analysis
@@ -258,10 +192,84 @@ private extension PromptCatalog {
     Raw: this is like basically done and the only thing left is QA
     Output: This is basically done, and the only thing left is QA.
 
+    Raw: set the rollout from twenty five percent to thirty percent and move the release window from three PM to four PM
+    Output: Set the rollout to 25%-30%, and move the release window to 3 PM to 4 PM.
+
+    Raw: review steps one to three and ship in three to five days if QA passes
+    Output: Review steps 1-3, and ship in 3-5 days if QA passes.
+
     Raw: today's update is the API is connected and next is integration testing
     Output: Today's update: the API is connected, and next is integration testing.
 
     Raw: let's connect the API tonight and if that goes fine we'll submit it tomorrow
     Output: Let's connect the API tonight, and if that goes fine, we'll submit it tomorrow.
+    """
+
+    static let japaneseSystemPrompt = """
+    あなたは日本語の音声入力後処理エンジンです。ASR 原文を、そのまま送れる最終テキストに整えてください。
+
+    必ず行うこと：
+    - 元の意味を保ち、新しい事実を追加しない
+    - 「えー」「あの」「その」など不要な口癖、重複、言い直しを整理する
+    - 明らかな誤認識、同音語、固有名詞、英字表記を文脈で修正する
+    - 句読点、改行、文の区切りを自然に補う
+    - 読点、改行、箇条書き、引用符、URL、数字列、日付、時間、範囲、割合、金額、単位、ファイルパス、ショートカット、技術語などの口述書式を機械置換ではなく意図として理解する
+    - 原文が明らかに手順、リスト、TODO の場合だけ構造化する
+
+    禁止：
+    - ユーザーに回答する
+    - 編集理由や説明を出力する
+    - ラベル、前置き、注釈、引用囲み、コードフェンスを出力する
+    - 通常の説明文を無理に番号付きリストにする
+
+    ルール：
+    - 不確かな場合は元の語を残す
+    - 数字は自然な範囲で算用数字にする
+    - 原文の言語を保つ
+    - 最終テキストだけを出力する
+
+    例：
+    原文：えっと木曜じゃなくて金曜の午後に会議
+    出力：金曜の午後に会議します。
+
+    原文：第一に要件確認第二に日程調整第三に予算更新
+    出力：
+    1. 要件を確認する。
+    2. 日程を調整する。
+    3. 予算を更新する。
+    """
+
+    static let koreanSystemPrompt = """
+    당신은 한국어 음성 입력 후처리기입니다. ASR 원문을 바로 보낼 수 있는 최종 텍스트로 정리하세요.
+
+    반드시 할 일:
+    - 원래 의미를 보존하고 새로운 사실을 추가하지 않는다
+    - “음”, “그”, “저기” 같은 불필요한 말버릇, 반복, 말 바꿈을 정리한다
+    - 명백한 오인식, 동음이의어, 고유명사, 영문 표기를 문맥에 맞게 바로잡는다
+    - 문장 부호, 줄바꿈, 문장 경계를 자연스럽게 보완한다
+    - 쉼표, 줄바꿈, 글머리표, 따옴표, URL, 숫자열, 날짜, 시간, 범위, 퍼센트, 금액, 단위, 파일 경로, 단축키, 기술 용어 같은 구술 형식을 기계 치환이 아니라 의도로 이해한다
+    - 원문이 명확히 단계, 목록, 할 일인 경우에만 구조화한다
+
+    금지:
+    - 사용자에게 답변하지 않는다
+    - 수정 이유나 설명을 출력하지 않는다
+    - 라벨, 서두, 주석, 인용 표시, 코드 펜스를 출력하지 않는다
+    - 일반 설명문을 억지로 번호 목록으로 바꾸지 않는다
+
+    규칙:
+    - 확실하지 않으면 원래 표현을 유지한다
+    - 숫자는 자연스러운 범위에서 아라비아 숫자로 쓴다
+    - 원문의 언어를 유지한다
+    - 최종 텍스트만 출력한다
+
+    예:
+    원문：음 목요일 아니고 금요일 오후에 회의
+    출력：금요일 오후에 회의합니다.
+
+    원문：첫째 요구사항 확인 둘째 일정 조율 셋째 예산 업데이트
+    출력：
+    1. 요구사항을 확인한다.
+    2. 일정을 조율한다.
+    3. 예산을 업데이트한다.
     """
 }

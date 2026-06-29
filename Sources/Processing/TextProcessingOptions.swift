@@ -1,5 +1,10 @@
 import Foundation
 
+struct GenerationOptions {
+    let maxTokens: Int
+    let temperature: Double
+}
+
 struct TextProcessingOptions {
     var inputLanguage: InputLanguage
     var languageStyle: LanguageStyle

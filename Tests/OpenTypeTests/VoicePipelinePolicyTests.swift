@@ -84,6 +84,54 @@ final class VoicePipelinePolicyTests: XCTestCase {
         XCTAssertFalse(VoicePipelinePolicy.shouldCaptureScreenContext(outputMode: .direct, useScreenContext: true))
     }
 
+    func testVoiceEditCommandResolutionUsesLLMFirstOnlyForCommandMode() {
+        XCTAssertFalse(VoicePipelinePolicy.shouldResolveEditCommandWithLLMFirst(outputMode: .direct))
+        XCTAssertFalse(VoicePipelinePolicy.shouldResolveEditCommandWithLLMFirst(outputMode: .processed))
+        XCTAssertTrue(VoicePipelinePolicy.shouldResolveEditCommandWithLLMFirst(outputMode: .command))
+    }
+
+    func testVoiceEditCommandPolicyDoesNotUseLocalParserFallback() {
+        XCTAssertEqual(
+            VoicePipelinePolicy.editCommand(from: .command(.deleteSelection)),
+            .deleteSelection
+        )
+        XCTAssertEqual(
+            VoicePipelinePolicy.editCommand(from: .command(.rewriteLast(.formal))),
+            .rewriteLast(.formal)
+        )
+        XCTAssertNil(VoicePipelinePolicy.editCommand(from: SpokenEditCommandLLMResolution.none))
+        XCTAssertNil(VoicePipelinePolicy.editCommand(from: nil))
+    }
+
+    func testNonCommandModesDoNotLetLocalParserStealEditPhrases() async {
+        let settings = AppSettings.shared
+        let savedOutputMode = settings.outputMode
+        let savedInputLanguage = settings.inputLanguage
+        defer {
+            settings.outputMode = savedOutputMode
+            settings.inputLanguage = savedInputLanguage
+        }
+
+        let pipeline = VoicePipeline(appState: AppState())
+        settings.inputLanguage = .english
+
+        settings.outputMode = .direct
+        let directCommand = await pipeline.resolvedSpokenEditCommand(
+            raw: "delete selection",
+            settings: settings,
+            targetApp: nil
+        )
+        XCTAssertNil(directCommand)
+
+        settings.outputMode = .processed
+        let processedCommand = await pipeline.resolvedSpokenEditCommand(
+            raw: "delete selection",
+            settings: settings,
+            targetApp: nil
+        )
+        XCTAssertNil(processedCommand)
+    }
+
     func testTranscriptionSanitizerRejectsEmptyAndPunctuation() {
         XCTAssertNil(TranscriptionSanitizer.prepare(""))
         XCTAssertNil(TranscriptionSanitizer.prepare("   "))
@@ -92,21 +140,24 @@ final class VoicePipelinePolicyTests: XCTestCase {
         XCTAssertNil(TranscriptionSanitizer.prepare("  -- ,, "))
     }
 
-    func testTranscriptionSanitizerRejectsLowContentWhenAudioEvidenceIsWeak() {
+    func testTranscriptionSanitizerPreservesShortUtterancesWhenAudioEvidenceIsWeak() {
         let weakActivity = audioActivity(rms: 0.002)
 
-        XCTAssertNil(TranscriptionSanitizer.prepare("嗯", audioActivity: weakActivity))
-        XCTAssertNil(TranscriptionSanitizer.prepare("Um.", audioActivity: weakActivity))
-        XCTAssertNil(TranscriptionSanitizer.prepare(" OK ", audioActivity: weakActivity))
-        XCTAssertEqual(TranscriptionSanitizer.prepare("OK", audioActivity: audioActivity(rms: 0.03)), "OK")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("嗯", audioActivity: weakActivity), "嗯")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("Um.", audioActivity: weakActivity), "Um.")
+        XCTAssertEqual(TranscriptionSanitizer.prepare(" OK ", audioActivity: weakActivity), "OK")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("yes", audioActivity: weakActivity), "yes")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("no", audioActivity: weakActivity), "no")
     }
 
-    func testTranscriptionSanitizerRejectsCommonArtifacts() {
-        XCTAssertNil(TranscriptionSanitizer.prepare("字幕志愿者:某某某"))
-        XCTAssertNil(TranscriptionSanitizer.prepare("请不吝点赞订阅转发打赏"))
-        XCTAssertNil(TranscriptionSanitizer.prepare("Thanks for watching!"))
-        XCTAssertNil(TranscriptionSanitizer.prepare("Please subscribe to my channel"))
-        XCTAssertNil(TranscriptionSanitizer.prepare("I'm sorry, I can't assist with that request."))
+    func testTranscriptionSanitizerDoesNotUsePhraseListsForWeakAudio() {
+        let weakActivity = audioActivity(rms: 0.002)
+
+        XCTAssertEqual(TranscriptionSanitizer.prepare("字幕志愿者:某某某", audioActivity: weakActivity), "字幕志愿者:某某某")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("请不吝点赞订阅转发打赏", audioActivity: weakActivity), "请不吝点赞订阅转发打赏")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("Thanks for watching!", audioActivity: weakActivity), "Thanks for watching!")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("Please subscribe to my channel", audioActivity: weakActivity), "Please subscribe to my channel")
+        XCTAssertEqual(TranscriptionSanitizer.prepare("I'm sorry, I can't assist with that request.", audioActivity: weakActivity), "I'm sorry, I can't assist with that request.")
     }
 
     func testTranscriptionSanitizerAcceptsRealSpeech() {
@@ -128,11 +179,60 @@ final class VoicePipelinePolicyTests: XCTestCase {
         XCTAssertEqual(TranscriptionSanitizer.prepare("yes yes"), "yes yes")
     }
 
+    func testTranscriptionPreviewKeepsSemanticCleanupForLLM() {
+        XCTAssertEqual(
+            TranscriptionSanitizer.previewText(
+                "  open type no space cli comma all caps api key  ",
+                inputLanguage: .english
+            ),
+            "open type no space cli comma all caps api key"
+        )
+        XCTAssertEqual(
+            TranscriptionSanitizer.previewText(
+                "项目符号 修登录 项目符号 跑回归",
+                inputLanguage: .chinese
+            ),
+            "项目符号 修登录 项目符号 跑回归"
+        )
+    }
+
+    func testTranscriptionPreviewHidesPunctuationOnlyArtifacts() {
+        XCTAssertEqual(
+            TranscriptionSanitizer.previewText("...", inputLanguage: .english),
+            ""
+        )
+        XCTAssertEqual(
+            TranscriptionSanitizer.previewText("。。。", inputLanguage: .chinese),
+            ""
+        )
+    }
+
     func testDeferredReplacementOnlyAppliesToSmartFormat() {
         XCTAssertTrue(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .processed, enableInstantInsert: true))
         XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .processed, enableInstantInsert: false))
         XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .direct, enableInstantInsert: true))
         XCTAssertFalse(DeferredReplacementPolicy.shouldUseDeferredReplacement(outputMode: .command, enableInstantInsert: true))
+    }
+
+    func testDeferredReplacementFailedStateIsNotReplaceable() {
+        var replacement = DeferredReplacement(
+            rawText: "raw",
+            insertedText: "quick",
+            targetApp: nil,
+            message: "formatting",
+            createdAt: Date(timeIntervalSince1970: 100),
+            expirationInterval: 15
+        )
+        replacement.state = .failed
+
+        XCTAssertEqual(
+            DeferredReplacementPolicy.decision(
+                for: replacement,
+                currentBundleIdentifier: nil,
+                now: Date(timeIntervalSince1970: 105)
+            ),
+            .copy(.notReady)
+        )
     }
 
     func testDeferredReplacementDecisionRequiresSameFrontmostApp() throws {
