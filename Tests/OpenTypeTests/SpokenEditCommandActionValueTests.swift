@@ -118,4 +118,19 @@ final class SpokenEditCommandActionValueTests: XCTestCase {
             .replaceLast("ship tomorrow")
         )
     }
+
+    func testDecodesActionParameterTargetContainers() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"name":"rewrite","parameters":{"target":{"kind":"selection"}}},"intent":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"operation":"replace","args":{"scope":{"entity":"lastInsertion"}}},"intent":null,"replacement":"ship tomorrow","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
 }

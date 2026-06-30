@@ -45,6 +45,9 @@ private extension LLMActionValue {
         "targetText", "target_text",
         "editTarget", "edit_target",
     ]
+    static let targetContainerKeys = [
+        "parameters", "params", "arguments", "args", "input",
+    ]
     static let booleanTargetFlagKeys = [
         "selection", "selected", "selectedText", "selected_text",
         "currentSelection", "current_selection",
@@ -133,6 +136,7 @@ private extension LLMActionValue {
                 || booleanActionFlagKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
                 || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
                 || (allowsTargetFields && targetObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame })
+                || (allowsTargetFields && targetContainerKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame })
                 || (allowsTargetFields && booleanTargetFlagKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame })
         }
     }
@@ -150,6 +154,12 @@ private extension LLMActionValue {
                 continue
             }
             return key
+        }
+        for key in targetContainerKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !value.isEmpty else { continue }
+            return value
         }
         return ""
     }
