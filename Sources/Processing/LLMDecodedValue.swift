@@ -29,6 +29,9 @@ private extension LLMTextValue {
     static let singleValueObjectKeys = [
         "text", "value", "instruction", "intent", "preset", "task", "replacement", "name", "type",
     ]
+    static let metadataObjectKeys = [
+        "confidence", "score", "probability", "reason", "rationale", "note", "notes", "kind", "type",
+    ]
 
     static func describe(array: [LLMTextValue]) -> String {
         array
@@ -45,6 +48,9 @@ private extension LLMTextValue {
            !value.isEmpty {
             return value
         }
+        if let semanticValue = singleSemanticValue(in: object) {
+            return semanticValue
+        }
 
         return object.keys.sorted().compactMap { key in
             let value = object[key]?.text.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -52,6 +58,25 @@ private extension LLMTextValue {
             return "\(key): \(value)"
         }
         .joined(separator: "; ")
+    }
+
+    static func singleSemanticValue(in object: [String: LLMTextValue]) -> String? {
+        for key in singleValueObjectKeys where key != "type" {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !value.isEmpty else { continue }
+
+            let hasOnlyMetadataBesidesValue = object.allSatisfy { objectKey, objectValue in
+                let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                return candidate.isEmpty
+                    || objectKey.localizedCaseInsensitiveCompare(key) == .orderedSame
+                    || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+            }
+            if hasOnlyMetadataBesidesValue {
+                return value
+            }
+        }
+        return nil
     }
 }
 

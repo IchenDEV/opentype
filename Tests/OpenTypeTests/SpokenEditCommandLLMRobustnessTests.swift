@@ -26,6 +26,30 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesPresetIntentWithMetadataAsPreset() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":{"preset":"summary","reason":"best fitting edit preset"},"replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":{"type":"preset","value":"meeting_notes"},"replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.meetingNotes)
+        )
+    }
+
+    func testDecodesCustomInstructionObjectWithMetadata() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":{"type":"custom","instruction":"make this warmer for a customer","reason":"contains extra tone"},"replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.custom("make this warmer for a customer"))
+        )
+    }
+
     func testDecodesCaseInsensitiveTopLevelResolutionFields() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(
