@@ -134,6 +134,21 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesTopLevelActionAliases() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"command":"rewrite_selection","intent":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"operation":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testDecodesStructuredIntentDetailsAsCustomInstruction() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(
