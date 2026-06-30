@@ -142,9 +142,10 @@ final class StreamingPreviewAccumulator {
             return next
         }
 
-        let overlap = largestOverlapCount(existing: current, incoming: next)
-        if overlap > 0 {
-            return current + next.dropFirst(overlap)
+        if let fuzzyOverlap = punctuationTolerantOverlap(existing: current, incoming: next) {
+            let remainder = String(next.dropFirst(fuzzyOverlap))
+            let prefix = removeTentativeTrailingPunctuation(from: current, before: remainder)
+            return prefix + remainder
         }
 
         return join(current, next)
@@ -157,21 +158,53 @@ final class StreamingPreviewAccumulator {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func largestOverlapCount(existing: String, incoming: String) -> Int {
-        let maxOverlap = min(existing.count, incoming.count)
-        guard maxOverlap >= minimumMeaningfulOverlap else { return 0 }
+    private static func punctuationTolerantOverlap(existing: String, incoming: String) -> Int? {
+        let existingUnits = canonicalOverlapUnits(existing)
+        let incomingUnits = canonicalOverlapUnits(incoming)
+        let maxOverlap = min(existingUnits.count, incomingUnits.count)
+        guard maxOverlap >= minimumMeaningfulOverlap else { return nil }
 
         for count in stride(from: maxOverlap, through: minimumMeaningfulOverlap, by: -1) {
-            if existing.suffix(count) == incoming.prefix(count) {
-                return count
+            let existingSuffix = existingUnits.suffix(count).map(\.value)
+            let incomingPrefix = incomingUnits.prefix(count).map(\.value)
+            if existingSuffix == incomingPrefix {
+                return incomingUnits[count - 1].endOffset
             }
         }
 
-        return 0
+        return nil
+    }
+
+    private static func canonicalOverlapUnits(_ text: String) -> [(value: String, endOffset: Int)] {
+        var units: [(value: String, endOffset: Int)] = []
+        var offset = 0
+        for character in text {
+            offset += 1
+            guard character.isOverlapSignificant else { continue }
+            units.append((String(character).lowercased(), offset))
+        }
+        return units
     }
 
     private static func commonPrefixCount(_ lhs: String, _ rhs: String) -> Int {
         zip(lhs, rhs).prefix { $0 == $1 }.count
+    }
+
+    private static func removeTentativeTrailingPunctuation(from current: String, before remainder: String) -> String {
+        guard let nextMeaningful = remainder.first(where: { !$0.isWhitespace }),
+              nextMeaningful.isOverlapSignificant else {
+            return current
+        }
+
+        var result = current
+        while result.last?.isWhitespace == true {
+            result.removeLast()
+        }
+        if result.last?.isTentativeContinuationPunctuation == true {
+            result.removeLast()
+            return result
+        }
+        return current
     }
 
     private static func join(_ lhs: String, _ rhs: String) -> String {
@@ -179,7 +212,7 @@ final class StreamingPreviewAccumulator {
             return lhs + rhs
         }
 
-        if lhsLast.isLetterOrNumberLike && rhsFirst.isLetterOrNumberLike {
+        if lhsLast.needsSpace(before: rhsFirst) {
             return lhs + " " + rhs
         }
 
@@ -188,7 +221,36 @@ final class StreamingPreviewAccumulator {
 }
 
 private extension Character {
+    var isOverlapSignificant: Bool {
+        !isWhitespace && !unicodeScalars.allSatisfy(CharacterSet.punctuationCharacters.contains)
+    }
+
     var isLetterOrNumberLike: Bool {
         unicodeScalars.allSatisfy(CharacterSet.alphanumerics.contains)
+    }
+
+    var isCJK: Bool {
+        unicodeScalars.contains { scalar in
+            switch scalar.value {
+            case 0x3400...0x9FFF, 0xF900...0xFAFF, 0x20000...0x2EBEF:
+                return true
+            default:
+                return false
+            }
+        }
+    }
+
+    var isTentativeContinuationPunctuation: Bool {
+        ".。!！?？,，、;；:：".contains(self)
+    }
+
+    func needsSpace(before next: Character) -> Bool {
+        if isCJK || next.isCJK {
+            return false
+        }
+        if isLetterOrNumberLike && next.isLetterOrNumberLike {
+            return true
+        }
+        return isTentativeContinuationPunctuation && next.isLetterOrNumberLike
     }
 }

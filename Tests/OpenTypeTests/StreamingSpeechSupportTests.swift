@@ -38,6 +38,27 @@ final class StreamingSpeechSupportTests: XCTestCase {
         XCTAssertEqual(accumulator.merge("streaming"), "open type streaming")
     }
 
+    func testPreviewAccumulatorMergesAcrossTentativePunctuation() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("Ship the release notes."), "Ship the release notes.")
+        XCTAssertEqual(accumulator.merge("release notes today."), "Ship the release notes today.")
+    }
+
+    func testPreviewAccumulatorAddsSpaceAfterSentencePunctuationWithoutOverlap() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("Ship today."), "Ship today.")
+        XCTAssertEqual(accumulator.merge("Confirm QA."), "Ship today. Confirm QA.")
+    }
+
+    func testPreviewAccumulatorConcatenatesCJKWithoutArtificialSpace() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("今天下午"), "今天下午")
+        XCTAssertEqual(accumulator.merge("同步发布"), "今天下午同步发布")
+    }
+
     func testTranscriptResolverUsesRecordedAudioWhenAvailable() async throws {
         let metrics = StreamingSessionMetrics(
             receivedBufferCount: 4,
