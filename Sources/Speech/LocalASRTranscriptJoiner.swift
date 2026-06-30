@@ -26,6 +26,9 @@ private extension LocalASRTranscriptJoiner {
         if isNumericJoin(previous: previous, next: next) {
             return true
         }
+        if isConnectorJoin(previous: previous, next: next) {
+            return true
+        }
         if isClosingPunctuation(first, after: previous) || isOpeningPunctuation(last, in: previous) {
             return true
         }
@@ -69,7 +72,34 @@ private extension LocalASRTranscriptJoiner {
         return false
     }
 
+    static func isConnectorJoin(previous: String, next: String) -> Bool {
+        guard let last = previous.unicodeScalars.last,
+              let first = next.unicodeScalars.first else {
+            return false
+        }
+        if isConnectorSymbol(first), canAttachConnector(first, after: last, previous: previous) {
+            return true
+        }
+        if isConnectorSymbol(last), canAttachAfterConnector(first) {
+            return true
+        }
+        if isDomainSeparator(first),
+           CharacterSet.alphanumerics.contains(last),
+           hasConnectorContext(previous) {
+            return true
+        }
+        if isDomainSeparator(last),
+           CharacterSet.alphanumerics.contains(first),
+           hasConnectorContext(String(previous.dropLast())) {
+            return true
+        }
+        return false
+    }
+
     static func isClosingPunctuation(_ scalar: Unicode.Scalar, after previous: String) -> Bool {
+        if isConnectorSymbol(scalar) {
+            return false
+        }
         if isQuote(scalar) {
             return hasUnclosedQuote(scalar, in: previous)
         }
@@ -119,6 +149,43 @@ private extension LocalASRTranscriptJoiner {
 
     static func isDegreeSymbol(_ scalar: Unicode.Scalar) -> Bool {
         scalar == "°"
+    }
+
+    static func isConnectorSymbol(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet(charactersIn: "@#/\\_+=").contains(scalar)
+    }
+
+    static func canAttachConnector(
+        _ connector: Unicode.Scalar,
+        after scalar: Unicode.Scalar,
+        previous: String
+    ) -> Bool {
+        if connector == "#", currentTokenLength(in: previous) > 1 {
+            return false
+        }
+        return CharacterSet.alphanumerics.contains(scalar)
+            || isConnectorSymbol(scalar)
+            || scalar == "."
+            || scalar == ":"
+    }
+
+    static func canAttachAfterConnector(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet.alphanumerics.contains(scalar)
+            || isConnectorSymbol(scalar)
+            || scalar == "."
+            || scalar == ":"
+    }
+
+    static func isDomainSeparator(_ scalar: Unicode.Scalar) -> Bool {
+        scalar == "."
+    }
+
+    static func hasConnectorContext(_ text: String) -> Bool {
+        text.unicodeScalars.contains(where: isConnectorSymbol)
+    }
+
+    static func currentTokenLength(in text: String) -> Int {
+        text.split(whereSeparator: \.isWhitespace).last?.unicodeScalars.count ?? 0
     }
 
     static func isCurrencySymbol(_ scalar: Unicode.Scalar) -> Bool {

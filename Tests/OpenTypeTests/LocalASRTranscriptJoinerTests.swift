@@ -24,6 +24,28 @@ final class LocalASRTranscriptJoinerTests: XCTestCase {
         )
     }
 
+    func testJoinsEmailAndMentionTokensWithoutSpaces() throws {
+        let output = """
+        {"tokens":[{"token":"Send"},{"token":"to"},{"token":"support"},{"token":"@"},{"token":"example"},{"token":"."},{"token":"com"},{"token":"and"},{"token":"tag"},{"token":"#"},{"token":"release"},{"token":"."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Send to support@example.com and tag #release."
+        )
+    }
+
+    func testJoinsURLPathAndShortcutTokensWithoutSpaces() throws {
+        let output = """
+        {"tokens":[{"token":"Open"},{"token":"https"},{"token":":"},{"token":"/"},{"token":"/"},{"token":"github"},{"token":"."},{"token":"com"},{"token":"/"},{"token":"IchenDEV"},{"token":"/"},{"token":"opentype"},{"token":"with"},{"token":"Command"},{"token":"+"},{"token":"Shift"},{"token":"+"},{"token":"P"},{"token":"."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Open https://github.com/IchenDEV/opentype with Command+Shift+P."
+        )
+    }
+
     func testKeepsSentencePunctuationSpacingAfterNumericJoinRules() throws {
         let output = """
         {"tokens":[{"token":"Ship"},{"token":"."},{"token":"Then"},{"token":"confirm"},{"token":"QA"},{"token":"."}]}
