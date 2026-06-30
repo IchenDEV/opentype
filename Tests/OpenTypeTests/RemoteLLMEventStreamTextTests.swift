@@ -58,6 +58,51 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIResponsesEventStreamTextDeltas() throws {
+        let response = #"""
+        event: response.output_text.delta
+        data: {"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"content_index":0,"delta":"{\"final_text\":\"Ship "}
+
+        event: response.output_text.delta
+        data: {"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"content_index":0,"delta":"the release notes today.\"}"}
+
+        event: response.completed
+        data: {"type":"response.completed","response":{"id":"resp_1"}}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
+    func testParsesOpenAIResponsesFunctionArgumentDeltas() throws {
+        let response = #"""
+        data: {"type":"response.function_call_arguments.delta","item_id":"fc_1","output_index":0,"delta":"{\"action\":\"replace_last\",\"intent\":null,"}
+
+        data: {"type":"response.function_call_arguments.delta","item_id":"fc_1","output_index":0,"delta":"\"replacement\":\"ship tomorrow\",\"confidence\":0.91}"}
+
+        data: {"type":"response.function_call_arguments.done","item_id":"fc_1","output_index":0,"arguments":"{\"action\":\"replace_last\",\"intent\":null,\"replacement\":\"ship tomorrow\",\"confidence\":0.91}"}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
+    func testParsesOpenAIResponsesCompletedOutputItem() throws {
+        let response = #"""
+        data: {"type":"response.output_item.done","output_index":0,"item":{"type":"function_call","arguments":"{\"final_text\":\"Ship the release notes today.\"}"}}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
     func testParsesAnthropicEventStreamTextDeltas() throws {
         let response = #"""
         event: message_start

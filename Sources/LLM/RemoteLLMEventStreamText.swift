@@ -6,6 +6,9 @@ enum RemoteLLMEventStreamText {
               text.localizedCaseInsensitiveContains("data:") else {
             return nil
         }
+        if let text = RemoteLLMResponsesEventStreamText.text(from: text) {
+            return text
+        }
 
         var contentParts: [String] = []
         var toolArguments: [Int: String] = [:]
