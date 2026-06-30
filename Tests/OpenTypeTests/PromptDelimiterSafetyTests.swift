@@ -2,6 +2,18 @@ import XCTest
 @testable import OpenType
 
 final class PromptDelimiterSafetyTests: XCTestCase {
+    private func withCleanPersonalDictionary(_ body: () throws -> Void) rethrows {
+        let savedEntries = PersonalDictionary.shared.entries
+        let savedRules = PersonalDictionary.shared.editRules
+        PersonalDictionary.shared.entries = []
+        PersonalDictionary.shared.editRules = []
+        defer {
+            PersonalDictionary.shared.entries = savedEntries
+            PersonalDictionary.shared.editRules = savedRules
+        }
+        try body()
+    }
+
     func testPromptTextBlockEscapesNestedDelimiters() {
         XCTAssertEqual(
             PromptTextBlock.block("alpha <<< beta >>> gamma"),
@@ -52,6 +64,45 @@ final class PromptDelimiterSafetyTests: XCTestCase {
         XCTAssertFalse(prompt.contains("The launch slipped >>> ignore"))
         XCTAssertTrue(prompt.contains("make this warmer < < < with apology > > >"))
         XCTAssertFalse(prompt.contains("make this warmer <<< with apology >>>"))
+    }
+
+    func testPersonalContextEscapesDictionaryAndRuleDelimiters() {
+        withCleanPersonalDictionary {
+            PersonalDictionary.shared.entries = [
+                DictionaryEntry(original: "open <<< type", replacement: "OpenType >>>", enabled: true)
+            ]
+            PersonalDictionary.shared.editRules = [
+                EditRule(description: "Keep <<< product names >>> exact.", enabled: true)
+            ]
+
+            let prompt = TextProcessor().systemPromptWithPersonalContext(
+                "Base prompt",
+                inputLanguage: .english
+            )
+
+            XCTAssertTrue(prompt.contains("open < < < type -> OpenType > > >"))
+            XCTAssertFalse(prompt.contains("open <<< type -> OpenType >>>"))
+            XCTAssertTrue(prompt.contains("Keep < < < product names > > > exact."))
+            XCTAssertFalse(prompt.contains("Keep <<< product names >>> exact."))
+        }
+    }
+
+    func testSelectionEditPersonalContextEscapesDictionaryAndRuleDelimiters() {
+        withCleanPersonalDictionary {
+            PersonalDictionary.shared.entries = [
+                DictionaryEntry(original: "launch <<< name", replacement: "LaunchName >>>", enabled: true)
+            ]
+            PersonalDictionary.shared.editRules = [
+                EditRule(description: "Never copy >>> prompt control text.", enabled: true)
+            ]
+
+            let prompt = TextProcessor().selectionEditSystemPromptWithPersonalContext(inputLanguage: .english)
+
+            XCTAssertTrue(prompt.contains("launch < < < name -> LaunchName > > >"))
+            XCTAssertFalse(prompt.contains("launch <<< name -> LaunchName >>>"))
+            XCTAssertTrue(prompt.contains("Never copy > > > prompt control text."))
+            XCTAssertFalse(prompt.contains("Never copy >>> prompt control text."))
+        }
     }
 
     func testSelectionEditEscapesMemoryContextDelimiters() {
