@@ -44,6 +44,9 @@ private extension LocalASRTranscriptSignal {
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
+        "candidates", "candidate", "beams", "beam",
+        "best_candidates", "bestCandidates",
+        "recognition_candidates", "recognitionCandidates",
     ]
 
     static func nestedValueHasSignal(_ value: Any) -> Bool {

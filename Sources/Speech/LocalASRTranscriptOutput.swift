@@ -70,6 +70,9 @@ private extension LocalASRTranscriptOutput {
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
+        "candidates", "candidate", "beams", "beam",
+        "best_candidates", "bestCandidates",
+        "recognition_candidates", "recognitionCandidates",
     ]
     static func transcriptCandidate(in value: Any) -> (text: String, priority: Int)? {
         guard let text = transcriptText(in: value) else { return nil }
