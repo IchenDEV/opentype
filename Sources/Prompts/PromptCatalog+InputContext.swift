@@ -30,50 +30,65 @@ extension PromptCatalog {
 }
 
 private func inputTargetDetails(_ context: InputContext, inputLanguage: InputLanguage) -> String {
-    let labels: [(String, String?)]
+    let metadataLabels: [(String, String?)]
+    let focusedTextLabels: [(String, String?)]
     switch inputLanguage {
     case .auto, .chinese, .cantonese:
-        labels = [
+        metadataLabels = [
             ("应用", context.appName),
             ("Bundle", context.bundleIdentifier),
             ("窗口", context.windowTitle),
+        ]
+        focusedTextLabels = [
             ("光标前文本", context.textBeforeSelection),
             ("当前选中文本", context.selectedText),
             ("光标后文本", context.textAfterSelection),
         ]
     case .english:
-        labels = [
+        metadataLabels = [
             ("App", context.appName),
             ("Bundle", context.bundleIdentifier),
             ("Window", context.windowTitle),
+        ]
+        focusedTextLabels = [
             ("Text before cursor/selection", context.textBeforeSelection),
             ("Selected text", context.selectedText),
             ("Text after cursor/selection", context.textAfterSelection),
         ]
     case .japanese:
-        labels = [
+        metadataLabels = [
             ("アプリ", context.appName),
             ("Bundle", context.bundleIdentifier),
             ("ウィンドウ", context.windowTitle),
+        ]
+        focusedTextLabels = [
             ("カーソル前のテキスト", context.textBeforeSelection),
             ("選択中のテキスト", context.selectedText),
             ("カーソル後のテキスト", context.textAfterSelection),
         ]
     case .korean:
-        labels = [
+        metadataLabels = [
             ("앱", context.appName),
             ("Bundle", context.bundleIdentifier),
             ("창", context.windowTitle),
+        ]
+        focusedTextLabels = [
             ("커서 앞 텍스트", context.textBeforeSelection),
             ("선택된 텍스트", context.selectedText),
             ("커서 뒤 텍스트", context.textAfterSelection),
         ]
     }
 
-    return labels
-        .compactMap { label, value in
+    let metadata: [String] = metadataLabels
+        .compactMap { label, value -> String? in
             guard let value else { return nil }
-            return "- \(label): \(value)"
+            return "- \(label): \(PromptTextBlock.safe(value))"
         }
+    let focusedText: [String] = focusedTextLabels
+        .compactMap { label, value -> String? in
+            guard let value else { return nil }
+            return "- \(label):\n\(PromptTextBlock.block(value))"
+        }
+    return (metadata + focusedText)
         .joined(separator: "\n")
 }
