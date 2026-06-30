@@ -26,11 +26,15 @@ private extension LocalASRTranscriptOutput {
         "text", "transcript", "transcription", "sentence", "prediction",
         "display", "display_text", "displayText",
         "word", "punctuated_word", "punctuatedWord", "content",
-        "lexical",
+        "lexical", "utterance", "hypothesis",
+        "normalized", "normalized_text", "normalizedText",
+        "generated_text", "generatedText",
+        "best_text", "bestText",
         "recognized_text", "recognizedText", "recognised_text", "recognisedText",
     ]
     static let nestedKeys = [
         "result", "data", "output", "response",
+        "best", "best_hypothesis", "bestHypothesis",
     ]
     static let arrayKeys = [
         "segments", "chunks", "results", "utterances", "channels",

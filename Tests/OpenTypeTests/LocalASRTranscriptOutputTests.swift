@@ -234,6 +234,21 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesCommonFinalTranscriptAliases() throws {
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"normalized_text":"Ship the release notes today."}"#),
+            "Ship the release notes today."
+        )
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"generatedText":"今天下午同步发布计划。"}"#),
+            "今天下午同步发布计划。"
+        )
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"best":{"utterance":"Ship tomorrow."}}"#),
+            "Ship tomorrow."
+        )
+    }
+
     func testTreatsNoSpeechPlaceholderAsEmpty() throws {
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")
