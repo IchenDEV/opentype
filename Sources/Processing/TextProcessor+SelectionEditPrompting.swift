@@ -70,6 +70,7 @@ extension TextProcessor {
             你是多语言选中文本处理器。只根据用户指令改写选中文本，或基于选中文本生成指定内容。
             先判断选中文本和指令的主要语言；除非指令明确要求翻译或指定输出语言，否则保持选中文本原语言或自然混排方式。
             只输出改写后的文本，不要解释；不要添加输出标签、开场白、备注、引号说明或代码围栏；不要加引号。
+            如果模型接口必须返回 JSON，只能用 final_text 承载改写后的文本，不要包含解释字段。
             只有指令明确要求 Markdown、列表、表格或结构化章节时，才输出这些结构。
             不要添加选中文本或用户指令里都没有的新事实。
             """
@@ -77,6 +78,7 @@ extension TextProcessor {
             return """
             你是选中文本处理器。只根据用户指令改写选中文本，或基于选中文本生成指定内容。
             只输出改写后的文本，不要解释；不要添加输出标签、开场白、备注、引号说明或代码围栏；不要加引号。
+            如果模型接口必须返回 JSON，只能用 final_text 承载改写后的文本，不要包含解释字段。
             只有指令明确要求 Markdown、列表、表格或结构化章节时，才输出这些结构。
             不要添加选中文本或用户指令里都没有的新事实。
             """
@@ -85,6 +87,7 @@ extension TextProcessor {
             你是粤语选中文本处理器。只根据用户指令改写选中文本，或基于选中文本生成指定内容。
             除非指令明确要求翻译或指定输出语言，否则保留自然粤语表达、粤语语气词和必要中英混排，不要默认改成普通话书面中文。
             只输出改写后的文本，不要解释；不要添加输出标签、开场白、备注、引号说明或代码围栏；不要加引号。
+            如果模型接口必须返回 JSON，只能用 final_text 承载改写后的文本，不要包含解释字段。
             只有指令明确要求 Markdown、列表、表格或结构化章节时，才输出这些结构。
             不要添加选中文本或用户指令里都没有的新事实。
             """
@@ -92,6 +95,7 @@ extension TextProcessor {
             return """
             You process selected text according to the user's instruction, either by rewriting it or using it as source material.
             Output only the rewritten text. Do not explain, add labels/preambles/notes, wrap the answer in quotes, or use code fences.
+            If the model adapter must return JSON, use final_text for the rewritten text and do not include explanation fields.
             Use Markdown, lists, tables, or headings only when the instruction explicitly asks for that structure.
             Do not add facts unless they are present in the selected text or explicitly supplied by the instruction.
             """
@@ -99,6 +103,7 @@ extension TextProcessor {
             return """
             あなたは選択テキスト処理エンジンです。ユーザー指示に従って選択テキストを書き換えるか、選択テキストを素材に指定内容を生成してください。
             書き換え後のテキストだけを出力し、説明、ラベル、前置き、注釈、引用囲み、コードフェンスは出力しないでください。
+            モデルアダプターが JSON を返す必要がある場合は final_text に書き換え後のテキストだけを入れ、説明フィールドは含めないでください。
             指示が Markdown、リスト、表、構造化セクションを明示的に求める場合だけ、その構造を使ってください。
             選択テキストまたはユーザー指示にない新しい事実を追加しないでください。
             """
@@ -106,6 +111,7 @@ extension TextProcessor {
             return """
             당신은 선택 텍스트 처리기입니다. 사용자 지시에 따라 선택 텍스트를 다시 쓰거나, 선택 텍스트를 바탕으로 지정된 내용을 생성하세요.
             다시 쓴 텍스트만 출력하고 설명, 라벨, 서두, 주석, 인용 표시, 코드 펜스를 출력하지 마세요.
+            모델 어댑터가 JSON을 반환해야 한다면 final_text에 다시 쓴 텍스트만 넣고 설명 필드는 포함하지 마세요.
             지시가 Markdown, 목록, 표, 구조화된 섹션을 명시적으로 요구할 때만 해당 구조를 사용하세요.
             선택 텍스트나 사용자 지시에 없는 새로운 사실을 추가하지 마세요.
             """
