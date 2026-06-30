@@ -27,6 +27,10 @@ enum RemoteLLMResponseText {
             throw RemoteLLMError.invalidResponse
         }
 
+        if let text = toolCallText(from: content) {
+            return text
+        }
+
         let text = content
             .compactMap(contentBlockText)
             .joined(separator: "\n")

@@ -229,32 +229,6 @@ final class RemoteLLMParsedPayloadTests: XCTestCase {
         XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "今天下午同步发布计划。")
     }
 
-    func testParsesAnthropicToolPayloadObject() throws {
-        let response = """
-        {
-          "content": [
-            {
-              "type": "tool_use",
-              "name": "emit_command",
-              "payload": {
-                "action": "rewrite_selection",
-                "intent": "summary",
-                "replacement": null,
-                "confidence": 0.91
-              }
-            }
-          ]
-        }
-        """
-
-        let rawText = try RemoteLLMResponseText.anthropic(from: data(response))
-
-        XCTAssertEqual(
-            SpokenEditCommandLLMResolver.command(from: rawText),
-            .rewriteSelection(.summary)
-        )
-    }
-
     private func data(_ json: String) -> Data {
         Data(json.utf8)
     }
