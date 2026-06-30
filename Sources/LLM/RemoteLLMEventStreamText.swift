@@ -140,7 +140,7 @@ private extension RemoteLLMEventStreamText {
         textParts: inout [Int: String],
         toolInputs: inout [Int: String]
     ) {
-        if let block = json.value(forCaseInsensitiveKey: "content_block") as? [String: Any],
+        if let block = dictionaryValue(in: json, keys: ["content_block", "contentBlock"]),
            let index = intValue(json.value(forCaseInsensitiveKey: "index")) {
             collectAnthropicStartBlock(block, index: index, textParts: &textParts, toolInputs: &toolInputs)
         }
@@ -152,7 +152,7 @@ private extension RemoteLLMEventStreamText {
         if let text = delta.value(forCaseInsensitiveKey: "text") as? String {
             textParts[index, default: ""] += text
         }
-        if let partialJSON = delta.value(forCaseInsensitiveKey: "partial_json") as? String {
+        if let partialJSON = stringValue(in: delta, keys: ["partial_json", "partialJson"]) {
             toolInputs[index, default: ""] += partialJSON
         }
     }
@@ -166,11 +166,28 @@ private extension RemoteLLMEventStreamText {
         if let text = block.value(forCaseInsensitiveKey: "text") as? String {
             textParts[index, default: ""] += text
         }
-        if let input = block.value(forCaseInsensitiveKey: "input"),
+        if let input = firstValue(in: block, keys: ["input", "input_json", "inputJson"]),
            let text = jsonString(from: input) {
             guard text != "{}" else { return }
             toolInputs[index, default: ""] += text
         }
+    }
+
+    static func firstValue(in object: [String: Any], keys: [String]) -> Any? {
+        for key in keys {
+            if let value = object.value(forCaseInsensitiveKey: key) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    static func dictionaryValue(in object: [String: Any], keys: [String]) -> [String: Any]? {
+        firstValue(in: object, keys: keys) as? [String: Any]
+    }
+
+    static func stringValue(in object: [String: Any], keys: [String]) -> String? {
+        firstValue(in: object, keys: keys) as? String
     }
 
     static func argumentsText(in object: [String: Any]) -> String? {
