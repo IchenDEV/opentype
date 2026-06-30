@@ -59,7 +59,8 @@ private extension LocalASRTranscriptOutput {
         "words", "tokens", "items",
     ]
     static let finalSegmentArrayKeys = [
-        "segments", "chunks", "utterances", "sentences", "phrases",
+        "segments", "chunks", "results", "utterances", "sentences",
+        "transcripts", "predictions", "phrases",
         "words", "tokens", "items",
     ]
     static let alternativeKeys = [
