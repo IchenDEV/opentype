@@ -20,6 +20,7 @@ enum LocalASRTranscriptOutput {
         var bestPriority = 0
         for data in LLMStructuredOutput.jsonValueDataCandidates(from: trimmed) {
             guard let object = try? JSONSerialization.jsonObject(with: data),
+                  isLikelyRunnerLog(object) == false,
                   let candidate = transcriptCandidate(in: object),
                   candidate.priority >= bestPriority else {
                 continue
@@ -159,6 +160,26 @@ private extension LocalASRTranscriptOutput {
 
     static func containsAny(_ keys: [String], in object: [String: Any]) -> Bool {
         keys.contains { object.value(forCaseInsensitiveKey: $0) != nil }
+    }
+
+    static func isLikelyRunnerLog(_ value: Any) -> Bool {
+        guard let object = value as? [String: Any],
+              ["level", "logger", "severity"].contains(where: { object.value(forCaseInsensitiveKey: $0) != nil }) else {
+            return false
+        }
+        return hasDirectTranscriptSignal(in: object) == false
+    }
+
+    static func hasDirectTranscriptSignal(in object: [String: Any]) -> Bool {
+        let transcriptKeys = [
+            "text", "transcript", "transcription", "sentence", "prediction",
+            "display", "display_text", "displayText",
+            "word", "punctuated_word", "punctuatedWord", "content",
+            "token", "token_str", "tokenStr", "piece", "surface",
+            "segments", "chunks", "results", "utterances", "sentences",
+            "transcripts", "words", "tokens", "alternatives", "hypotheses",
+        ]
+        return transcriptKeys.contains { object.value(forCaseInsensitiveKey: $0) != nil }
     }
 
     static func transcriptText(in value: Any, joinsFinalSegments: Bool) -> String? {

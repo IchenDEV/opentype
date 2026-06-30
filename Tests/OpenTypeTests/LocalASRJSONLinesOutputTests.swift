@@ -27,6 +27,18 @@ final class LocalASRJSONLinesOutputTests: XCTestCase {
         )
     }
 
+    func testSkipsSingleRunnerJSONLogBeforeOneTranscriptLine() throws {
+        let output = """
+        {"level":"info","message":"Loading local ASR model"}
+        {"text":"今天下午同步发布计划。"}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "今天下午同步发布计划。"
+        )
+    }
+
     func testKeepsFinalityMetadataOnExistingBestCandidatePath() throws {
         let output = """
         {"type":"partial","text":"Ship the"}
