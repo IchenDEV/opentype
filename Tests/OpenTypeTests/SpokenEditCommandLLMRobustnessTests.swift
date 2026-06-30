@@ -105,6 +105,18 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
             ),
             .replaceLast("ship tomorrow at 3 PM")
         )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"replacement":{"old":"ship today","new":"ship tomorrow"},"confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_selection","intent":null,"replacement":{"from":"old customer note","to":"new customer note"},"confidence":0.91}"#
+            ),
+            .replaceSelection("new customer note")
+        )
     }
 
     func testDuplicateCaseKeysDoNotBreakStructuredConfidenceDecoding() {

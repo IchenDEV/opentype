@@ -136,7 +136,7 @@ private extension SpokenEditCommandLLMResolver {
     struct Resolution: Decodable {
         let action: LLMTextValue?
         let intent: LLMTextValue?
-        let replacement: LLMTextValue?
+        let replacement: LLMReplacementValue?
         let confidence: LLMNumericConfidence?
         let hasAction: Bool
 
@@ -145,7 +145,7 @@ private extension SpokenEditCommandLLMResolver {
             hasAction = container.caseInsensitiveKey("action") != nil
             action = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "action")
             intent = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "intent")
-            replacement = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "replacement")
+            replacement = try container.decodeIfPresentCaseInsensitive(LLMReplacementValue.self, forKey: "replacement")
             confidence = try container.decodeIfPresentCaseInsensitive(LLMNumericConfidence.self, forKey: "confidence")
         }
     }

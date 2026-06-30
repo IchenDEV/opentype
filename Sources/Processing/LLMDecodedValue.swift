@@ -80,6 +80,84 @@ private extension LLMTextValue {
     }
 }
 
+struct LLMReplacementValue: Decodable {
+    let text: String
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            text = ""
+        } else if let value = try? container.decode(String.self) {
+            text = value
+        } else if let value = try? container.decode(Int.self) {
+            text = String(value)
+        } else if let value = try? container.decode(Double.self) {
+            text = String(value)
+        } else if let value = try? container.decode(Bool.self) {
+            text = value ? "true" : "false"
+        } else if let value = try? container.decode([LLMReplacementValue].self) {
+            text = Self.describe(array: value)
+        } else if let value = try? container.decode([String: LLMReplacementValue].self) {
+            text = Self.describe(object: value)
+        } else {
+            text = ""
+        }
+    }
+}
+
+private extension LLMReplacementValue {
+    static let preferredObjectKeys = [
+        "replacement", "replacementText", "replacement_text", "text", "value",
+        "new", "newText", "new_text", "to", "toText", "to_text", "after", "target",
+    ]
+    static let metadataObjectKeys = [
+        "old", "oldText", "old_text", "from", "fromText", "from_text", "before",
+        "source", "original", "previous", "current", "language", "locale", "format",
+        "confidence", "score", "probability", "reason", "rationale", "note", "notes",
+        "kind", "type",
+    ]
+
+    static func describe(array: [LLMReplacementValue]) -> String {
+        array
+            .map(\.text)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+
+    static func describe(object: [String: LLMReplacementValue]) -> String {
+        if let value = semanticReplacementValue(in: object) {
+            return value
+        }
+
+        return object.keys.sorted().compactMap { key in
+            let value = object[key]?.text.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !value.isEmpty else { return nil }
+            return "\(key): \(value)"
+        }
+        .joined(separator: "; ")
+    }
+
+    static func semanticReplacementValue(in object: [String: LLMReplacementValue]) -> String? {
+        for key in preferredObjectKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !value.isEmpty else { continue }
+
+            let hasOnlyReplacementOrMetadata = object.allSatisfy { objectKey, objectValue in
+                let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                return candidate.isEmpty
+                    || preferredObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+                    || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+            }
+            if hasOnlyReplacementOrMetadata {
+                return value
+            }
+        }
+        return nil
+    }
+}
+
 struct LLMNumericConfidence: Decodable {
     let value: Double
 
