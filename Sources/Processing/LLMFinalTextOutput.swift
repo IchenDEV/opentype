@@ -17,6 +17,13 @@ private extension LLMFinalTextOutput {
     static let explicitTextKeys = [
         "final_text", "finalText", "formatted_text", "formattedText",
         "cleaned_text", "cleanedText", "rewritten_text", "rewrittenText",
+        "output_text", "outputText", "result_text", "resultText",
+    ]
+    static let typedFinalTextValues = [
+        "output_text", "final_text", "formatted_text", "cleaned_text", "rewritten_text",
+    ]
+    static let wrapperKeys = [
+        "data", "payload", "result", "output", "response",
     ]
     static let ambiguousTextKeys = [
         "text", "output", "result", "content", "body", "message", "response",
@@ -82,7 +89,26 @@ private extension LLMFinalTextOutput {
             }
             return text
         }
+        if let text = typedFinalText(in: object) {
+            return text
+        }
+        for key in wrapperKeys {
+            guard let rawValue = object.value(forCaseInsensitiveKey: key),
+                  let text = explicitFinalText(in: rawValue) else {
+                continue
+            }
+            return text
+        }
         return nil
+    }
+
+    static func typedFinalText(in object: [String: Any]) -> String? {
+        guard let kind = object.value(forCaseInsensitiveKey: "type") as? String,
+              typedFinalTextValues.contains(where: { normalizedKind(kind) == $0 }),
+              let rawValue = object.value(forCaseInsensitiveKey: "text") else {
+            return nil
+        }
+        return finalTextValue(from: rawValue, allowsAmbiguousKeys: true)
     }
 
     static func finalTextValue(from value: Any, allowsAmbiguousKeys: Bool) -> String? {
@@ -105,6 +131,14 @@ private extension LLMFinalTextOutput {
 
     static func hasMetadata(in object: [String: Any]) -> Bool {
         metadataKeys.contains { object.value(forCaseInsensitiveKey: $0) != nil }
+    }
+
+    static func normalizedKind(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
     }
 
     static func stripWrappingCodeFence(from text: String) -> String {
