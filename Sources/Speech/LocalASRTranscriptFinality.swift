@@ -102,6 +102,7 @@ private extension LocalASRTranscriptFinality {
         guard let text = value as? String else { return nil }
         switch normalizedStatus(text) {
         case "final", "finaltranscript", "finalresult",
+             "sentenceend", "utteranceend", "speechend", "endofspeech", "endoftranscript",
              "complete", "completed", "done", "success", "succeeded", "finished", "finalized", "recognized":
             return .final
         case "partial", "partialtranscript", "partialresult",

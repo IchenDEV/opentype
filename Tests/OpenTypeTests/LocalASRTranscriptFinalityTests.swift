@@ -122,6 +122,17 @@ final class LocalASRTranscriptFinalityTests: XCTestCase {
         )
     }
 
+    func testRecognizesEndpointFinalityStringStatuses() throws {
+        let output = """
+        {"events":[{"event":"partial","text":"Ship release"},{"event":"UtteranceEnd","text":"Ship release notes today."},{"event":"partial","text":"Ship rel"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship release notes today."
+        )
+    }
+
     func testParsesNestedMessageAndBodyWrappers() throws {
         XCTAssertEqual(
             try LocalASREngine.parseRunnerOutput(#"{"message":{"text":"Ship tomorrow.","status":"completed"}}"#),
