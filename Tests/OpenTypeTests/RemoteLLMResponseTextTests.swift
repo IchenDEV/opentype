@@ -236,6 +236,21 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testParsesAnthropicToolUseInputObjects() throws {
+        let finalResponse = #"{"content":[{"type":"tool_use","name":"emit_final","input":{"final_text":"Ship the release notes today."}}]}"#
+        let finalRaw = try RemoteLLMResponseText.anthropic(from: data(finalResponse))
+
+        XCTAssertEqual(FormattedOutputCleaner.clean(finalRaw), "Ship the release notes today.")
+
+        let commandResponse = #"{"content":[{"type":"tool_use","name":"emit_command","input":{"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}}]}"#
+        let commandRaw = try RemoteLLMResponseText.anthropic(from: data(commandResponse))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: commandRaw),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testRejectsResponsesWithoutText() {
         XCTAssertThrowsError(
             try RemoteLLMResponseText.openAI(from: data(#"{"choices":[{"message":{"content":[]}}]}"#))

@@ -161,7 +161,7 @@ private extension RemoteLLMResponseText {
 
     static let textBlockTypes = ["text", "output_text"]
     static let wrapperBlockTypes = ["message"]
-    static let argumentBlockTypes = ["function", "function_call", "tool_call"]
+    static let argumentBlockTypes = ["function", "function_call", "tool_call", "tool_use"]
 
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
