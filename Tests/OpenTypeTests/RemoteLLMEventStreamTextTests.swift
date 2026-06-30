@@ -51,6 +51,21 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIEventStreamSingularToolCallObject() throws {
+        let response = """
+        data: {"choices":[{"delta":{"tool_call":{"type":"function","function":{"name":"emit_command","arguments":{"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}}}}}]}
+
+        data: [DONE]
+        """
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testParsesOpenAIEventStreamPlainTextDeltas() throws {
         let response = """
         event: message

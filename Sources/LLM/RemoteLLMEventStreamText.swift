@@ -96,13 +96,24 @@ private extension RemoteLLMEventStreamText {
                       let text = RemoteLLMStreamContentDeltaText.text(from: content) {
                 contentParts.append(text)
             }
-            appendToolArguments(from: delta.value(forCaseInsensitiveKey: "tool_calls"), to: &toolArguments)
-            appendFunctionArguments(from: delta.value(forCaseInsensitiveKey: "function_call"), to: &functionArguments)
+            for key in ["tool_calls", "toolCalls", "tool_call", "toolCall"] {
+                appendToolArguments(from: delta.value(forCaseInsensitiveKey: key), to: &toolArguments)
+            }
+            for key in ["function_call", "functionCall"] {
+                appendFunctionArguments(from: delta.value(forCaseInsensitiveKey: key), to: &functionArguments)
+            }
         }
     }
 
     static func appendToolArguments(from value: Any?, to toolArguments: inout [Int: String]) {
-        guard let calls = value as? [Any] else { return }
+        let calls: [Any]
+        if let array = value as? [Any] {
+            calls = array
+        } else if let object = value as? [String: Any] {
+            calls = [object]
+        } else {
+            return
+        }
         for (fallbackIndex, value) in calls.enumerated() {
             guard let call = value as? [String: Any] else { continue }
             let index = intValue(call.value(forCaseInsensitiveKey: "index")) ?? fallbackIndex
