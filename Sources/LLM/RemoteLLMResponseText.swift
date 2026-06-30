@@ -123,22 +123,22 @@ private extension RemoteLLMResponseText {
         }
 
         if let type = object["type"] as? String {
-            if textBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+            if matchesBlockType(type, in: textBlockTypes) {
                 return contentText(from: object["text"])
                     ?? contentText(from: object["content"])
                     ?? contentText(from: object["value"])
             }
-            if wrapperBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+            if matchesBlockType(type, in: wrapperBlockTypes) {
                 return structuredPayloadText(from: object["parsed"])
                     ?? structuredPayloadText(from: object["output_parsed"])
                     ?? contentText(from: object["content"])
                     ?? contentText(from: object["output"])
                     ?? contentText(from: object["value"])
             }
-            if argumentBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+            if matchesBlockType(type, in: argumentBlockTypes) {
                 return toolCallText(from: object)
             }
-            if structuredBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+            if matchesBlockType(type, in: structuredBlockTypes) {
                 return structuredContentBlockText(object)
             }
             return nil
@@ -239,6 +239,20 @@ private extension RemoteLLMResponseText {
         "input_json", "inputJson", "parameters_json", "parametersJson",
         "arguments", "input", "parameters", "params", "args", "payload", "data",
     ]
+
+    static func matchesBlockType(_ type: String, in candidates: [String]) -> Bool {
+        let normalized = normalizedBlockType(type)
+        return candidates.contains { normalizedBlockType($0) == normalized }
+    }
+
+    static func normalizedBlockType(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: " ", with: "")
+    }
 
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -52,6 +52,17 @@ final class LLMFinalTextOutputTests: XCTestCase {
         )
     }
 
+    func testExtractsCamelAndKebabTypedFinalTextPayloads() {
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(#"{"type":"finalText","content":"Ship the release notes today."}"#),
+            "Ship the release notes today."
+        )
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(#"{"type":"formatted-text","value":"今天下午同步发布计划。"}"#),
+            "今天下午同步发布计划。"
+        )
+    }
+
     func testExtractsOpenAIChatTextBlocksFromWholeResponse() {
         let llmOutput = """
         {"choices":[{"message":{"content":[{"type":"text","text":"Ship the release notes."},{"type":"text","text":"Then confirm QA."}]}}]}

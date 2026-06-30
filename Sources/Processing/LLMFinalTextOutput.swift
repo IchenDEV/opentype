@@ -147,7 +147,7 @@ private extension LLMFinalTextOutput {
 
     static func typedFinalText(in object: [String: Any]) -> String? {
         guard let kind = object.value(forCaseInsensitiveKey: "type") as? String,
-              typedFinalTextValues.contains(where: { normalizedKind(kind) == $0 }) else {
+              typedFinalTextValues.contains(where: { normalizedKind(kind) == normalizedKind($0) }) else {
             return nil
         }
         for key in typedFinalTextPayloadKeys {
@@ -198,8 +198,9 @@ private extension LLMFinalTextOutput {
         value
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-            .replacingOccurrences(of: "-", with: "_")
-            .replacingOccurrences(of: " ", with: "_")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: " ", with: "")
     }
 
     static func stripWrappingCodeFence(from text: String) -> String {
