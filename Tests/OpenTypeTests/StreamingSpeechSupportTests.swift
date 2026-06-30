@@ -80,6 +80,14 @@ final class StreamingSpeechSupportTests: XCTestCase {
         XCTAssertEqual(accumulator.merge("同步发布"), "今天下午同步发布")
     }
 
+    func testPreviewAccumulatorConcatenatesJapaneseKanaWithoutArtificialSpace() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("金曜の午後"), "金曜の午後")
+        XCTAssertEqual(accumulator.merge("よろしく"), "金曜の午後よろしく")
+        XCTAssertEqual(accumulator.merge("お願いします"), "金曜の午後よろしくお願いします")
+    }
+
     func testTranscriptResolverUsesRecordedAudioWhenAvailable() async throws {
         let metrics = StreamingSessionMetrics(
             receivedBufferCount: 4,

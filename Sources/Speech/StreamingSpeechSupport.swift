@@ -190,7 +190,7 @@ final class StreamingPreviewAccumulator {
         if existingSuffix.count >= minimumLatinFuzzyOverlap {
             return true
         }
-        if existingSuffix.contains(where: \.isCJK) {
+        if existingSuffix.contains(where: \.isNoSpaceScript) {
             return true
         }
         if existingSuffix.count >= minimumLatinContinuationOverlap,
@@ -215,7 +215,7 @@ final class StreamingPreviewAccumulator {
             return OverlapUnit(
                 value: String(character).lowercased(),
                 endOffset: index + 1,
-                isCJK: character.isCJK,
+                isNoSpaceScript: character.isNoSpaceScript,
                 startsAtBoundary: previous?.isOverlapSignificant != true,
                 endsAtBoundary: next?.isOverlapSignificant != true
             )
@@ -259,7 +259,7 @@ final class StreamingPreviewAccumulator {
 private struct OverlapUnit {
     let value: String
     let endOffset: Int
-    let isCJK: Bool
+    let isNoSpaceScript: Bool
     let startsAtBoundary: Bool
     let endsAtBoundary: Bool
 }
@@ -273,15 +273,8 @@ private extension Character {
         unicodeScalars.allSatisfy(CharacterSet.alphanumerics.contains)
     }
 
-    var isCJK: Bool {
-        unicodeScalars.contains { scalar in
-            switch scalar.value {
-            case 0x3400...0x9FFF, 0xF900...0xFAFF, 0x20000...0x2EBEF:
-                return true
-            default:
-                return false
-            }
-        }
+    var isNoSpaceScript: Bool {
+        unicodeScalars.contains(where: NoSpaceScript.contains)
     }
 
     var isTentativeContinuationPunctuation: Bool {
@@ -289,7 +282,7 @@ private extension Character {
     }
 
     func needsSpace(before next: Character) -> Bool {
-        if isCJK || next.isCJK {
+        if isNoSpaceScript || next.isNoSpaceScript {
             return false
         }
         if isLetterOrNumberLike && next.isLetterOrNumberLike {
