@@ -2,6 +2,7 @@ import Foundation
 
 extension TextProcessor {
     private static let thinkTagNames = [
+        "analysis",
         "think", "thinking", "thought",
         "reason", "reasoning",
         "reflect", "reflection",
@@ -14,6 +15,10 @@ extension TextProcessor {
     }()
 
     func stripThinkingTags(_ text: String) -> String {
+        if let finalText = LLMScaffoldedOutput.finalText(from: text) {
+            return finalText
+        }
+
         var result = text
         for tag in Self.thinkTagNames {
             result = result.replacingOccurrences(
