@@ -58,6 +58,39 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesWordLevelRunnerOutput() throws {
+        let output = """
+        {"words":[{"word":"Ship"},{"word":"the"},{"word":"release"},{"word":"notes"},{"word":"today"},{"word":"."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
+    func testParsesCJKWordLevelRunnerOutputWithoutExtraSpaces() throws {
+        let output = """
+        {"words":[{"word":"今天"},{"word":"下午"},{"word":"发布"},{"word":"。"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "今天下午发布。"
+        )
+    }
+
+    func testParsesAWSItemAlternativesFromRunnerOutput() throws {
+        let output = """
+        {"results":{"items":[{"alternatives":[{"content":"Ship","confidence":"0.99"}]},{"alternatives":[{"content":"the"}]},{"alternatives":[{"content":"release"}]},{"alternatives":[{"content":"notes"}]},{"alternatives":[{"content":"today"}]},{"alternatives":[{"content":"."}],"type":"punctuation"}]}}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesTopLevelSegmentArrayRunnerOutput() throws {
         let output = """
         [{"text":"Ship the release notes."},{"text":"Then confirm QA."}]
@@ -116,6 +149,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
     func testParsesFirstHypothesisFromRunnerOutput() throws {
         let output = """
         {"nBest":[{"text":"Ship the release notes today."},{"text":"Skip the release notes today."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
+    func testParsesRecognizedPhrasesFromRunnerOutput() throws {
+        let output = """
+        {"recognizedPhrases":[{"nBest":[{"display":"Skip the release notes today.","confidence":0.41},{"display":"Ship the release notes today.","confidence":0.93}]}]}
         """
 
         XCTAssertEqual(

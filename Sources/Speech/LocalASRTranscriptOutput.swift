@@ -25,6 +25,8 @@ private extension LocalASRTranscriptOutput {
     static let textKeys = [
         "text", "transcript", "transcription", "sentence", "prediction",
         "display", "display_text", "displayText",
+        "word", "punctuated_word", "punctuatedWord", "content",
+        "lexical",
         "recognized_text", "recognizedText", "recognised_text", "recognisedText",
     ]
     static let nestedKeys = [
@@ -33,6 +35,9 @@ private extension LocalASRTranscriptOutput {
     static let arrayKeys = [
         "segments", "chunks", "results", "utterances", "channels",
         "sentences", "transcripts", "predictions",
+        "phrases", "recognizedPhrases", "recognized_phrases",
+        "combinedRecognizedPhrases", "combined_recognized_phrases",
+        "words", "items",
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
@@ -105,7 +110,7 @@ private extension LocalASRTranscriptOutput {
     static func transcriptText(in array: [Any]) -> String? {
         let parts = array.compactMap(transcriptText)
         guard !parts.isEmpty else { return nil }
-        return parts.joined(separator: " ")
+        return joinedTranscriptParts(parts)
     }
 
     static func bestAlternativeText(in value: Any) -> String? {
@@ -182,6 +187,47 @@ private extension LocalASRTranscriptOutput {
             return number / 100
         }
         return nil
+    }
+
+    static func joinedTranscriptParts(_ parts: [String]) -> String {
+        parts.reduce(into: "") { result, part in
+            let text = part.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return }
+            if result.isEmpty || shouldAttachWithoutSpace(previous: result, next: text) {
+                result += text
+            } else {
+                result += " \(text)"
+            }
+        }
+    }
+
+    static func shouldAttachWithoutSpace(previous: String, next: String) -> Bool {
+        guard let last = previous.unicodeScalars.last,
+              let first = next.unicodeScalars.first else {
+            return false
+        }
+        if isClosingPunctuation(first) || isOpeningPunctuation(last) {
+            return true
+        }
+        return isCJK(last) && isCJK(first)
+    }
+
+    static func isClosingPunctuation(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet.punctuationCharacters.contains(scalar) && !isOpeningPunctuation(scalar)
+    }
+
+    static func isOpeningPunctuation(_ scalar: Unicode.Scalar) -> Bool {
+        let opening = CharacterSet(charactersIn: "([{")
+        return opening.contains(scalar)
+    }
+
+    static func isCJK(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x3400...0x9FFF, 0xF900...0xFAFF, 0x20000...0x2EBEF:
+            return true
+        default:
+            return false
+        }
     }
 
     static func nonEmpty(_ text: String) -> String? {
