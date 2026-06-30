@@ -215,9 +215,7 @@ final class LocalASREngine: SpeechEngine, @unchecked Sendable {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LocalASRError.invalidResponse }
 
-        if let data = trimmed.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let text = json["text"] as? String {
+        if let text = LocalASRTranscriptOutput.text(from: trimmed) {
             return normalizeTranscriptText(text)
         }
 

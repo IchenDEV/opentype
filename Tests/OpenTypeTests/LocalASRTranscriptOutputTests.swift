@@ -1,0 +1,54 @@
+import XCTest
+@testable import OpenType
+
+final class LocalASRTranscriptOutputTests: XCTestCase {
+    func testParsesPlainAndTopLevelJSONRunnerOutput() throws {
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"text":" 你好，OpenType。 "}"#),
+            "你好，OpenType。"
+        )
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput("Good morning."),
+            "Good morning."
+        )
+    }
+
+    func testParsesRunnerJSONAfterStdoutLogs() throws {
+        let output = """
+        Loading local ASR model...
+        {"text":"今天下午同步发布计划。","language":"zh"}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "今天下午同步发布计划。"
+        )
+    }
+
+    func testParsesNestedRunnerTranscriptFields() throws {
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"result":{"transcript":"Ship tomorrow."}}"#),
+            "Ship tomorrow."
+        )
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"data":{"transcription":"金曜の午後に会議します。"}}"#),
+            "金曜の午後に会議します。"
+        )
+    }
+
+    func testParsesSegmentedRunnerOutput() throws {
+        let output = """
+        {"segments":[{"text":"Ship the release notes."},{"text":"Then confirm QA."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes. Then confirm QA."
+        )
+    }
+
+    func testTreatsNoSpeechPlaceholderAsEmpty() throws {
+        XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
+        XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")
+    }
+}
