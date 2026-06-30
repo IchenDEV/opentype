@@ -51,6 +51,30 @@ final class LocalASRJSONLinesOutputTests: XCTestCase {
         )
     }
 
+    func testSkipsLogShapedPayloadsWithoutTranscriptSignal() throws {
+        let output = """
+        {"level":"info","data":"Loading local ASR model"}
+        {"text":"Ship the release notes today."}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
+    func testKeepsLogShapedNestedTranscriptPayloads() throws {
+        let output = #"""
+        {"severity":"info","message":{"text":"Ship the release notes today."}}
+        {"severity":"info","payload":"{\"text\":\"Then confirm QA.\"}"}
+        """#
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today. Then confirm QA."
+        )
+    }
+
     func testKeepsFinalityMetadataOnExistingBestCandidatePath() throws {
         let output = """
         {"type":"partial","text":"Ship the"}
