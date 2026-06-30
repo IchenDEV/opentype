@@ -135,9 +135,7 @@ extension TextProcessor {
         return """
 
         \(label)
-        ---
-        \(memoryContext)
-        ---
+        \(PromptTextBlock.block(memoryContext))
         """
     }
 }

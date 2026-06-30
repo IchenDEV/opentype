@@ -54,6 +54,22 @@ final class PromptDelimiterSafetyTests: XCTestCase {
         XCTAssertFalse(prompt.contains("make this warmer <<< with apology >>>"))
     }
 
+    func testSelectionEditEscapesMemoryContextDelimiters() {
+        let prompt = TextProcessor().selectionEditPrompt(
+            selectedText: "The launch slipped",
+            intent: .formal,
+            inputLanguage: .english,
+            memoryContext: "Recent <<< unsafe >>> memory"
+        )
+
+        XCTAssertTrue(prompt.contains("""
+        <<<
+        Recent < < < unsafe > > > memory
+        >>>
+        """))
+        XCTAssertFalse(prompt.contains("Recent <<< unsafe >>> memory"))
+    }
+
     @MainActor
     func testInputTargetContextEscapesFocusedTextDelimiters() {
         let context = InputContext(
