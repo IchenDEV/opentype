@@ -21,6 +21,9 @@ private extension RemoteLLMStreamContentDeltaText {
             if matchesBlockType(type, in: textBlockTypes) {
                 return firstText(in: object, keys: ["text", "content", "value"])
             }
+            if matchesBlockType(type, in: deltaBlockTypes) {
+                return firstText(in: object, keys: ["delta", "text", "content", "value"])
+            }
             if matchesBlockType(type, in: wrapperBlockTypes) {
                 return firstText(in: object, keys: ["content", "output", "value", "text"])
             }
@@ -43,6 +46,10 @@ private extension RemoteLLMStreamContentDeltaText {
     static let textBlockTypes = [
         "text", "output_text", "final_text", "formatted_text", "cleaned_text",
         "rewritten_text", "result_text",
+    ]
+    static let deltaBlockTypes = [
+        "text_delta", "output_text_delta", "final_text_delta", "formatted_text_delta",
+        "cleaned_text_delta", "rewritten_text_delta", "result_text_delta",
     ]
     static let wrapperBlockTypes = ["message"]
 
