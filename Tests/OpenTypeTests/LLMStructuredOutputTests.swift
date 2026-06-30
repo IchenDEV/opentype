@@ -31,4 +31,19 @@ final class LLMStructuredOutputTests: XCTestCase {
         XCTAssertEqual(first["ignored"], true)
         XCTAssertEqual(second["action"] as? String, "none")
     }
+
+    func testJSONObjectDataCandidatesIncludeNestedObjectsAfterWrapper() throws {
+        let output = """
+        Final:
+        {"result":{"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":0.91}}
+        """
+
+        let candidates = LLMStructuredOutput.jsonObjectDataCandidates(from: output)
+
+        XCTAssertEqual(candidates.count, 2)
+        let wrapper = try XCTUnwrap(JSONSerialization.jsonObject(with: candidates[0]) as? [String: Any])
+        let nested = try XCTUnwrap(JSONSerialization.jsonObject(with: candidates[1]) as? [String: Any])
+        XCTAssertNotNil(wrapper["result"])
+        XCTAssertEqual(nested["action"] as? String, "rewrite_selection")
+    }
 }

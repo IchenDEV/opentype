@@ -17,6 +17,25 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesResolutionNestedInWrapperObject() {
+        let output = """
+        Final result:
+        {
+          "result": {
+            "action": "rewrite_selection",
+            "intent": "summary",
+            "replacement": null,
+            "confidence": 0.91
+          }
+        }
+        """
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: output),
+            .rewriteSelection(.summary)
+        )
+    }
+
     func testDecodesSingleValueObjectIntentAsPreset() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(

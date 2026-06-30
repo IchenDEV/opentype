@@ -18,26 +18,10 @@ enum LLMStructuredOutput {
 
     static func balancedJSONObjectRanges(in text: String) -> [ClosedRange<String.Index>] {
         var ranges: [ClosedRange<String.Index>] = []
+        var starts: [String.Index] = []
         var index = text.startIndex
-        while index < text.endIndex {
-            if text[index] == "{",
-               let end = balancedJSONObjectEnd(startingAt: index, in: text) {
-                ranges.append(index...end)
-                index = text.index(after: end)
-                continue
-            }
-            index = text.index(after: index)
-        }
-        return ranges
-    }
-}
-
-private extension LLMStructuredOutput {
-    static func balancedJSONObjectEnd(startingAt start: String.Index, in text: String) -> String.Index? {
-        var depth = 0
         var isInsideString = false
         var isEscaped = false
-        var index = start
 
         while index < text.endIndex {
             let character = text[index]
@@ -52,15 +36,21 @@ private extension LLMStructuredOutput {
             } else if character == "\"" {
                 isInsideString = true
             } else if character == "{" {
-                depth += 1
+                starts.append(index)
             } else if character == "}" {
-                depth -= 1
-                if depth == 0 { return index }
-                if depth < 0 { return nil }
+                guard let start = starts.popLast() else {
+                    index = text.index(after: index)
+                    continue
+                }
+                ranges.append(start...index)
             }
-
             index = text.index(after: index)
         }
-        return nil
+        return ranges.sorted { lhs, rhs in
+            if lhs.lowerBound == rhs.lowerBound {
+                return lhs.upperBound > rhs.upperBound
+            }
+            return lhs.lowerBound < rhs.lowerBound
+        }
     }
 }
