@@ -36,6 +36,36 @@ enum LLMStructuredOutput {
         return candidates
     }
 
+    static func jsonValueDataCandidates(from text: String) -> [Data] {
+        var candidates: [Data] = []
+        var seen: Set<String> = []
+
+        func appendCandidate(_ data: Data) {
+            guard candidates.count < maxJSONCandidates,
+                  let key = String(data: data, encoding: .utf8),
+                  !seen.contains(key) else {
+                return
+            }
+            seen.insert(key)
+            candidates.append(data)
+        }
+
+        for range in balancedJSONValueRanges(in: text) {
+            guard let data = String(text[range]).data(using: .utf8) else { continue }
+            appendCandidate(data)
+        }
+
+        var index = 0
+        while index < candidates.count, candidates.count < maxJSONCandidates {
+            for data in embeddedJSONValueDataCandidates(in: candidates[index]) {
+                appendCandidate(data)
+            }
+            index += 1
+        }
+
+        return candidates
+    }
+
     static func firstBalancedJSONObjectRange(in text: String) -> ClosedRange<String.Index>? {
         balancedJSONObjectRanges(in: text).first
     }
@@ -77,10 +107,54 @@ enum LLMStructuredOutput {
             return lhs.lowerBound < rhs.lowerBound
         }
     }
+
+    static func balancedJSONValueRanges(in text: String) -> [ClosedRange<String.Index>] {
+        var ranges: [ClosedRange<String.Index>] = []
+        var stack: [Character] = []
+        var rootStart: String.Index?
+        var index = text.startIndex
+        var isInsideString = false
+        var isEscaped = false
+
+        while index < text.endIndex {
+            let character = text[index]
+            if isInsideString {
+                if isEscaped {
+                    isEscaped = false
+                } else if character == "\\" {
+                    isEscaped = true
+                } else if character == "\"" {
+                    isInsideString = false
+                }
+            } else if character == "\"" {
+                isInsideString = true
+            } else if character == "{" || character == "[" {
+                if stack.isEmpty {
+                    rootStart = index
+                }
+                stack.append(character == "{" ? "}" : "]")
+            } else if character == "}" || character == "]" {
+                guard stack.last == character else {
+                    stack.removeAll()
+                    rootStart = nil
+                    index = text.index(after: index)
+                    continue
+                }
+                stack.removeLast()
+                if stack.isEmpty, let start = rootStart {
+                    ranges.append(start...index)
+                    rootStart = nil
+                }
+            }
+            index = text.index(after: index)
+        }
+        return ranges
+    }
 }
 
 private extension LLMStructuredOutput {
-    static let maxJSONObjectCandidates = 32
+    static let maxJSONCandidates = 32
+    static let maxJSONObjectCandidates = maxJSONCandidates
 
     static func embeddedJSONObjectDataCandidates(in data: Data) -> [Data] {
         guard let object = try? JSONSerialization.jsonObject(with: data) else {
@@ -95,6 +169,37 @@ private extension LLMStructuredOutput {
         func collect(_ value: Any) {
             if let string = value as? String {
                 for range in balancedJSONObjectRanges(in: string) {
+                    guard let data = String(string[range]).data(using: .utf8) else { continue }
+                    candidates.append(data)
+                }
+            } else if let dictionary = value as? [String: Any] {
+                for value in dictionary.values {
+                    collect(value)
+                }
+            } else if let array = value as? [Any] {
+                for value in array {
+                    collect(value)
+                }
+            }
+        }
+
+        collect(object)
+        return candidates
+    }
+
+    static func embeddedJSONValueDataCandidates(in data: Data) -> [Data] {
+        guard let object = try? JSONSerialization.jsonObject(with: data) else {
+            return []
+        }
+        return embeddedJSONValueDataCandidates(in: object)
+    }
+
+    static func embeddedJSONValueDataCandidates(in object: Any) -> [Data] {
+        var candidates: [Data] = []
+
+        func collect(_ value: Any) {
+            if let string = value as? String {
+                for range in balancedJSONValueRanges(in: string) {
                     guard let data = String(string[range]).data(using: .utf8) else { continue }
                     candidates.append(data)
                 }

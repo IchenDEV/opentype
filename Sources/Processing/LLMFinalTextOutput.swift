@@ -44,7 +44,7 @@ private extension LLMFinalTextOutput {
 
     static func embeddedExplicitFinalText(in text: String) -> String? {
         var bestText: String?
-        for data in LLMStructuredOutput.jsonObjectDataCandidates(from: text) {
+        for data in LLMStructuredOutput.jsonValueDataCandidates(from: text) {
             guard let object = try? JSONSerialization.jsonObject(with: data),
                   let text = explicitFinalText(in: object) else {
                 continue
