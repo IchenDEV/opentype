@@ -25,6 +25,9 @@ private extension LLMFinalTextOutput {
     static let typedFinalTextPayloadKeys = [
         "text", "content", "value", "output", "data",
     ]
+    static let valueEnvelopeKeys = [
+        "value",
+    ]
     static let wrapperKeys = [
         "data", "payload", "result", "output", "response",
         "parsed", "output_parsed",
@@ -171,6 +174,10 @@ private extension LLMFinalTextOutput {
             return nestedStructuredFinalText(in: trimmed) ?? trimmed
         }
         if let object = value as? [String: Any] {
+            if allowsAmbiguousKeys,
+               let text = valueEnvelopeText(in: object) {
+                return text
+            }
             return finalText(in: object, allowsAmbiguousKeys: allowsAmbiguousKeys)
         }
         if let array = value as? [Any] {
@@ -179,6 +186,17 @@ private extension LLMFinalTextOutput {
             }
             guard !parts.isEmpty else { return nil }
             return parts.joined(separator: "\n")
+        }
+        return nil
+    }
+
+    static func valueEnvelopeText(in object: [String: Any]) -> String? {
+        for key in valueEnvelopeKeys {
+            guard let rawValue = object.value(forCaseInsensitiveKey: key),
+                  let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: false) else {
+                continue
+            }
+            return text
         }
         return nil
     }
