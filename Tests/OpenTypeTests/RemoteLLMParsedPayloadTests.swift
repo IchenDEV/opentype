@@ -25,6 +25,41 @@ final class RemoteLLMParsedPayloadTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIToolCallParametersObjectPayload() throws {
+        let response = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": null,
+                "tool_calls": [
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "emit_command",
+                      "parameters": {
+                        "action": "replace_selection",
+                        "intent": null,
+                        "replacement": "send the customer update",
+                        "confidence": 0.91
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceSelection("send the customer update")
+        )
+    }
+
     func testParsesOpenAIParsedMessageObject() throws {
         let response = """
         {"choices":[{"message":{"content":null,"parsed":{"final_text":"Ship the release notes today."}}}]}
@@ -66,6 +101,42 @@ final class RemoteLLMParsedPayloadTests: XCTestCase {
         let rawText = try RemoteLLMResponseText.openAI(from: data(response))
 
         XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "今天下午同步发布计划。")
+    }
+
+    func testParsesOpenAIResponsesArgsStringPayload() throws {
+        let response = #"""
+        {"id":"resp_1","output":[{"type":"function_call","name":"emit_final","args":"{\"final_text\":\"Ship the release notes today.\"}"}]}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
+    func testParsesAnthropicToolPayloadObject() throws {
+        let response = """
+        {
+          "content": [
+            {
+              "type": "tool_use",
+              "name": "emit_command",
+              "payload": {
+                "action": "rewrite_selection",
+                "intent": "summary",
+                "replacement": null,
+                "confidence": 0.91
+              }
+            }
+          ]
+        }
+        """
+
+        let rawText = try RemoteLLMResponseText.anthropic(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .rewriteSelection(.summary)
+        )
     }
 
     private func data(_ json: String) -> Data {

@@ -142,15 +142,21 @@ private extension RemoteLLMResponseText {
             return contentText(from: value)
         }
 
-        if let text = structuredPayloadText(from: object["arguments"]) {
+        if let text = toolPayloadText(in: object) {
             return text
         }
         if let function = object["function"] as? [String: Any],
-           let text = structuredPayloadText(from: function["arguments"]) {
+           let text = toolPayloadText(in: function) {
             return text
         }
-        if let text = structuredPayloadText(from: object["input"]) {
-            return text
+        return nil
+    }
+
+    static func toolPayloadText(in object: [String: Any]) -> String? {
+        for key in toolPayloadKeys {
+            if let text = structuredPayloadText(from: object[key]) {
+                return text
+            }
         }
         return nil
     }
@@ -175,6 +181,7 @@ private extension RemoteLLMResponseText {
     static let textBlockTypes = ["text", "output_text"]
     static let wrapperBlockTypes = ["message"]
     static let argumentBlockTypes = ["function", "function_call", "tool_call", "tool_use"]
+    static let toolPayloadKeys = ["arguments", "input", "parameters", "params", "args", "payload", "data"]
 
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
