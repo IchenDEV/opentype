@@ -60,6 +60,28 @@ final class RemoteLLMIrrelevantToolPayloadTests: XCTestCase {
         )
     }
 
+    func testOpenAIIgnoresUntypedMetadataObjectsInContentBlocks() throws {
+        let response = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": [
+                  {"query": "release notes", "source": "retrieval"},
+                  {"type": "output_text", "text": "Ship the release notes today."}
+                ]
+              }
+            }
+          ]
+        }
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes today."
+        )
+    }
+
     func testAnthropicFallsBackToTextWhenToolPayloadIsNotOutput() throws {
         let response = """
         {

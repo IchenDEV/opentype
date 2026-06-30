@@ -153,7 +153,7 @@ private extension RemoteLLMResponseText {
         if let text = contentText(from: object.value(forCaseInsensitiveKey: "value")) {
             return text
         }
-        return jsonString(from: object)
+        return actionableJSONText(from: object)
     }
 
     static func toolCallText(from value: Any?) -> String? {
@@ -212,6 +212,14 @@ private extension RemoteLLMResponseText {
             return text
         }
         return jsonString(from: value)
+    }
+
+    static func actionableJSONText(from value: Any?) -> String? {
+        guard let text = jsonString(from: value),
+              isActionableOutputPayload(text) else {
+            return nil
+        }
+        return text
     }
 
     static func jsonString(from value: Any?) -> String? {
