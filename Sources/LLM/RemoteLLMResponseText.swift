@@ -129,17 +129,34 @@ private extension RemoteLLMResponseText {
             return contentText(from: value)
         }
 
-        if let text = contentText(from: object["arguments"]) {
+        if let text = argumentText(from: object["arguments"]) {
             return text
         }
         if let function = object["function"] as? [String: Any],
-           let text = contentText(from: function["arguments"]) {
+           let text = argumentText(from: function["arguments"]) {
             return text
         }
-        if let text = contentText(from: object["input"]) {
+        if let text = argumentText(from: object["input"]) {
             return text
         }
         return nil
+    }
+
+    static func argumentText(from value: Any?) -> String? {
+        if let text = contentText(from: value) {
+            return text
+        }
+        return jsonString(from: value)
+    }
+
+    static func jsonString(from value: Any?) -> String? {
+        guard let value,
+              JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value),
+              let text = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return nonEmpty(text)
     }
 
     static let textBlockTypes = ["text", "output_text"]

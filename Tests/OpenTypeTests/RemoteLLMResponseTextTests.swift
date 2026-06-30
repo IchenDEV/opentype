@@ -156,6 +156,68 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "今天下午同步发布计划。")
     }
 
+    func testParsesDecodedToolCallArgumentObject() throws {
+        let response = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": null,
+                "tool_calls": [
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "emit_final",
+                      "arguments": {"final_text": "Ship the release notes today."}
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
+    func testParsesDecodedToolCallCommandObject() throws {
+        let response = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": null,
+                "tool_calls": [
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "emit_command",
+                      "arguments": {
+                        "action": "replace_last",
+                        "intent": null,
+                        "replacement": "ship tomorrow",
+                        "confidence": 0.91
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testParsesAllAnthropicTextBlocks() throws {
         let response = """
         {
