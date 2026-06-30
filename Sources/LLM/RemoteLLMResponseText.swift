@@ -2,10 +2,21 @@ import Foundation
 
 enum RemoteLLMResponseText {
     static func openAI(from data: Data) throws -> String {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let text = openAIText(in: json) {
+                return text
+            }
             throw RemoteLLMError.invalidResponse
         }
 
+        if let text = RemoteLLMEventStreamText.openAI(from: data) {
+            return text
+        }
+
+        throw RemoteLLMError.invalidResponse
+    }
+
+    static func openAIText(in json: [String: Any]) -> String? {
         if let choices = json.value(forCaseInsensitiveKey: "choices") as? [Any] {
             for case let choice as [String: Any] in choices {
                 if let text = openAIChoiceText(choice) {
@@ -18,7 +29,7 @@ enum RemoteLLMResponseText {
             return text
         }
 
-        throw RemoteLLMError.invalidResponse
+        return nil
     }
 
     static func anthropic(from data: Data) throws -> String {
