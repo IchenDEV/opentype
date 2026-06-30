@@ -32,6 +32,13 @@ private extension LLMActionValue {
         "operation", "operationType", "operation_type",
         "value", "name", "type",
     ]
+    static let booleanActionFlagKeys = [
+        "replace", "rewrite", "delete", "undo",
+        "replaceLast", "replace_last", "replaceSelection", "replace_selection",
+        "rewriteLast", "rewrite_last", "rewriteSelection", "rewrite_selection",
+        "deleteSelection", "delete_selection",
+        "undoLastInsertion", "undo_last_insertion",
+    ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale", "description",
         "explanation", "note", "notes", "kind",
@@ -49,6 +56,9 @@ private extension LLMActionValue {
     }
 
     static func describe(object: [String: LLMActionValue]) -> String {
+        if let flagAction = booleanFlagAction(in: object) {
+            return flagAction
+        }
         if let value = semanticActionValue(in: object) {
             return value
         }
@@ -78,6 +88,37 @@ private extension LLMActionValue {
             }
         }
         return nil
+    }
+
+    static func booleanFlagAction(in object: [String: LLMActionValue]) -> String? {
+        for key in booleanActionFlagKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text,
+                  isTruthy(value),
+                  hasOnlyActionOrMetadataFields(object) else {
+                continue
+            }
+            return key
+        }
+        return nil
+    }
+
+    static func hasOnlyActionOrMetadataFields(_ object: [String: LLMActionValue]) -> Bool {
+        object.allSatisfy { objectKey, objectValue in
+            let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return candidate.isEmpty
+                || preferredObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+                || booleanActionFlagKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+                || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+        }
+    }
+
+    static func isTruthy(_ value: String) -> Bool {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "true", "yes", "1":
+            return true
+        default:
+            return false
+        }
     }
 }
 

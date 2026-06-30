@@ -88,4 +88,19 @@ final class SpokenEditCommandActionValueTests: XCTestCase {
             .replaceLast("ship tomorrow")
         )
     }
+
+    func testDecodesBooleanActionFlagObjects() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"rewrite":true,"reason":"model selected rewrite"},"target":{"selection":true},"intent":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"replaceLast":true,"confidence":0.91},"intent":null,"replacement":"ship tomorrow","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
 }
