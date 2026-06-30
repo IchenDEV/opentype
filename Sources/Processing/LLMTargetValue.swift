@@ -9,6 +9,8 @@ struct LLMTargetValue: Decodable, Equatable {
             text = ""
         } else if let value = try? container.decode(String.self) {
             text = value
+        } else if let value = try? container.decode(Bool.self) {
+            text = value ? "true" : "false"
         } else if let value = try? container.decode([String: LLMTargetValue].self) {
             text = Self.describe(object: value)
         } else if let value = try? container.decode([LLMTargetValue].self) {
@@ -25,6 +27,14 @@ private extension LLMTargetValue {
         "entity", "name", "value", "text", "selection",
         "targetText", "target_text", "editTarget", "edit_target",
     ]
+    static let booleanTargetFlagKeys = [
+        "selection", "selected", "selectedText", "selected_text",
+        "currentSelection", "current_selection",
+        "activeSelection", "active_selection",
+        "last", "previous", "lastInsertion", "last_insertion",
+        "previousInsertion", "previous_insertion",
+        "lastOutput", "last_output",
+    ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale",
         "description", "explanation", "note", "notes",
@@ -39,6 +49,9 @@ private extension LLMTargetValue {
     }
 
     static func describe(object: [String: LLMTargetValue]) -> String {
+        if let target = booleanFlagTarget(in: object) {
+            return target
+        }
         for key in preferredObjectKeys {
             guard let value = object.value(forCaseInsensitiveKey: key)?.text
                 .trimmingCharacters(in: .whitespacesAndNewlines),
@@ -55,6 +68,37 @@ private extension LLMTargetValue {
             }
         }
         return ""
+    }
+
+    static func booleanFlagTarget(in object: [String: LLMTargetValue]) -> String? {
+        for key in booleanTargetFlagKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text,
+                  isTruthy(value),
+                  hasOnlyTargetOrMetadataFields(object) else {
+                continue
+            }
+            return key
+        }
+        return nil
+    }
+
+    static func hasOnlyTargetOrMetadataFields(_ object: [String: LLMTargetValue]) -> Bool {
+        object.allSatisfy { objectKey, objectValue in
+            let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return candidate.isEmpty
+                || preferredObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+                || booleanTargetFlagKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+                || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+        }
+    }
+
+    static func isTruthy(_ value: String) -> Bool {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "true", "yes", "1":
+            return true
+        default:
+            return false
+        }
     }
 }
 
