@@ -47,6 +47,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesChunkedRunnerOutput() throws {
+        let output = """
+        {"chunks":[{"timestamp":[0.0,1.2],"text":"Ship the release notes."},{"timestamp":[1.2,2.4],"text":"Then confirm QA."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes. Then confirm QA."
+        )
+    }
+
     func testTreatsNoSpeechPlaceholderAsEmpty() throws {
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")
