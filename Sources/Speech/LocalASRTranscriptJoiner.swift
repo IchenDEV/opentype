@@ -68,6 +68,9 @@ private extension LocalASRTranscriptJoiner {
         if isCurrencySymbol(last), CharacterSet.decimalDigits.contains(first) {
             return true
         }
+        if isCJKSentencePunctuation(last), isCJK(first) {
+            return true
+        }
         if isCJK(last), isOpeningPunctuation(first, in: previous) {
             return true
         }
@@ -182,6 +185,10 @@ private extension LocalASRTranscriptJoiner {
 
     static func isDegreeSymbol(_ scalar: Unicode.Scalar) -> Bool {
         scalar == "°"
+    }
+
+    static func isCJKSentencePunctuation(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet(charactersIn: "。！？；：，、").contains(scalar)
     }
 
     static func isConnectorSymbol(_ scalar: Unicode.Scalar) -> Bool {

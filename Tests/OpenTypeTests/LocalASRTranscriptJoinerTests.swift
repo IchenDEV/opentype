@@ -89,4 +89,15 @@ final class LocalASRTranscriptJoinerTests: XCTestCase {
             "Ship. Then confirm QA."
         )
     }
+
+    func testJoinsCJKSentencePunctuationWithoutArtificialSpace() throws {
+        let output = """
+        {"tokens":[{"token":"今天"},{"token":"发布"},{"token":"。"},{"token":"然后"},{"token":"确认"},{"token":"。"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "今天发布。然后确认。"
+        )
+    }
 }

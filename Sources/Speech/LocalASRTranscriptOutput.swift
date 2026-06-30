@@ -5,6 +5,17 @@ enum LocalASRTranscriptOutput {
         let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
+        if let jsonLinesText = LocalASRJSONLinesOutput.text(from: trimmed) {
+            return jsonLinesText
+        }
+
+        return structuredText(from: trimmed)
+    }
+
+    static func structuredText(from output: String) -> String? {
+        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
         var bestText: String?
         var bestPriority = 0
         for data in LLMStructuredOutput.jsonValueDataCandidates(from: trimmed) {
