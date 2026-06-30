@@ -16,9 +16,14 @@ private extension LLMScaffoldedOutput {
     static let thinkingMarkers = [
         "analysis", "reasoning", "reason", "thought", "thoughts",
         "thinking", "scratchpad", "inner monologue", "inner_monologue",
+        "分析", "思考", "推理", "推論", "理由", "考え", "考察",
+        "분석", "생각", "추론", "이유",
     ]
     static let finalMarkers = [
         "final", "final answer", "final output", "answer",
+        "最终", "最终答案", "最终文本", "答案", "输出",
+        "最終", "最終回答", "最終テキスト", "回答", "出力",
+        "최종", "최종 답변", "최종 텍스트", "답변", "출력",
     ]
     static let finalTagPattern = #"<(?:final|final_answer|answer)>([\s\S]*?)</(?:final|final_answer|answer)>"#
     static let thinkingTagPattern = #"<(?:analysis|think|thinking|thought|reason|reasoning|reflect|reflection|inner_monologue|scratchpad)>"#

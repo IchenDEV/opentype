@@ -52,6 +52,44 @@ final class TextProcessorFallbackTests: XCTestCase {
         )
     }
 
+    func testGeneratedOutputUsesLocalizedFinalSectionAfterThinkingScaffold() {
+        let processor = TextProcessor()
+        let chinese = """
+        分析：
+        用户要一个简洁的发布同步。
+
+        最终：
+        今天下午同步发布计划。
+        """
+        let japanese = """
+        分析:
+        最終文だけを出す必要がある。
+
+        最終:
+        金曜の午後に会議します。
+        """
+        let korean = """
+        분석:
+        최종 문장만 출력해야 한다.
+
+        최종:
+        금요일 오후에 회의합니다.
+        """
+
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput(chinese, inputLanguage: .chinese),
+            "今天下午同步发布计划。"
+        )
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput(japanese, inputLanguage: .japanese),
+            "金曜の午後に会議します。"
+        )
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput(korean, inputLanguage: .korean),
+            "금요일 오후에 회의합니다."
+        )
+    }
+
     func testGeneratedOutputKeepsAnalysisTextWithoutFinalScaffold() {
         let processor = TextProcessor()
         let output = """
