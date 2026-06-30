@@ -12,8 +12,15 @@ enum LLMResolutionFieldAlias {
         "format", "category", "targetStyle", "target_style",
     ]
     static let replacement = [
-        "replacement", "replacementText", "replacement_text", "text", "value", "new", "newText", "new_text", "output",
-        "content", "body", "message", "response", "finalText", "final_text",
+        "replacement", "replacementText", "replacement_text",
+        "text", "value", "content", "body", "message", "response",
+        "new", "newText", "new_text", "newValue", "new_value",
+        "to", "toText", "to_text", "after", "current",
+        "output", "outputText", "output_text", "resultText", "result_text",
+        "final", "finalText", "final_text",
+        "updated", "updatedText", "updated_text",
+        "corrected", "correctedText", "corrected_text",
+        "revised", "revisedText", "revised_text",
     ]
     static let confidence = [
         "confidence", "score", "probability", "certainty",

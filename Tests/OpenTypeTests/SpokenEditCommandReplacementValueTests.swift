@@ -49,4 +49,28 @@ final class SpokenEditCommandReplacementValueTests: XCTestCase {
             .replaceSelection("new customer note")
         )
     }
+
+    func testDecodesTopLevelReplacementTextAliases() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"to_text":"ship tomorrow at 3 PM","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow at 3 PM")
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_selection","intent":null,"correctedText":"new customer note","confidence":0.91}"#
+            ),
+            .replaceSelection("new customer note")
+        )
+    }
+
+    func testDecodesTopLevelCurrentReplacementWithPreviousMetadata() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"previous":"ship today","current":"ship tomorrow","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
 }
