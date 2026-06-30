@@ -226,6 +226,27 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesTopLevelConfidenceAliases() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":"summary","replacement":null,"score":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"replacement":"ship tomorrow","probability":91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.resolution(
+                from: #"{"action":"rewrite_selection","intent":"summary","replacement":null,"score":62}"#
+            ),
+            .some(.none)
+        )
+    }
+
     func testKeepsStructuredLowConfidenceAsNone() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.resolution(
