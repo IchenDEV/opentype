@@ -15,11 +15,15 @@ enum LocalASRConfidence {
 
 private extension LocalASRConfidence {
     static let confidenceKeys = [
-        "confidence", "score", "probability", "certainty",
+        "confidence", "conf", "score", "probability", "prob", "certainty",
         "confidence_score", "confidenceScore",
+        "confidence_value", "confidenceValue",
+        "confidence_percent", "confidencePercent",
+        "confidence_pct", "confidencePct",
     ]
     static let envelopeValueKeys = [
         "value", "normalized", "normalized_value", "normalizedValue",
+        "percent", "percentage", "pct",
     ]
 
     static func parse(_ value: Any) -> Double? {
