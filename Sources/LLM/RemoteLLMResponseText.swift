@@ -39,12 +39,6 @@ enum RemoteLLMResponseText {
 private extension RemoteLLMResponseText {
     static func openAIChoiceText(_ choice: [String: Any]) -> String? {
         if let message = choice["message"] as? [String: Any] {
-            if let text = contentText(from: message["content"]) {
-                return text
-            }
-            if let text = contentText(from: message["text"]) {
-                return text
-            }
             if let text = toolCallText(from: message["tool_calls"]) {
                 return text
             }
@@ -54,15 +48,30 @@ private extension RemoteLLMResponseText {
             if let text = structuredPayloadText(from: message["parsed"]) {
                 return text
             }
+            if let text = structuredPayloadText(from: message["output_parsed"]) {
+                return text
+            }
+            if let text = contentText(from: message["content"]) {
+                return text
+            }
+            if let text = contentText(from: message["text"]) {
+                return text
+            }
         }
 
+        if let text = structuredPayloadText(from: choice["parsed"]) {
+            return text
+        }
+        if let text = structuredPayloadText(from: choice["output_parsed"]) {
+            return text
+        }
         if let text = contentText(from: choice["content"]) {
             return text
         }
         if let text = contentText(from: choice["text"]) {
             return text
         }
-        return structuredPayloadText(from: choice["parsed"])
+        return nil
     }
 
     static func openAIResponsesText(_ json: [String: Any]) -> String? {
@@ -108,11 +117,11 @@ private extension RemoteLLMResponseText {
                     ?? contentText(from: object["value"])
             }
             if wrapperBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
-                return contentText(from: object["content"])
+                return structuredPayloadText(from: object["parsed"])
+                    ?? structuredPayloadText(from: object["output_parsed"])
+                    ?? contentText(from: object["content"])
                     ?? contentText(from: object["output"])
                     ?? contentText(from: object["value"])
-                    ?? structuredPayloadText(from: object["parsed"])
-                    ?? structuredPayloadText(from: object["output_parsed"])
             }
             if argumentBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
                 return toolCallText(from: object)
