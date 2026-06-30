@@ -146,6 +146,17 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
     }
 
+    func testParsesOpenAIResponsesCompletedResponseOutput() throws {
+        let response = """
+        data: {"type":"response.completed","response":{"id":"resp_1","output":[{"type":"message","content":[{"type":"output_text","text":"Ship the release notes today."}]}]}}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesAnthropicEventStreamTextDeltas() throws {
         let response = #"""
         event: message_start

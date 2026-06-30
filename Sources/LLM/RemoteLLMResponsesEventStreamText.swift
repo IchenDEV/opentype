@@ -40,6 +40,11 @@ enum RemoteLLMResponsesEventStreamText {
                    let text = RemoteLLMResponseText.openAIText(in: ["output": [item]]) {
                     return text
                 }
+            case "responsecompleted":
+                if let response = json.value(forCaseInsensitiveKey: "response") as? [String: Any],
+                   let text = RemoteLLMResponseText.openAIText(in: response) {
+                    return text
+                }
             default:
                 if let text = RemoteLLMResponseText.openAIText(in: json) {
                     return text
