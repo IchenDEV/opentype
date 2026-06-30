@@ -111,6 +111,7 @@ struct LLMReplacementValue: Decodable {
 private extension LLMReplacementValue {
     static let preferredObjectKeys = [
         "replacement", "replacementText", "replacement_text", "text", "value",
+        "content", "body", "message", "response", "output",
         "new", "newText", "new_text", "to", "toText", "to_text", "after", "target",
         "final", "finalText", "final_text", "outputText", "output_text",
         "resultText", "result_text", "updated", "updatedText", "updated_text",

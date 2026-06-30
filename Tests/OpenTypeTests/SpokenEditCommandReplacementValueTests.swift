@@ -34,4 +34,19 @@ final class SpokenEditCommandReplacementValueTests: XCTestCase {
             .replaceLast("ship tomorrow")
         )
     }
+
+    func testDecodesContentWrappedReplacementObject() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"replacement":{"content":{"value":"ship tomorrow"},"type":"text","annotations":[]},"confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_selection","intent":null,"replacement":{"output":"new customer note","reason":"adapter payload"},"confidence":0.91}"#
+            ),
+            .replaceSelection("new customer note")
+        )
+    }
 }
