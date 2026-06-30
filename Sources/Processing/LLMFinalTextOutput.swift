@@ -4,7 +4,7 @@ enum LLMFinalTextOutput {
     static func text(from rawText: String) -> String? {
         let candidate = stripWrappingCodeFence(from: rawText)
         if let text = finalText(
-            from: wholeJSONObjectData(from: candidate),
+            from: wholeJSONValueData(from: candidate),
             allowsAmbiguousKeys: false
         ) {
             return text
@@ -54,21 +54,22 @@ private extension LLMFinalTextOutput {
         return bestText
     }
 
-    static func wholeJSONObjectData(from text: String) -> Data? {
+    static func wholeJSONValueData(from text: String) -> Data? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let range = LLMStructuredOutput.firstBalancedJSONObjectRange(in: trimmed),
-              range.lowerBound == trimmed.startIndex,
-              range.upperBound == trimmed.index(before: trimmed.endIndex) else {
+        guard let data = trimmed.data(using: .utf8),
+              let value = try? JSONSerialization.jsonObject(with: data),
+              value is [String: Any] || value is [Any] else {
             return nil
         }
-        return String(trimmed[range]).data(using: .utf8)
+        return data
     }
 
     static func finalText(in value: Any, allowsAmbiguousKeys: Bool) -> String? {
-        guard let object = value as? [String: Any] else { return nil }
-        if let text = explicitFinalText(in: object) {
+        if let text = explicitFinalText(in: value) {
             return text
         }
+
+        guard let object = value as? [String: Any] else { return nil }
 
         guard allowsAmbiguousKeys || hasMetadata(in: object) else { return nil }
         for key in ambiguousTextKeys {
