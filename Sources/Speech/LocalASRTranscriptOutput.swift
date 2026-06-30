@@ -7,7 +7,7 @@ enum LocalASRTranscriptOutput {
 
         var bestText: String?
         var bestPriority = 0
-        for data in LLMStructuredOutput.jsonObjectDataCandidates(from: trimmed) {
+        for data in LLMStructuredOutput.jsonValueDataCandidates(from: trimmed) {
             guard let object = try? JSONSerialization.jsonObject(with: data),
                   let candidate = transcriptCandidate(in: object),
                   candidate.priority >= bestPriority else {
