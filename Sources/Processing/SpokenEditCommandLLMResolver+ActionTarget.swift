@@ -19,9 +19,13 @@ extension SpokenEditCommandLLMResolver {
     static func normalizedEditTarget(_ rawTarget: String?) -> String {
         switch normalizedCommandIdentifier(rawTarget) {
         case "last", "previous", "last_insertion", "previous_insertion",
-             "lastinsertedtext", "last_inserted_text":
+             "lastinsertion", "previousinsertion",
+             "lastinsertedtext", "last_inserted_text",
+             "last_output", "lastoutput":
             return "last"
         case "selection", "selected", "selected_text", "current_selection":
+            return "selection"
+        case "selectedtext", "currentselection", "active_selection", "activeselection":
             return "selection"
         default:
             return ""
