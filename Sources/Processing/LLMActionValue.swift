@@ -17,8 +17,9 @@ struct LLMActionValue: Decodable {
             text = value ? "true" : "false"
         } else if let value = try? container.decode([LLMActionValue].self) {
             text = Self.describe(array: value)
-        } else if let value = try? container.decode([String: LLMActionValue].self) {
-            text = Self.describe(object: value)
+        } else if let actionValues = try? container.decode([String: LLMActionValue].self) {
+            let targetValues = (try? container.decode([String: LLMTargetValue].self)) ?? [:]
+            text = Self.describe(actionObject: actionValues, targetObject: targetValues)
         } else {
             text = ""
         }
@@ -39,6 +40,19 @@ private extension LLMActionValue {
         "deleteSelection", "delete_selection",
         "undoLastInsertion", "undo_last_insertion",
     ]
+    static let targetObjectKeys = [
+        "target", "scope", "object", "subject",
+        "targetText", "target_text",
+        "editTarget", "edit_target",
+    ]
+    static let booleanTargetFlagKeys = [
+        "selection", "selected", "selectedText", "selected_text",
+        "currentSelection", "current_selection",
+        "activeSelection", "active_selection",
+        "last", "previous", "lastInsertion", "last_insertion",
+        "previousInsertion", "previous_insertion",
+        "lastOutput", "last_output",
+    ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale", "description",
         "explanation", "note", "notes", "kind",
@@ -56,45 +70,51 @@ private extension LLMActionValue {
     }
 
     static func describe(object: [String: LLMActionValue]) -> String {
-        if let flagAction = booleanFlagAction(in: object) {
-            return flagAction
-        }
-        if let value = semanticActionValue(in: object) {
-            return value
+        describe(actionObject: object, targetObject: [:])
+    }
+
+    static func describe(
+        actionObject: [String: LLMActionValue],
+        targetObject: [String: LLMTargetValue]
+    ) -> String {
+        let action = booleanFlagAction(in: actionObject, allowsTargetFields: true)
+            ?? semanticActionValue(in: actionObject, allowsTargetFields: true)
+        if let action {
+            return targetedAction(action, target: targetValue(in: targetObject))
         }
 
-        return object.keys.sorted().compactMap { key in
-            let value = object[key]?.text.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return actionObject.keys.sorted().compactMap { key in
+            let value = actionObject[key]?.text.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             guard !value.isEmpty else { return nil }
             return "\(key): \(value)"
         }
         .joined(separator: "; ")
     }
 
-    static func semanticActionValue(in object: [String: LLMActionValue]) -> String? {
+    static func semanticActionValue(
+        in object: [String: LLMActionValue],
+        allowsTargetFields: Bool = false
+    ) -> String? {
         for key in preferredObjectKeys {
             guard let value = object.value(forCaseInsensitiveKey: key)?.text
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                 !value.isEmpty else { continue }
 
-            let hasOnlyActionOrMetadata = object.allSatisfy { objectKey, objectValue in
-                let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
-                return candidate.isEmpty
-                    || preferredObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
-                    || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
-            }
-            if hasOnlyActionOrMetadata {
+            if hasOnlyActionOrMetadataFields(object, allowsTargetFields: allowsTargetFields) {
                 return value
             }
         }
         return nil
     }
 
-    static func booleanFlagAction(in object: [String: LLMActionValue]) -> String? {
+    static func booleanFlagAction(
+        in object: [String: LLMActionValue],
+        allowsTargetFields: Bool = false
+    ) -> String? {
         for key in booleanActionFlagKeys {
             guard let value = object.value(forCaseInsensitiveKey: key)?.text,
                   isTruthy(value),
-                  hasOnlyActionOrMetadataFields(object) else {
+                  hasOnlyActionOrMetadataFields(object, allowsTargetFields: allowsTargetFields) else {
                 continue
             }
             return key
@@ -102,14 +122,44 @@ private extension LLMActionValue {
         return nil
     }
 
-    static func hasOnlyActionOrMetadataFields(_ object: [String: LLMActionValue]) -> Bool {
+    static func hasOnlyActionOrMetadataFields(
+        _ object: [String: LLMActionValue],
+        allowsTargetFields: Bool = false
+    ) -> Bool {
         object.allSatisfy { objectKey, objectValue in
             let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
             return candidate.isEmpty
                 || preferredObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
                 || booleanActionFlagKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
                 || metadataObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame }
+                || (allowsTargetFields && targetObjectKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame })
+                || (allowsTargetFields && booleanTargetFlagKeys.contains { $0.localizedCaseInsensitiveCompare(objectKey) == .orderedSame })
         }
+    }
+
+    static func targetValue(in object: [String: LLMTargetValue]) -> String {
+        for key in targetObjectKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+                !value.isEmpty else { continue }
+            return value
+        }
+        for key in booleanTargetFlagKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key)?.text,
+                  isTruthy(value) else {
+                continue
+            }
+            return key
+        }
+        return ""
+    }
+
+    static func targetedAction(_ action: String, target: String) -> String {
+        guard !target.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return action
+        }
+        let normalizedTargetedAction = SpokenEditCommandLLMResolver.normalizedAction(action, target: target)
+        return normalizedTargetedAction == normalizedIdentifier(action) ? action : normalizedTargetedAction
     }
 
     static func isTruthy(_ value: String) -> Bool {
@@ -119,6 +169,14 @@ private extension LLMActionValue {
         default:
             return false
         }
+    }
+
+    static func normalizedIdentifier(_ rawValue: String) -> String {
+        rawValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
     }
 }
 
