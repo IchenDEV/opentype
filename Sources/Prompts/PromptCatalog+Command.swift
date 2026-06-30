@@ -184,9 +184,7 @@ private extension PromptCatalog {
         }
         return """
         \(screenLabel)
-        ---
-        \(screenContext)
-        ---
+        \(PromptTextBlock.block(screenContext))
         """
     }
 
@@ -210,30 +208,22 @@ private extension PromptCatalog {
         case .auto, .chinese, .cantonese:
             return """
             以下是用户最近的输入历史，仅供语境、术语、专有名词和语气参考；除非本次语音指令明确要求使用最近输入，否则不要把这里的新事实加入输出：
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         case .english:
             return """
             Recent input history for context, terminology, proper nouns, and tone only. Do not add facts from it unless the current voice command explicitly asks to use recent input:
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         case .japanese:
             return """
             最近の入力履歴。文脈、用語、固有名詞、語調の参考だけに使い、現在の音声指令が最近の入力を使うよう明示しない限り、ここから新しい事実を出力に追加しないでください：
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         case .korean:
             return """
             최근 입력 기록입니다. 맥락, 용어, 고유명사, 어조 참고용으로만 사용하고 현재 음성 명령이 최근 입력 사용을 명시하지 않는 한 여기의 새 사실을 출력에 추가하지 마세요:
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         }
     }
