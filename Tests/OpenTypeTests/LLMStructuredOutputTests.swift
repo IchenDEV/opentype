@@ -46,4 +46,17 @@ final class LLMStructuredOutputTests: XCTestCase {
         XCTAssertNotNil(wrapper["result"])
         XCTAssertEqual(nested["action"] as? String, "rewrite_selection")
     }
+
+    func testJSONObjectDataCandidatesIncludeObjectsInsideJSONStringFields() throws {
+        let output = #"""
+        {"tool_call":{"arguments":"{\"action\":\"replace_last\",\"intent\":null,\"replacement\":\"ship tomorrow\",\"confidence\":0.91}"}}
+        """#
+
+        let candidates = LLMStructuredOutput.jsonObjectDataCandidates(from: output)
+
+        XCTAssertEqual(candidates.count, 3)
+        let embedded = try XCTUnwrap(JSONSerialization.jsonObject(with: candidates[2]) as? [String: Any])
+        XCTAssertEqual(embedded["action"] as? String, "replace_last")
+        XCTAssertEqual(embedded["replacement"] as? String, "ship tomorrow")
+    }
 }

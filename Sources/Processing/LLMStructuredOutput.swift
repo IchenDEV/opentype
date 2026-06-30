@@ -7,9 +7,33 @@ enum LLMStructuredOutput {
     }
 
     static func jsonObjectDataCandidates(from text: String) -> [Data] {
-        balancedJSONObjectRanges(in: text).compactMap { range in
-            String(text[range]).data(using: .utf8)
+        var candidates: [Data] = []
+        var seen: Set<String> = []
+
+        func appendCandidate(_ data: Data) {
+            guard candidates.count < maxJSONObjectCandidates,
+                  let key = String(data: data, encoding: .utf8),
+                  !seen.contains(key) else {
+                return
+            }
+            seen.insert(key)
+            candidates.append(data)
         }
+
+        for range in balancedJSONObjectRanges(in: text) {
+            guard let data = String(text[range]).data(using: .utf8) else { continue }
+            appendCandidate(data)
+        }
+
+        var index = 0
+        while index < candidates.count, candidates.count < maxJSONObjectCandidates {
+            for data in embeddedJSONObjectDataCandidates(in: candidates[index]) {
+                appendCandidate(data)
+            }
+            index += 1
+        }
+
+        return candidates
     }
 
     static func firstBalancedJSONObjectRange(in text: String) -> ClosedRange<String.Index>? {
@@ -52,5 +76,40 @@ enum LLMStructuredOutput {
             }
             return lhs.lowerBound < rhs.lowerBound
         }
+    }
+}
+
+private extension LLMStructuredOutput {
+    static let maxJSONObjectCandidates = 32
+
+    static func embeddedJSONObjectDataCandidates(in data: Data) -> [Data] {
+        guard let object = try? JSONSerialization.jsonObject(with: data) else {
+            return []
+        }
+        return embeddedJSONObjectDataCandidates(in: object)
+    }
+
+    static func embeddedJSONObjectDataCandidates(in object: Any) -> [Data] {
+        var candidates: [Data] = []
+
+        func collect(_ value: Any) {
+            if let string = value as? String {
+                for range in balancedJSONObjectRanges(in: string) {
+                    guard let data = String(string[range]).data(using: .utf8) else { continue }
+                    candidates.append(data)
+                }
+            } else if let dictionary = value as? [String: Any] {
+                for value in dictionary.values {
+                    collect(value)
+                }
+            } else if let array = value as? [Any] {
+                for value in array {
+                    collect(value)
+                }
+            }
+        }
+
+        collect(object)
+        return candidates
     }
 }

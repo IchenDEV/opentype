@@ -66,6 +66,17 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesResolutionFromJSONStringArguments() {
+        let output = #"""
+        {"tool_call":{"arguments":"{\"action\":\"replace_last\",\"intent\":null,\"replacement\":\"ship tomorrow\",\"confidence\":0.91}"}}
+        """#
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: output),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testDecodesSingleValueObjectIntentAsPreset() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(
