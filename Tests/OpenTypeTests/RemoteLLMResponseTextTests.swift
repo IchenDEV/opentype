@@ -81,6 +81,17 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testSkipsNonObjectOpenAIChoices() throws {
+        let response = """
+        {"choices":[null,"ignored",{"message":{"content":[{"type":"output_text","text":"Ship the release notes today."}]}}]}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesOpenAITextChoiceFallback() throws {
         let response = """
         {"choices":[{"text":"  Ship the release notes today.  "}]}

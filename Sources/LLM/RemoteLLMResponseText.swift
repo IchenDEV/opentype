@@ -6,8 +6,8 @@ enum RemoteLLMResponseText {
             throw RemoteLLMError.invalidResponse
         }
 
-        if let choices = json.value(forCaseInsensitiveKey: "choices") as? [[String: Any]] {
-            for choice in choices {
+        if let choices = json.value(forCaseInsensitiveKey: "choices") as? [Any] {
+            for case let choice as [String: Any] in choices {
                 if let text = openAIChoiceText(choice) {
                     return text
                 }
