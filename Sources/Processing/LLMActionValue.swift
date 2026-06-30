@@ -27,7 +27,10 @@ struct LLMActionValue: Decodable {
 
 private extension LLMActionValue {
     static let preferredObjectKeys = [
-        "action", "value", "name", "type", "command", "operation",
+        "action", "actionType", "action_type",
+        "command", "commandType", "command_type",
+        "operation", "operationType", "operation_type",
+        "value", "name", "type",
     ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale", "description",

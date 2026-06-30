@@ -1,7 +1,12 @@
 import Foundation
 
 enum LLMResolutionFieldAlias {
-    static let action = ["action", "command", "operation", "type", "name", "actionType", "action_type"]
+    static let action = [
+        "action", "actionType", "action_type",
+        "command", "commandType", "command_type",
+        "operation", "operationType", "operation_type",
+        "type", "name",
+    ]
     static let intent = [
         "intent", "instruction", "task", "preset", "style",
         "format", "category", "targetStyle", "target_style",
