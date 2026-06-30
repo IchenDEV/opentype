@@ -58,6 +58,7 @@ private extension LocalASRTranscriptOutput {
     static let arrayKeys = [
         "events", "messages", "outputs",
         "segments", "chunks", "results", "utterances", "channels",
+        "monologues", "elements",
         "sentences", "transcripts", "predictions",
         "phrases", "recognizedPhrases", "recognized_phrases",
         "combinedRecognizedPhrases", "combined_recognized_phrases",
@@ -66,7 +67,7 @@ private extension LocalASRTranscriptOutput {
     static let finalSegmentArrayKeys = [
         "segments", "chunks", "results", "utterances", "sentences",
         "transcripts", "predictions", "phrases",
-        "words", "tokens", "items",
+        "elements", "words", "tokens", "items",
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
@@ -102,7 +103,25 @@ private extension LocalASRTranscriptOutput {
     }
 
     static func directTranscriptText(in object: [String: Any]) -> String? {
+        if let text = typedValueTranscriptText(in: object) {
+            return text
+        }
         for key in textKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key),
+                  let text = transcriptText(in: value) else {
+                continue
+            }
+            return text
+        }
+        return nil
+    }
+
+    static func typedValueTranscriptText(in object: [String: Any]) -> String? {
+        guard let type = typedValueType(in: object),
+              typedValueTranscriptTypes.contains(where: { normalizedTypedValueType($0) == type }) else {
+            return nil
+        }
+        for key in typedValueKeys {
             guard let value = object.value(forCaseInsensitiveKey: key),
                   let text = transcriptText(in: value) else {
                 continue

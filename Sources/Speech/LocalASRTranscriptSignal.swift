@@ -37,6 +37,7 @@ private extension LocalASRTranscriptSignal {
     static let arrayKeys = [
         "events", "messages", "outputs",
         "segments", "chunks", "results", "utterances", "channels",
+        "monologues", "elements",
         "sentences", "transcripts", "predictions",
         "phrases", "recognizedPhrases", "recognized_phrases",
         "combinedRecognizedPhrases", "combined_recognized_phrases",
