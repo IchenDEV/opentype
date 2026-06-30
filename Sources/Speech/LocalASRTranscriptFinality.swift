@@ -8,6 +8,10 @@ enum LocalASRTranscriptFinality {
     static func hasMetadata(in object: [String: Any]) -> Bool {
         finality(in: object) != .unknown
     }
+
+    static func isFinal(in object: [String: Any]) -> Bool {
+        finality(in: object) == .final
+    }
 }
 
 private enum TranscriptFinality {

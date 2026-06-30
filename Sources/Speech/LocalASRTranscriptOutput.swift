@@ -58,6 +58,10 @@ private extension LocalASRTranscriptOutput {
         "combinedRecognizedPhrases", "combined_recognized_phrases",
         "words", "tokens", "items",
     ]
+    static let finalSegmentArrayKeys = [
+        "segments", "chunks", "utterances", "sentences", "phrases",
+        "words", "tokens", "items",
+    ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
     ]
@@ -114,7 +118,10 @@ private extension LocalASRTranscriptOutput {
 
         for key in arrayKeys {
             guard let value = object.value(forCaseInsensitiveKey: key),
-                  let text = transcriptText(in: value) else {
+                  let text = transcriptText(
+                    in: value,
+                    joinsFinalSegments: finalSegmentArrayKeys.contains(where: { matchesKey(key, $0) })
+                  ) else {
                 continue
             }
             return text
@@ -135,13 +142,37 @@ private extension LocalASRTranscriptOutput {
         keys.contains { object.value(forCaseInsensitiveKey: $0) != nil }
     }
 
-    static func transcriptText(in array: [Any]) -> String? {
+    static func transcriptText(in value: Any, joinsFinalSegments: Bool) -> String? {
+        if let array = value as? [Any] {
+            return transcriptText(in: array, joinsFinalSegments: joinsFinalSegments)
+        }
+        return transcriptText(in: value)
+    }
+
+    static func transcriptText(in array: [Any], joinsFinalSegments: Bool = false) -> String? {
+        if joinsFinalSegments,
+           let text = joinedFinalSegmentsText(in: array) {
+            return text
+        }
         if let text = finalityPreferredText(in: array) {
             return text
         }
         let parts = array.compactMap(transcriptText)
         guard !parts.isEmpty else { return nil }
         return LocalASRTranscriptJoiner.join(parts)
+    }
+
+    static func joinedFinalSegmentsText(in array: [Any]) -> String? {
+        let finalTexts = array.compactMap { value -> String? in
+            guard let object = value as? [String: Any],
+                  LocalASRTranscriptFinality.isFinal(in: object),
+                  let candidate = transcriptCandidate(in: object) else {
+                return nil
+            }
+            return candidate.text
+        }
+        guard finalTexts.count > 1 else { return nil }
+        return LocalASRFinalSegmentJoiner.join(finalTexts)
     }
 
     static func finalityPreferredText(in array: [Any]) -> String? {
@@ -242,6 +273,10 @@ private extension LocalASRTranscriptOutput {
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    static func matchesKey(_ lhs: String, _ rhs: String) -> Bool {
+        lhs.localizedCaseInsensitiveCompare(rhs) == .orderedSame
     }
 }
 

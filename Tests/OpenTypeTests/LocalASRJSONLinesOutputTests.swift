@@ -39,6 +39,31 @@ final class LocalASRJSONLinesOutputTests: XCTestCase {
         )
     }
 
+    func testJoinsFinalJSONLineTranscriptSegments() throws {
+        let output = """
+        {"type":"final","text":"Ship the release notes."}
+        {"type":"final","text":"Then confirm QA."}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes. Then confirm QA."
+        )
+    }
+
+    func testKeepsLatestCumulativeFinalJSONLineTranscript() throws {
+        let output = """
+        {"type":"final","text":"Ship"}
+        {"type":"final","text":"Ship today"}
+        {"type":"final","text":"Ship today."}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship today."
+        )
+    }
+
     func testParsesDataPrefixedJSONLineTranscriptSegments() throws {
         let output = """
         event: transcript

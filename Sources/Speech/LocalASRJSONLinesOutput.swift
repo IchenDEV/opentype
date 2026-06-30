@@ -3,9 +3,12 @@ import Foundation
 enum LocalASRJSONLinesOutput {
     static func text(from output: String) -> String? {
         let events = jsonLineEvents(in: output)
-        guard events.count > 1,
-              events.contains(where: \.hasFinalityMetadata) == false else {
+        guard events.count > 1 else {
             return nil
+        }
+
+        if events.contains(where: \.hasFinalityMetadata) {
+            return finalEventsText(in: events)
         }
 
         let parts = events.compactMap(\.text)
@@ -17,6 +20,7 @@ enum LocalASRJSONLinesOutput {
 private struct LocalASRJSONLineEvent {
     let text: String?
     let hasFinalityMetadata: Bool
+    let isFinal: Bool
 }
 
 private extension LocalASRJSONLinesOutput {
@@ -39,8 +43,16 @@ private extension LocalASRJSONLinesOutput {
 
         return LocalASRJSONLineEvent(
             text: LocalASRTranscriptOutput.structuredText(from: payload),
-            hasFinalityMetadata: hasFinalityMetadata(in: value)
+            hasFinalityMetadata: hasFinalityMetadata(in: value),
+            isFinal: isFinal(in: value)
         )
+    }
+
+    static func finalEventsText(in events: [LocalASRJSONLineEvent]) -> String? {
+        let finalTexts = events.filter(\.isFinal).compactMap(\.text)
+        guard !finalTexts.isEmpty else { return nil }
+        if finalTexts.count == 1 { return finalTexts[0] }
+        return LocalASRFinalSegmentJoiner.join(finalTexts)
     }
 
     static func jsonPayload(in line: String) -> String {
@@ -83,6 +95,19 @@ private extension LocalASRJSONLinesOutput {
         }
         if let array = value as? [Any] {
             return array.contains(where: hasFinalityMetadata)
+        }
+        return false
+    }
+
+    static func isFinal(in value: Any) -> Bool {
+        if let object = value as? [String: Any] {
+            if LocalASRTranscriptFinality.isFinal(in: object) {
+                return true
+            }
+            return object.values.contains(where: isFinal)
+        }
+        if let array = value as? [Any] {
+            return array.contains(where: isFinal)
         }
         return false
     }
