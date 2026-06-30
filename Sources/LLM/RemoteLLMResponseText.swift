@@ -177,11 +177,17 @@ private extension RemoteLLMResponseText {
 
     static func toolPayloadText(in object: [String: Any]) -> String? {
         for key in toolPayloadKeys {
-            if let text = structuredPayloadText(from: object[key]) {
+            if let text = structuredPayloadText(from: object[key]),
+               isActionableOutputPayload(text) {
                 return text
             }
         }
         return nil
+    }
+
+    static func isActionableOutputPayload(_ text: String) -> Bool {
+        LLMFinalTextOutput.text(from: text) != nil
+            || SpokenEditCommandLLMResolver.command(from: text) != nil
     }
 
     static func structuredPayloadText(from value: Any?) -> String? {
