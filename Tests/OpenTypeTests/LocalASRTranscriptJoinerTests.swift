@@ -111,4 +111,15 @@ final class LocalASRTranscriptJoinerTests: XCTestCase {
             "金曜の午後に会議します。よろしくお願いします。"
         )
     }
+
+    func testSkipsTokenizerControlTokensFromASRTokenOutput() throws {
+        let output = """
+        {"tokens":[{"token":"<|startoftranscript|>","special":true},{"token":"<|zh|>"},{"token":"▁今天"},{"token":"下午"},{"token":"发布"},{"token":"。"},{"token":"<|endoftext|>","type":"special"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "今天下午发布。"
+        )
+    }
 }

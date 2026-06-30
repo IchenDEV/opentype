@@ -82,9 +82,10 @@ private extension LocalASRTranscriptOutput {
 
     static func transcriptText(in value: Any) -> String? {
         if let text = value as? String {
-            return nonEmpty(text)
+            return LocalASRTokenControl.textIfNotControl(text)
         }
         if let object = value as? [String: Any] {
+            guard !LocalASRTokenControl.shouldIgnore(object) else { return nil }
             return transcriptText(in: object)
         }
         if let array = value as? [Any] {
@@ -269,11 +270,6 @@ private extension LocalASRTranscriptOutput {
             return number / 100
         }
         return nil
-    }
-
-    static func nonEmpty(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 
     static func matchesKey(_ lhs: String, _ rhs: String) -> Bool {
