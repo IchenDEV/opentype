@@ -8,7 +8,10 @@ enum LLMResolutionFieldAlias {
         "type", "name",
     ]
     static let intent = [
-        "intent", "instruction", "task", "preset", "style",
+        "intent", "instruction", "editInstruction", "edit_instruction",
+        "rewriteInstruction", "rewrite_instruction",
+        "task", "goal", "objective", "directive",
+        "preset", "style",
         "format", "category", "targetStyle", "target_style",
     ]
     static let replacement = [
