@@ -29,6 +29,30 @@ final class SpokenEditCommandIntentValueTests: XCTestCase {
         )
     }
 
+    func testDecodesTopLevelFormatAndCategoryAsIntent() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","format":"numbered_points","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.numberedList)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_last","category":"main_points","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteLast(.keyPoints)
+        )
+    }
+
+    func testDecodesTargetStyleIntentObjectAsPreset() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":{"target_style":"casual","reason":"requested tone"},"replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.casual)
+        )
+    }
+
     func testDecodesCommonPresetAliases() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(
