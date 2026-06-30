@@ -51,19 +51,22 @@ struct InputContext: Codable, Equatable {
     static func capture(
         targetApp: NSRunningApplication?,
         screenContext: String,
+        selectedTextOverride: String? = nil,
         outputMode: OutputMode,
         inputLanguage: InputLanguage,
         source: InputSource
     ) -> InputContext {
         let app = targetApp ?? NSWorkspace.shared.frontmostApplication
         let focusedText = focusedTextContext(for: app)
+        let selectedText = normalized(selectedTextOverride, limit: maxFocusedContextLength)
+            ?? focusedText?.selectedText
         return InputContext(
             appName: app?.localizedName,
             bundleIdentifier: app?.bundleIdentifier,
             windowTitle: windowTitle(for: app),
             screenContext: screenContext,
             textBeforeSelection: focusedText?.textBeforeSelection,
-            selectedText: focusedText?.selectedText,
+            selectedText: selectedText,
             textAfterSelection: focusedText?.textAfterSelection,
             outputMode: outputMode,
             inputLanguage: inputLanguage,

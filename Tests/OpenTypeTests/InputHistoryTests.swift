@@ -69,6 +69,21 @@ final class InputHistoryTests: XCTestCase {
     }
 
     @MainActor
+    func testCapturedSelectionOverrideDoesNotBecomeScreenContext() {
+        let context = InputContext.capture(
+            targetApp: nil,
+            screenContext: "",
+            selectedTextOverride: "Selected customer note",
+            outputMode: .command,
+            inputLanguage: .english,
+            source: .menuBar
+        )
+
+        XCTAssertEqual(context.selectedText, "Selected customer note")
+        XCTAssertNil(context.screenContext)
+    }
+
+    @MainActor
     func testMemoryStorePrioritizesSameAppContext() {
         let now = Date(timeIntervalSince1970: 10_000)
         let safari = InputContext(
