@@ -36,6 +36,21 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIEventStreamDecodedToolArgumentObject() throws {
+        let response = """
+        data: {"choices":[{"delta":{"tool_calls":[{"index":0,"type":"function","function":{"name":"emit_command","arguments":{"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}}}]}}]}
+
+        data: [DONE]
+        """
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testParsesOpenAIEventStreamPlainTextDeltas() throws {
         let response = """
         event: message
@@ -99,6 +114,19 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
 
         data: {"type":"response.function_call_arguments.done","item_id":"fc_1","output_index":0,"arguments":"{\"action\":\"replace_last\",\"intent\":null,\"replacement\":\"ship tomorrow\",\"confidence\":0.91}"}
         """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
+    func testParsesOpenAIResponsesFunctionArgumentObjectDone() throws {
+        let response = """
+        data: {"type":"response.function_call_arguments.done","item_id":"fc_1","output_index":0,"arguments":{"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}}
+        """
 
         let rawText = try RemoteLLMResponseText.openAI(from: data(response))
 

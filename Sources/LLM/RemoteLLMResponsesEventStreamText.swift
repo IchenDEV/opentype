@@ -32,7 +32,7 @@ enum RemoteLLMResponsesEventStreamText {
                     functionArguments[eventKey(in: json), default: ""] += delta
                 }
             case "responsefunctioncallargumentsdone":
-                if let arguments = json.value(forCaseInsensitiveKey: "arguments") as? String {
+                if let arguments = argumentsText(from: json.value(forCaseInsensitiveKey: "arguments")) {
                     functionArguments[eventKey(in: json)] = arguments
                 }
             case "responseoutputitemdone":
@@ -90,6 +90,19 @@ private extension RemoteLLMResponsesEventStreamText {
             return text
         }
         return nil
+    }
+
+    static func argumentsText(from value: Any?) -> String? {
+        if let text = value as? String, !text.isEmpty {
+            return text
+        }
+        guard let value,
+              JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value),
+              let text = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return text
     }
 
     static func eventKey(in json: [String: Any]) -> String {

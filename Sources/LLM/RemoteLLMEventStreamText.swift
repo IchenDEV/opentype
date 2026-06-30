@@ -186,9 +186,13 @@ private extension RemoteLLMEventStreamText {
 
     static func argumentsText(in object: [String: Any]) -> String? {
         for key in ["arguments", "args", "parameters", "params", "input"] {
-            guard let text = object.value(forCaseInsensitiveKey: key) as? String,
-                  !text.isEmpty else { continue }
-            return text
+            guard let value = object.value(forCaseInsensitiveKey: key) else { continue }
+            if let text = value as? String, !text.isEmpty {
+                return text
+            }
+            if let text = jsonString(from: value) {
+                return text
+            }
         }
         return nil
     }
