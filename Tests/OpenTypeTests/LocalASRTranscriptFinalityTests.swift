@@ -45,6 +45,28 @@ final class LocalASRTranscriptFinalityTests: XCTestCase {
         )
     }
 
+    func testPrefersFinalEventInsideRunnerEventContainer() throws {
+        let output = """
+        {"events":[{"text":"Ship release","type":"partial"},{"text":"Ship release notes today.","type":"final"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship release notes today."
+        )
+    }
+
+    func testParsesNestedMessageAndBodyWrappers() throws {
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"message":{"text":"Ship tomorrow.","status":"completed"}}"#),
+            "Ship tomorrow."
+        )
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"body":{"transcript":"Confirm QA.","is_final":true}}"#),
+            "Confirm QA."
+        )
+    }
+
     func testStillJoinsUntypedSegmentArrays() throws {
         let output = """
         [{"text":"Ship the release notes."},{"text":"Then confirm QA."}]

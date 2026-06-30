@@ -35,10 +35,11 @@ private extension LocalASRTranscriptOutput {
         "recognized_text", "recognizedText", "recognised_text", "recognisedText",
     ]
     static let nestedKeys = [
-        "result", "data", "output", "response",
+        "result", "data", "output", "response", "payload", "message", "body",
         "best", "best_hypothesis", "bestHypothesis",
     ]
     static let arrayKeys = [
+        "events", "messages", "outputs",
         "segments", "chunks", "results", "utterances", "channels",
         "sentences", "transcripts", "predictions",
         "phrases", "recognizedPhrases", "recognized_phrases",
