@@ -109,10 +109,14 @@ private extension LLMReplacementValue {
     static let preferredObjectKeys = [
         "replacement", "replacementText", "replacement_text", "text", "value",
         "new", "newText", "new_text", "to", "toText", "to_text", "after", "target",
+        "final", "finalText", "final_text", "outputText", "output_text",
+        "resultText", "result_text", "updated", "updatedText", "updated_text",
+        "corrected", "correctedText", "corrected_text", "revised", "revisedText",
+        "revised_text", "current",
     ]
     static let metadataObjectKeys = [
         "old", "oldText", "old_text", "from", "fromText", "from_text", "before",
-        "source", "original", "previous", "current", "language", "locale", "format",
+        "source", "original", "previous", "language", "locale", "format",
         "confidence", "score", "probability", "reason", "rationale", "note", "notes",
         "kind", "type",
     ]
