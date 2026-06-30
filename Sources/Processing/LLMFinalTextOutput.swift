@@ -69,6 +69,12 @@ private extension LLMFinalTextOutput {
             return text
         }
 
+        if let array = value as? [Any] {
+            let parts = array.compactMap { finalText(in: $0, allowsAmbiguousKeys: false) }
+            guard !parts.isEmpty else { return nil }
+            return parts.joined(separator: "\n")
+        }
+
         guard let object = value as? [String: Any] else { return nil }
 
         guard allowsAmbiguousKeys || hasMetadata(in: object) else { return nil }

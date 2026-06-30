@@ -25,4 +25,27 @@ final class LLMFinalTextOutputTests: XCTestCase {
             llmOutput
         )
     }
+
+    func testExtractsTopLevelTextBlockArray() {
+        let llmOutput = """
+        [{"type":"text","text":"Ship the release notes."},{"type":"text","text":"Then confirm QA."}]
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            Ship the release notes.
+            Then confirm QA.
+            """
+        )
+    }
+
+    func testKeepsOrdinaryTopLevelArrayWithoutResponseMetadata() {
+        let llmOutput = #"[{"text":"Ship the release notes today.","mode":"voice"}]"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
 }
