@@ -16,4 +16,20 @@ final class SpokenEditCommandLLMOrderingTests: XCTestCase {
             .replaceLast("ship tomorrow")
         )
     }
+
+    func testFinalNoneOverridesCopiedExampleCommand() {
+        let output = """
+        Example:
+        {"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":0.92}
+
+        Final:
+        {"action":"none","intent":null,"replacement":null,"confidence":0}
+        """
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.resolution(from: output),
+            .some(.none)
+        )
+        XCTAssertNil(SpokenEditCommandLLMResolver.command(from: output))
+    }
 }

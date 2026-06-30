@@ -1,57 +1,5 @@
 import Foundation
 
-enum SpokenEditCommandTargetAvailability {
-    case available
-    case unavailable
-    case unknown
-
-    var chinesePromptDescription: String {
-        switch self {
-        case .available: return "可用"
-        case .unavailable: return "不可用"
-        case .unknown: return "未知"
-        }
-    }
-
-    var englishPromptDescription: String {
-        switch self {
-        case .available: return "available"
-        case .unavailable: return "unavailable"
-        case .unknown: return "unknown"
-        }
-    }
-
-    var japanesePromptDescription: String {
-        switch self {
-        case .available: return "利用可能"
-        case .unavailable: return "利用不可"
-        case .unknown: return "不明"
-        }
-    }
-
-    var koreanPromptDescription: String {
-        switch self {
-        case .available: return "사용 가능"
-        case .unavailable: return "사용 불가"
-        case .unknown: return "알 수 없음"
-        }
-    }
-}
-
-struct SpokenEditCommandResolutionContext {
-    var lastInsertion: SpokenEditCommandTargetAvailability = .unknown
-    var selectedText: SpokenEditCommandTargetAvailability = .unknown
-    var lastInsertionPreview: String?
-    var selectedTextPreview: String?
-
-    static let unknown = SpokenEditCommandResolutionContext()
-}
-
-enum SpokenEditCommandLLMResolution: Equatable {
-    case command(SpokenEditCommand)
-    case none
-}
-
 extension TextProcessor {
     func resolveSpokenEditCommand(
         text: String,
@@ -114,7 +62,7 @@ extension TextProcessor {
 
 enum SpokenEditCommandLLMResolver {
     static func resolution(from text: String) -> SpokenEditCommandLLMResolution? {
-        var bestCommand: SpokenEditCommandLLMResolution?
+        var latestResolution: SpokenEditCommandLLMResolution?
         var fallbackResolution: SpokenEditCommandLLMResolution?
         for data in jsonObjectDataCandidates(from: text) {
             guard let resolution = try? JSONDecoder().decode(Resolution.self, from: data),
@@ -123,12 +71,14 @@ enum SpokenEditCommandLLMResolver {
             }
             guard let resolved = resolvedAction(from: resolution) else { continue }
             if case .command = resolved {
-                bestCommand = resolved
+                latestResolution = resolved
+            } else if isCompleteRejectionCandidate(resolution) {
+                latestResolution = resolved
             } else {
                 fallbackResolution = resolved
             }
         }
-        return bestCommand ?? fallbackResolution
+        return latestResolution ?? fallbackResolution
     }
 
     static func command(from text: String) -> SpokenEditCommand? {
@@ -210,6 +160,31 @@ private extension SpokenEditCommandLLMResolver {
         }
     }
 
+    static func isCompleteRejectionCandidate(_ resolution: Resolution) -> Bool {
+        let action = normalizedIdentifier(resolution.action?.text)
+        if action == "none" {
+            return true
+        }
+        guard let confidence = resolution.confidence?.value,
+              (0...1).contains(confidence) else {
+            return false
+        }
+
+        switch action {
+        case "replace_last", "replacelast", "replace_selection", "replaceselection":
+            return emptyPayload(resolution.intent?.text)
+                && !cleanReplacementPayload(resolution.replacement?.text).isEmpty
+        case "rewrite_last", "rewritelast", "rewrite_selection", "rewriteselection":
+            return emptyPayload(resolution.replacement?.text)
+                && SelectionRewriteIntent.llmValue(resolution.intent?.text) != nil
+        case "delete_selection", "deleteselection", "undo_last_insertion", "undolastinsertion":
+            return emptyPayload(resolution.intent?.text)
+                && emptyPayload(resolution.replacement?.text)
+        default:
+            return false
+        }
+    }
+
     static let minimumConfidence = 0.75
 
     static func emptyPayload(_ rawValue: String?) -> Bool {
@@ -220,8 +195,12 @@ private extension SpokenEditCommandLLMResolver {
         _ rawReplacement: String?,
         command: (String) -> SpokenEditCommand
     ) -> SpokenEditCommand? {
-        let replacement = SpokenEditCommandPayloadCleaner.cleanReplacement(rawReplacement ?? "")
+        let replacement = cleanReplacementPayload(rawReplacement)
         return replacement.isEmpty ? nil : command(replacement)
+    }
+
+    static func cleanReplacementPayload(_ rawReplacement: String?) -> String {
+        SpokenEditCommandPayloadCleaner.cleanReplacement(rawReplacement ?? "")
     }
 
     static func jsonObjectDataCandidates(from text: String) -> [Data] {
