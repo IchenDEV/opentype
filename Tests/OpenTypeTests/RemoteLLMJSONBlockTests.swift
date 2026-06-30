@@ -77,6 +77,24 @@ final class RemoteLLMJSONBlockTests: XCTestCase {
         XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "今天下午同步发布计划。")
     }
 
+    func testParsesTypedFinalTextContentBlocks() throws {
+        let openAIResponse = """
+        {"choices":[{"message":{"content":[{"type":"final_text","content":"Ship the release notes today."}]}}]}
+        """
+        let anthropicResponse = """
+        {"content":[{"type":"formatted_text","value":"今天下午同步发布计划。"}]}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(openAIResponse)),
+            "Ship the release notes today."
+        )
+        XCTAssertEqual(
+            try RemoteLLMResponseText.anthropic(from: data(anthropicResponse)),
+            "今天下午同步发布计划。"
+        )
+    }
+
     func testIgnoresIrrelevantJSONContentBlockAndFallsBackToText() throws {
         let response = """
         {

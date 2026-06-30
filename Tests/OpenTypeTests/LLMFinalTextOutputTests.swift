@@ -40,6 +40,18 @@ final class LLMFinalTextOutputTests: XCTestCase {
         )
     }
 
+    func testExtractsTypedFinalTextContentPayload() {
+        let llmOutput = """
+        Final response:
+        {"type":"final_text","content":"Ship the release notes today."}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
     func testExtractsOpenAIChatTextBlocksFromWholeResponse() {
         let llmOutput = """
         {"choices":[{"message":{"content":[{"type":"text","text":"Ship the release notes."},{"type":"text","text":"Then confirm QA."}]}}]}

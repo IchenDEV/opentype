@@ -22,6 +22,9 @@ private extension LLMFinalTextOutput {
     static let typedFinalTextValues = [
         "output_text", "final_text", "formatted_text", "cleaned_text", "rewritten_text",
     ]
+    static let typedFinalTextPayloadKeys = [
+        "text", "content", "value", "output", "data",
+    ]
     static let wrapperKeys = [
         "data", "payload", "result", "output", "response",
         "parsed", "output_parsed",
@@ -144,11 +147,17 @@ private extension LLMFinalTextOutput {
 
     static func typedFinalText(in object: [String: Any]) -> String? {
         guard let kind = object.value(forCaseInsensitiveKey: "type") as? String,
-              typedFinalTextValues.contains(where: { normalizedKind(kind) == $0 }),
-              let rawValue = object.value(forCaseInsensitiveKey: "text") else {
+              typedFinalTextValues.contains(where: { normalizedKind(kind) == $0 }) else {
             return nil
         }
-        return finalTextValue(from: rawValue, allowsAmbiguousKeys: true)
+        for key in typedFinalTextPayloadKeys {
+            guard let rawValue = object.value(forCaseInsensitiveKey: key),
+                  let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: true) else {
+                continue
+            }
+            return text
+        }
+        return nil
     }
 
     static func isStructuredValue(_ value: Any) -> Bool {

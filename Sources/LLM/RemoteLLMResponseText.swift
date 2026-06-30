@@ -224,7 +224,10 @@ private extension RemoteLLMResponseText {
         return nonEmpty(text)
     }
 
-    static let textBlockTypes = ["text", "output_text"]
+    static let textBlockTypes = [
+        "text", "output_text", "final_text", "formatted_text", "cleaned_text",
+        "rewritten_text", "result_text",
+    ]
     static let wrapperBlockTypes = ["message"]
     static let argumentBlockTypes = ["function", "function_call", "tool_call", "tool_use"]
     static let structuredBlockTypes = ["json", "output_json", "input_json"]
