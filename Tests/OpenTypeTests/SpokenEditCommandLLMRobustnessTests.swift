@@ -108,6 +108,21 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesStructuredActionValues() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"action":"rewrite_selection","reason":"final answer"},"intent":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"type":"replace_last","confidence":0.91},"intent":null,"replacement":"ship tomorrow","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testDecodesStructuredIntentDetailsAsCustomInstruction() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(
