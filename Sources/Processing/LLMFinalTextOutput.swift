@@ -3,12 +3,13 @@ import Foundation
 enum LLMFinalTextOutput {
     static func text(from rawText: String) -> String? {
         let candidate = stripWrappingCodeFence(from: rawText)
-        guard let data = wholeJSONObjectData(from: candidate),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let text = finalText(in: object, allowsAmbiguousKeys: false) else {
-            return nil
+        if let text = finalText(
+            from: wholeJSONObjectData(from: candidate),
+            allowsAmbiguousKeys: false
+        ) {
+            return text
         }
-        return text
+        return embeddedExplicitFinalText(in: candidate)
     }
 }
 
@@ -25,6 +26,26 @@ private extension LLMFinalTextOutput {
         "score", "probability", "language", "locale", "type", "kind",
     ]
 
+    static func finalText(from data: Data?, allowsAmbiguousKeys: Bool) -> String? {
+        guard let data,
+              let object = try? JSONSerialization.jsonObject(with: data) else {
+            return nil
+        }
+        return finalText(in: object, allowsAmbiguousKeys: allowsAmbiguousKeys)
+    }
+
+    static func embeddedExplicitFinalText(in text: String) -> String? {
+        var bestText: String?
+        for data in LLMStructuredOutput.jsonObjectDataCandidates(from: text) {
+            guard let object = try? JSONSerialization.jsonObject(with: data),
+                  let text = explicitFinalText(in: object) else {
+                continue
+            }
+            bestText = text
+        }
+        return bestText
+    }
+
     static func wholeJSONObjectData(from text: String) -> Data? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let range = LLMStructuredOutput.firstBalancedJSONObjectRange(in: trimmed),
@@ -37,16 +58,24 @@ private extension LLMFinalTextOutput {
 
     static func finalText(in value: Any, allowsAmbiguousKeys: Bool) -> String? {
         guard let object = value as? [String: Any] else { return nil }
-        for key in explicitTextKeys {
+        if let text = explicitFinalText(in: object) {
+            return text
+        }
+
+        guard allowsAmbiguousKeys || hasMetadata(in: object) else { return nil }
+        for key in ambiguousTextKeys {
             guard let rawValue = object.value(forCaseInsensitiveKey: key),
                   let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: true) else {
                 continue
             }
             return text
         }
+        return nil
+    }
 
-        guard allowsAmbiguousKeys || hasMetadata(in: object) else { return nil }
-        for key in ambiguousTextKeys {
+    static func explicitFinalText(in value: Any) -> String? {
+        guard let object = value as? [String: Any] else { return nil }
+        for key in explicitTextKeys {
             guard let rawValue = object.value(forCaseInsensitiveKey: key),
                   let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: true) else {
                 continue

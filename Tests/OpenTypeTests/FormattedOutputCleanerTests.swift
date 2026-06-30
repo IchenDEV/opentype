@@ -168,6 +168,27 @@ final class FormattedOutputCleanerTests: XCTestCase {
         )
     }
 
+    func testExtractsExplicitFinalTextJSONAfterPreamble() {
+        let llmOutput = """
+        Sure, here is the cleaned result:
+        {"final_text":"Ship the release notes today.","reason":"Removed filler words."}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testKeepsOrdinaryEmbeddedJSONWithoutExplicitFinalText() {
+        let llmOutput = #"The payload is {"text":"Ship the release notes today.","mode":"voice"}."#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
     func testKeepsOrdinaryJSONWithoutFinalTextField() {
         let llmOutput = #"{"name":"OpenType","mode":"voice"}"#
 
