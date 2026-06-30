@@ -3,14 +3,40 @@ import Foundation
 enum LocalASRTranscriptJoiner {
     static func join(_ parts: [String]) -> String {
         parts.reduce(into: "") { result, part in
-            let text = part.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return }
-            if result.isEmpty || shouldAttachWithoutSpace(previous: result, next: text) {
-                result += text
+            let piece = normalizedPiece(part)
+            guard !piece.text.isEmpty else { return }
+            if result.isEmpty || piece.attachesToPrevious || shouldAttachWithoutSpace(previous: result, next: piece.text) {
+                result += piece.text
             } else {
-                result += " \(text)"
+                result += " \(piece.text)"
             }
         }
+    }
+}
+
+private struct LocalASRTranscriptPiece {
+    let text: String
+    let attachesToPrevious: Bool
+}
+
+private extension LocalASRTranscriptJoiner {
+    static func normalizedPiece(_ rawPart: String) -> LocalASRTranscriptPiece {
+        var text = rawPart.trimmingCharacters(in: .whitespacesAndNewlines)
+        var attachesToPrevious = false
+
+        if text.hasPrefix("##") {
+            attachesToPrevious = true
+            repeat {
+                text.removeFirst(2)
+            } while text.hasPrefix("##")
+        }
+
+        text = text
+            .replacingOccurrences(of: "▁", with: " ")
+            .replacingOccurrences(of: "Ġ", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return LocalASRTranscriptPiece(text: text, attachesToPrevious: attachesToPrevious)
     }
 }
 
