@@ -80,6 +80,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesFirstHypothesisFromRunnerOutput() throws {
+        let output = """
+        {"nBest":[{"text":"Ship the release notes today."},{"text":"Skip the release notes today."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
     func testTreatsNoSpeechPlaceholderAsEmpty() throws {
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")

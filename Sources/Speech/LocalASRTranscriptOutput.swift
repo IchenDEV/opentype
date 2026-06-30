@@ -32,7 +32,7 @@ private extension LocalASRTranscriptOutput {
         "segments", "chunks", "results", "utterances",
     ]
     static let alternativeKeys = [
-        "alternatives",
+        "alternatives", "hypotheses", "nbest", "n_best",
     ]
 
     static func transcriptCandidate(in value: Any) -> (text: String, priority: Int)? {
