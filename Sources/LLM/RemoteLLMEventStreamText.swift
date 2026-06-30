@@ -114,6 +114,9 @@ private extension RemoteLLMEventStreamText {
             guard let delta = choice.value(forCaseInsensitiveKey: "delta") as? [String: Any] else { continue }
             if let content = delta.value(forCaseInsensitiveKey: "content") as? String {
                 contentParts.append(content)
+            } else if let content = delta.value(forCaseInsensitiveKey: "content"),
+                      let text = RemoteLLMStreamContentDeltaText.text(from: content) {
+                contentParts.append(text)
             }
             appendToolArguments(from: delta.value(forCaseInsensitiveKey: "tool_calls"), to: &toolArguments)
             appendFunctionArguments(from: delta.value(forCaseInsensitiveKey: "function_call"), to: &functionArguments)

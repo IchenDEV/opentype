@@ -52,6 +52,21 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIEventStreamContentBlockDeltas() throws {
+        let response = #"""
+        data: {"choices":[{"delta":{"content":[{"type":"output_text","text":"{\"final_text\":\"Ship "}]}}]}
+
+        data: {"choices":[{"delta":{"content":{"type":"output_text","text":"the release notes today.\"}"}}}]}
+
+        data: [DONE]
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
     func testRejectsEmptyOpenAIEventStream() {
         XCTAssertThrowsError(
             try RemoteLLMResponseText.openAI(from: data("data: [DONE]\n\n"))
