@@ -37,6 +37,10 @@ private extension LocalASRTranscriptOutput {
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
     ]
+    static let confidenceKeys = [
+        "confidence", "score", "probability", "certainty",
+        "confidence_score", "confidenceScore",
+    ]
 
     static func transcriptCandidate(in value: Any) -> (text: String, priority: Int)? {
         guard let text = transcriptText(in: value) else { return nil }
@@ -85,7 +89,7 @@ private extension LocalASRTranscriptOutput {
 
         for key in alternativeKeys {
             guard let value = object.value(forCaseInsensitiveKey: key),
-                  let text = firstAlternativeText(in: value) else {
+                  let text = bestAlternativeText(in: value) else {
                 continue
             }
             return text
@@ -104,11 +108,80 @@ private extension LocalASRTranscriptOutput {
         return parts.joined(separator: " ")
     }
 
-    static func firstAlternativeText(in value: Any) -> String? {
+    static func bestAlternativeText(in value: Any) -> String? {
         if let array = value as? [Any] {
-            return array.lazy.compactMap(transcriptText).first
+            var firstText: String?
+            var bestText: String?
+            var bestConfidence = -1.0
+            for value in array {
+                guard let candidate = alternativeCandidate(in: value) else { continue }
+                if firstText == nil {
+                    firstText = candidate.text
+                }
+                guard let confidence = candidate.confidence,
+                      confidence > bestConfidence else {
+                    continue
+                }
+                bestText = candidate.text
+                bestConfidence = confidence
+            }
+            return bestText ?? firstText
         }
         return transcriptText(in: value)
+    }
+
+    static func alternativeCandidate(in value: Any) -> (text: String, confidence: Double?)? {
+        guard let text = transcriptText(in: value) else { return nil }
+        let confidence = (value as? [String: Any]).flatMap(confidence(in:))
+        return (text, confidence)
+    }
+
+    static func confidence(in object: [String: Any]) -> Double? {
+        for key in confidenceKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key),
+                  let confidence = confidence(from: value) else {
+                continue
+            }
+            return confidence
+        }
+        return nil
+    }
+
+    static func confidence(from value: Any) -> Double? {
+        if value is Bool {
+            return nil
+        }
+        if let number = value as? NSNumber {
+            return normalizedConfidence(number.doubleValue)
+        }
+        if let text = value as? String {
+            return confidence(from: text)
+        }
+        if let object = value as? [String: Any] {
+            return confidence(in: object)
+        }
+        return nil
+    }
+
+    static func confidence(from text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasSuffix("%"),
+           let percent = Double(trimmed.dropLast().trimmingCharacters(in: .whitespacesAndNewlines)),
+           (0...100).contains(percent) {
+            return percent / 100
+        }
+        guard let number = Double(trimmed) else { return nil }
+        return normalizedConfidence(number)
+    }
+
+    static func normalizedConfidence(_ number: Double) -> Double? {
+        if (0...1).contains(number) {
+            return number
+        }
+        if number > 1, number <= 100 {
+            return number / 100
+        }
+        return nil
     }
 
     static func nonEmpty(_ text: String) -> String? {

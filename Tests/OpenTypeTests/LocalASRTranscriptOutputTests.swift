@@ -80,6 +80,39 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testSelectsHighestConfidenceAlternativeFromRunnerResults() throws {
+        let output = """
+        {"alternatives":[{"transcript":"Skip the release notes today.","confidence":0.42},{"transcript":"Ship the release notes today.","confidence":0.91}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
+    func testKeepsFirstAlternativeWithoutConfidenceScores() throws {
+        let output = """
+        {"alternatives":[{"transcript":"Ship the release notes today."},{"transcript":"Skip the release notes today."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
+    func testParsesNestedAndPercentConfidenceScores() throws {
+        let output = """
+        {"hypotheses":[{"transcript":"Skip the release notes today.","confidence":{"score":"62%"}},{"transcript":"Ship the release notes today.","confidence":{"score":"93%"}}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesFirstHypothesisFromRunnerOutput() throws {
         let output = """
         {"nBest":[{"text":"Ship the release notes today."},{"text":"Skip the release notes today."}]}
