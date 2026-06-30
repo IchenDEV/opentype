@@ -37,6 +37,33 @@ enum RemoteLLMEventStreamText {
         }
         return nonEmpty(contentParts.joined())
     }
+
+    static func anthropic(from data: Data) -> String? {
+        guard let text = String(data: data, encoding: .utf8),
+              text.localizedCaseInsensitiveContains("data:") else {
+            return nil
+        }
+
+        var textParts: [Int: String] = [:]
+        var toolInputs: [Int: String] = [:]
+
+        for payload in eventPayloads(in: text) {
+            guard payload != "[DONE]",
+                  let data = payload.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                continue
+            }
+            if let text = RemoteLLMResponseText.anthropicText(in: json) {
+                return text
+            }
+            collectAnthropicPayload(from: json, textParts: &textParts, toolInputs: &toolInputs)
+        }
+
+        if let text = anthropicToolText(toolInputs) {
+            return text
+        }
+        return anthropicText(textParts)
+    }
 }
 
 private extension RemoteLLMEventStreamText {
@@ -113,6 +140,44 @@ private extension RemoteLLMEventStreamText {
         functionArguments += arguments
     }
 
+    static func collectAnthropicPayload(
+        from json: [String: Any],
+        textParts: inout [Int: String],
+        toolInputs: inout [Int: String]
+    ) {
+        if let block = json.value(forCaseInsensitiveKey: "content_block") as? [String: Any],
+           let index = intValue(json.value(forCaseInsensitiveKey: "index")) {
+            collectAnthropicStartBlock(block, index: index, textParts: &textParts, toolInputs: &toolInputs)
+        }
+
+        guard let delta = json.value(forCaseInsensitiveKey: "delta") as? [String: Any],
+              let index = intValue(json.value(forCaseInsensitiveKey: "index")) else {
+            return
+        }
+        if let text = delta.value(forCaseInsensitiveKey: "text") as? String {
+            textParts[index, default: ""] += text
+        }
+        if let partialJSON = delta.value(forCaseInsensitiveKey: "partial_json") as? String {
+            toolInputs[index, default: ""] += partialJSON
+        }
+    }
+
+    static func collectAnthropicStartBlock(
+        _ block: [String: Any],
+        index: Int,
+        textParts: inout [Int: String],
+        toolInputs: inout [Int: String]
+    ) {
+        if let text = block.value(forCaseInsensitiveKey: "text") as? String {
+            textParts[index, default: ""] += text
+        }
+        if let input = block.value(forCaseInsensitiveKey: "input"),
+           let text = jsonString(from: input) {
+            guard text != "{}" else { return }
+            toolInputs[index, default: ""] += text
+        }
+    }
+
     static func argumentsText(in object: [String: Any]) -> String? {
         for key in ["arguments", "args", "parameters", "params", "input"] {
             guard let text = object.value(forCaseInsensitiveKey: key) as? String,
@@ -136,6 +201,28 @@ private extension RemoteLLMEventStreamText {
         payloadText(fromArguments: functionArguments, toolKey: "function_call")
     }
 
+    static func anthropicToolText(_ toolInputs: [Int: String]) -> String? {
+        for key in toolInputs.keys.sorted() {
+            let input = normalizedAnthropicToolInput(toolInputs[key] ?? "")
+            let payload: [String: Any] = ["content": [["type": "tool_use", "input": input]]]
+            guard let text = RemoteLLMResponseText.anthropicText(in: payload) else { continue }
+            return text
+        }
+        return nil
+    }
+
+    static func normalizedAnthropicToolInput(_ input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.hasPrefix("{") else { return trimmed }
+        return "{\(trimmed)}"
+    }
+
+    static func anthropicText(_ textParts: [Int: String]) -> String? {
+        let parts = textParts.keys.sorted().compactMap { nonEmpty(textParts[$0] ?? "") }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: "\n")
+    }
+
     static func payloadText(fromArguments arguments: String, toolKey: String) -> String? {
         let trimmed = arguments.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -153,6 +240,15 @@ private extension RemoteLLMEventStreamText {
         if let number = value as? NSNumber { return number.intValue }
         if let text = value as? String { return Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
         return nil
+    }
+
+    static func jsonString(from value: Any) -> String? {
+        guard JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value),
+              let text = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return text
     }
 
     static func nonEmpty(_ text: String) -> String? {

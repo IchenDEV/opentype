@@ -33,17 +33,23 @@ enum RemoteLLMResponseText {
     }
 
     static func anthropic(from data: Data) throws -> String {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let content = json.value(forCaseInsensitiveKey: "content") else {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let text = anthropicText(in: json) {
+                return text
+            }
             throw RemoteLLMError.invalidResponse
         }
 
-        if let text = toolCallText(from: content) {
+        if let text = RemoteLLMEventStreamText.anthropic(from: data) {
             return text
         }
 
-        guard let text = contentText(from: content) else { throw RemoteLLMError.invalidResponse }
-        return text
+        throw RemoteLLMError.invalidResponse
+    }
+
+    static func anthropicText(in json: [String: Any]) -> String? {
+        guard let content = json.value(forCaseInsensitiveKey: "content") else { return nil }
+        return toolCallText(from: content) ?? contentText(from: content)
     }
 }
 
