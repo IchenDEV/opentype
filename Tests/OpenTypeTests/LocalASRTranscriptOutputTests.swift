@@ -249,6 +249,28 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesTokenLevelAlternativesFromRunnerOutput() throws {
+        let output = """
+        {"hypotheses":[{"tokens":[{"token":"Skip"},{"token":"today"},{"token":"."}],"confidence":0.42},{"tokens":[{"token":"Ship"},{"token":"today"},{"token":"."}],"confidence":0.91}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship today."
+        )
+    }
+
+    func testJoinsTokenLevelPunctuationWithoutAwkwardSpaces() throws {
+        let output = """
+        {"tokens":[{"token":"He"},{"token":"said"},{"token":"“"},{"token":"ship"},{"token":"it"},{"token":"”"},{"token":"."},{"token":"Cost"},{"token":"$"},{"token":"20"},{"token":"."},{"token":"中文"},{"token":"（"},{"token":"测试"},{"token":"）"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "He said “ship it”. Cost $20. 中文（测试）"
+        )
+    }
+
     func testTreatsNoSpeechPlaceholderAsEmpty() throws {
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
         XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")

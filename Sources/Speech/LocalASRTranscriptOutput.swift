@@ -26,6 +26,8 @@ private extension LocalASRTranscriptOutput {
         "text", "transcript", "transcription", "sentence", "prediction",
         "display", "display_text", "displayText",
         "word", "punctuated_word", "punctuatedWord", "content",
+        "token", "display_token", "displayToken",
+        "punctuated_token", "punctuatedToken",
         "lexical", "utterance", "hypothesis",
         "normalized", "normalized_text", "normalizedText",
         "generated_text", "generatedText",
@@ -41,7 +43,7 @@ private extension LocalASRTranscriptOutput {
         "sentences", "transcripts", "predictions",
         "phrases", "recognizedPhrases", "recognized_phrases",
         "combinedRecognizedPhrases", "combined_recognized_phrases",
-        "words", "items",
+        "words", "tokens", "items",
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
@@ -217,19 +219,56 @@ private extension LocalASRTranscriptOutput {
               let first = next.unicodeScalars.first else {
             return false
         }
-        if isClosingPunctuation(first) || isOpeningPunctuation(last) {
+        if isClosingPunctuation(first, after: previous) || isOpeningPunctuation(last, in: previous) {
+            return true
+        }
+        if isCurrencySymbol(last), CharacterSet.decimalDigits.contains(first) {
+            return true
+        }
+        if isCJK(last), isOpeningPunctuation(first, in: previous) {
             return true
         }
         return isCJK(last) && isCJK(first)
     }
 
-    static func isClosingPunctuation(_ scalar: Unicode.Scalar) -> Bool {
-        CharacterSet.punctuationCharacters.contains(scalar) && !isOpeningPunctuation(scalar)
+    static func isClosingPunctuation(_ scalar: Unicode.Scalar, after previous: String) -> Bool {
+        if isQuote(scalar) {
+            return hasUnclosedQuote(scalar, in: previous)
+        }
+        return CharacterSet.punctuationCharacters.contains(scalar) && !isOpeningPunctuation(scalar, in: previous)
     }
 
-    static func isOpeningPunctuation(_ scalar: Unicode.Scalar) -> Bool {
-        let opening = CharacterSet(charactersIn: "([{")
+    static func isOpeningPunctuation(_ scalar: Unicode.Scalar, in previous: String) -> Bool {
+        if isQuote(scalar) {
+            return !hasUnclosedQuote(scalar, in: String(previous.dropLast()))
+        }
+        let opening = CharacterSet(charactersIn: "([{（［｛【《〈〔〖〘〚「『«‹“‘")
         return opening.contains(scalar)
+    }
+
+    static func isQuote(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet(charactersIn: "\"'“”‘’「」『』«»‹›").contains(scalar)
+    }
+
+    static func hasUnclosedQuote(_ scalar: Unicode.Scalar, in text: String) -> Bool {
+        let quotedScalars = text.unicodeScalars.filter { matchingQuoteFamily($0) == matchingQuoteFamily(scalar) }
+        return !quotedScalars.isEmpty && quotedScalars.count.isMultiple(of: 2) == false
+    }
+
+    static func matchingQuoteFamily(_ scalar: Unicode.Scalar) -> String {
+        switch scalar {
+        case "\"", "“", "”": return "\""
+        case "'", "‘", "’": return "'"
+        case "「", "」": return "「"
+        case "『", "』": return "『"
+        case "«", "»": return "«"
+        case "‹", "›": return "‹"
+        default: return String(scalar)
+        }
+    }
+
+    static func isCurrencySymbol(_ scalar: Unicode.Scalar) -> Bool {
+        CharacterSet(charactersIn: "$€£¥₹₩₽₺₪₫₴₦₱฿₡₲₵₸₼₿").contains(scalar)
     }
 
     static func isCJK(_ scalar: Unicode.Scalar) -> Bool {
