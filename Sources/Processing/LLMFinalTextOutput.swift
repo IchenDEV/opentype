@@ -150,7 +150,8 @@ private extension LLMFinalTextOutput {
     static func finalTextValue(from value: Any, allowsAmbiguousKeys: Bool) -> String? {
         if let text = value as? String {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
+            guard !trimmed.isEmpty else { return nil }
+            return nestedStructuredFinalText(in: trimmed) ?? trimmed
         }
         if let object = value as? [String: Any] {
             return finalText(in: object, allowsAmbiguousKeys: allowsAmbiguousKeys)
@@ -163,6 +164,13 @@ private extension LLMFinalTextOutput {
             return parts.joined(separator: "\n")
         }
         return nil
+    }
+
+    static func nestedStructuredFinalText(in text: String) -> String? {
+        finalText(
+            from: wholeJSONValueData(from: stripWrappingCodeFence(from: text)),
+            allowsAmbiguousKeys: false
+        )
     }
 
     static func hasMetadata(in object: [String: Any]) -> Bool {
