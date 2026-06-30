@@ -140,13 +140,12 @@ private extension RemoteLLMEventStreamText {
         textParts: inout [Int: String],
         toolInputs: inout [Int: String]
     ) {
-        if let block = dictionaryValue(in: json, keys: ["content_block", "contentBlock"]),
-           let index = intValue(json.value(forCaseInsensitiveKey: "index")) {
+        let index = anthropicIndex(in: json)
+        if let block = dictionaryValue(in: json, keys: ["content_block", "contentBlock"]) {
             collectAnthropicStartBlock(block, index: index, textParts: &textParts, toolInputs: &toolInputs)
         }
 
-        guard let delta = json.value(forCaseInsensitiveKey: "delta") as? [String: Any],
-              let index = intValue(json.value(forCaseInsensitiveKey: "index")) else {
+        guard let delta = json.value(forCaseInsensitiveKey: "delta") as? [String: Any] else {
             return
         }
         if let text = delta.value(forCaseInsensitiveKey: "text") as? String {
@@ -171,6 +170,10 @@ private extension RemoteLLMEventStreamText {
             guard text != "{}" else { return }
             toolInputs[index, default: ""] += text
         }
+    }
+
+    static func anthropicIndex(in object: [String: Any]) -> Int {
+        intValue(firstValue(in: object, keys: ["index", "content_block_index", "contentBlockIndex", "content_index", "contentIndex"])) ?? 0
     }
 
     static func firstValue(in object: [String: Any], keys: [String]) -> Any? {
