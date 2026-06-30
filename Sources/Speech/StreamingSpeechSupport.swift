@@ -6,9 +6,14 @@ struct StreamingSessionMetrics: Equatable {
     var partialUpdateCount = 0
     var startedAt = Date()
     var lastPartialAt: Date?
+    var lastPartialUnitCount = 0
 
     var hasCapturedAudio: Bool {
         capturedUnitCount > 0
+    }
+
+    var livePreviewCoversCapturedAudio: Bool {
+        partialUpdateCount > 0 && lastPartialUnitCount >= capturedUnitCount
     }
 
     mutating func recordBuffer(unitCount: Int) {
@@ -17,9 +22,10 @@ struct StreamingSessionMetrics: Equatable {
         capturedUnitCount += unitCount
     }
 
-    mutating func markPartial(at date: Date = Date()) {
+    mutating func markPartial(unitCount: Int, at date: Date = Date()) {
         partialUpdateCount += 1
         lastPartialAt = date
+        lastPartialUnitCount = max(lastPartialUnitCount, unitCount)
     }
 }
 
@@ -75,7 +81,7 @@ enum StreamingTranscriptResolver {
         }
 
         let trimmedPreview = livePreviewText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if preferLivePreview, !trimmedPreview.isEmpty, metrics.partialUpdateCount > 0 {
+        if preferLivePreview, !trimmedPreview.isEmpty, metrics.livePreviewCoversCapturedAudio {
             Log.info("[\(engineName)] using streaming preview as final transcript")
             return trimmedPreview
         }

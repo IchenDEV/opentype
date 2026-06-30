@@ -65,7 +65,8 @@ final class StreamingSpeechSupportTests: XCTestCase {
             capturedUnitCount: 64_000,
             partialUpdateCount: 2,
             startedAt: Date(),
-            lastPartialAt: Date()
+            lastPartialAt: Date(),
+            lastPartialUnitCount: 64_000
         )
 
         var transcribeCalls = 0
@@ -90,7 +91,8 @@ final class StreamingSpeechSupportTests: XCTestCase {
             capturedUnitCount: 64_000,
             partialUpdateCount: 2,
             startedAt: Date(),
-            lastPartialAt: Date()
+            lastPartialAt: Date(),
+            lastPartialUnitCount: 64_000
         )
 
         var transcribeCalls = 0
@@ -108,6 +110,33 @@ final class StreamingSpeechSupportTests: XCTestCase {
 
         XCTAssertEqual(text, "preview text")
         XCTAssertEqual(transcribeCalls, 0)
+    }
+
+    func testTranscriptResolverFallsBackWhenLivePreviewMissesLatestAudio() async throws {
+        let metrics = StreamingSessionMetrics(
+            receivedBufferCount: 6,
+            capturedUnitCount: 96_000,
+            partialUpdateCount: 2,
+            startedAt: Date(),
+            lastPartialAt: Date(),
+            lastPartialUnitCount: 64_000
+        )
+
+        var transcribeCalls = 0
+        let text = try await StreamingTranscriptResolver.resolveFinalTranscript(
+            engineName: "WhisperEngine",
+            audioURL: URL(fileURLWithPath: "/tmp/opentype-test.wav"),
+            livePreviewText: "stale preview",
+            metrics: metrics,
+            unitLabel: "samples",
+            preferLivePreview: true
+        ) {
+            transcribeCalls += 1
+            return "final recorded text"
+        }
+
+        XCTAssertEqual(text, "final recorded text")
+        XCTAssertEqual(transcribeCalls, 1)
     }
 
     func testTranscriptResolverFallsBackToLivePreviewWithoutRecordedAudio() async throws {
