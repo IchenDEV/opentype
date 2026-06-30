@@ -149,6 +149,36 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesTopLevelIntentAliases() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","preset":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_last","instruction":"make it warmer for a customer","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteLast(.custom("make it warmer for a customer"))
+        )
+    }
+
+    func testDecodesTopLevelReplacementAliases() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"text":"ship tomorrow","confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_selection","intent":null,"new_text":"new customer note","confidence":0.91}"#
+            ),
+            .replaceSelection("new customer note")
+        )
+    }
+
     func testDecodesStructuredIntentDetailsAsCustomInstruction() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(

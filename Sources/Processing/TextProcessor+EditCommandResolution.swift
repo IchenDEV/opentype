@@ -147,13 +147,11 @@ private extension SpokenEditCommandLLMResolver {
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: LLMResolutionCodingKey.self)
-            let actionKey = ["action", "command", "operation"].first { container.caseInsensitiveKey($0) != nil }
-            let confidenceKey = ["confidence", "score", "probability"].first { container.caseInsensitiveKey($0) != nil }
-            hasAction = actionKey != nil
-            action = try actionKey.flatMap { try container.decodeIfPresentCaseInsensitive(LLMActionValue.self, forKey: $0) }
-            intent = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "intent")
-            replacement = try container.decodeIfPresentCaseInsensitive(LLMReplacementValue.self, forKey: "replacement")
-            confidence = try confidenceKey.flatMap { try container.decodeIfPresentCaseInsensitive(LLMNumericConfidence.self, forKey: $0) }
+            hasAction = container.hasCaseInsensitiveKey(anyOf: LLMResolutionFieldAlias.action)
+            action = try container.decodeIfPresentCaseInsensitive(LLMActionValue.self, forAnyKey: LLMResolutionFieldAlias.action)
+            intent = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forAnyKey: LLMResolutionFieldAlias.intent)
+            replacement = try container.decodeIfPresentCaseInsensitive(LLMReplacementValue.self, forAnyKey: LLMResolutionFieldAlias.replacement)
+            confidence = try container.decodeIfPresentCaseInsensitive(LLMNumericConfidence.self, forAnyKey: LLMResolutionFieldAlias.confidence)
         }
     }
 
