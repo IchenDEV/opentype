@@ -17,6 +17,36 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testPrefersLaterCommandOverLeadingNoneCandidate() {
+        let output = """
+        Preliminary:
+        {"action":"none","intent":null,"replacement":null,"confidence":0}
+
+        Final:
+        {"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":0.91}
+        """
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: output),
+            .rewriteSelection(.summary)
+        )
+    }
+
+    func testPrefersLaterCommandOverLeadingLowConfidenceCandidate() {
+        let output = """
+        Earlier candidate:
+        {"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":0.62}
+
+        Final:
+        {"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}
+        """
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: output),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testDecodesResolutionNestedInWrapperObject() {
         let output = """
         Final result:

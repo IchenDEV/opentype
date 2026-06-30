@@ -114,14 +114,19 @@ extension TextProcessor {
 
 enum SpokenEditCommandLLMResolver {
     static func resolution(from text: String) -> SpokenEditCommandLLMResolution? {
+        var fallbackResolution: SpokenEditCommandLLMResolution?
         for data in jsonObjectDataCandidates(from: text) {
             guard let resolution = try? JSONDecoder().decode(Resolution.self, from: data),
                   resolution.hasAction else {
                 continue
             }
-            return resolvedAction(from: resolution)
+            guard let resolved = resolvedAction(from: resolution) else { continue }
+            if case .command = resolved {
+                return resolved
+            }
+            fallbackResolution = resolved
         }
-        return nil
+        return fallbackResolution
     }
 
     static func command(from text: String) -> SpokenEditCommand? {
