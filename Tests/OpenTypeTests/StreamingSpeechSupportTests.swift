@@ -45,6 +45,20 @@ final class StreamingSpeechSupportTests: XCTestCase {
         XCTAssertEqual(accumulator.merge("release notes today."), "Ship the release notes today.")
     }
 
+    func testPreviewAccumulatorDoesNotMergeShortLatinPrefixInsideWord() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("go to"), "go to")
+        XCTAssertEqual(accumulator.merge("today"), "go to today")
+    }
+
+    func testPreviewAccumulatorMergesShortLatinWholeWordOverlap() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("go to."), "go to.")
+        XCTAssertEqual(accumulator.merge("to start"), "go to start")
+    }
+
     func testPreviewAccumulatorAddsSpaceAfterSentencePunctuationWithoutOverlap() {
         let accumulator = StreamingPreviewAccumulator()
 

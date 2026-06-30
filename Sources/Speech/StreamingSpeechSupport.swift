@@ -101,6 +101,7 @@ enum StreamingTranscriptResolver {
 
 final class StreamingPreviewAccumulator {
     private static let minimumMeaningfulOverlap = 2
+    private static let minimumLatinFuzzyOverlap = 4
 
     private(set) var previewText = ""
     private var latestWindow = ""
@@ -171,25 +172,47 @@ final class StreamingPreviewAccumulator {
         guard maxOverlap >= minimumMeaningfulOverlap else { return nil }
 
         for count in stride(from: maxOverlap, through: minimumMeaningfulOverlap, by: -1) {
-            let existingSuffix = existingUnits.suffix(count).map(\.value)
-            let incomingPrefix = incomingUnits.prefix(count).map(\.value)
-            if existingSuffix == incomingPrefix {
-                return incomingUnits[count - 1].endOffset
+            let existingSuffix = Array(existingUnits.suffix(count))
+            let incomingPrefix = Array(incomingUnits.prefix(count))
+            if existingSuffix.map(\.value) == incomingPrefix.map(\.value),
+               isAcceptableFuzzyOverlap(existingSuffix: existingSuffix, incomingPrefix: incomingPrefix) {
+                return incomingPrefix[count - 1].endOffset
             }
         }
 
         return nil
     }
 
-    private static func canonicalOverlapUnits(_ text: String) -> [(value: String, endOffset: Int)] {
-        var units: [(value: String, endOffset: Int)] = []
-        var offset = 0
-        for character in text {
-            offset += 1
-            guard character.isOverlapSignificant else { continue }
-            units.append((String(character).lowercased(), offset))
+    private static func isAcceptableFuzzyOverlap(
+        existingSuffix: [OverlapUnit],
+        incomingPrefix: [OverlapUnit]
+    ) -> Bool {
+        if existingSuffix.count >= minimumLatinFuzzyOverlap {
+            return true
         }
-        return units
+        if existingSuffix.contains(where: \.isCJK) {
+            return true
+        }
+        return existingSuffix.first?.startsAtBoundary == true
+            && existingSuffix.last?.endsAtBoundary == true
+            && incomingPrefix.first?.startsAtBoundary == true
+            && incomingPrefix.last?.endsAtBoundary == true
+    }
+
+    private static func canonicalOverlapUnits(_ text: String) -> [OverlapUnit] {
+        let characters = Array(text)
+        return characters.enumerated().compactMap { index, character in
+            guard character.isOverlapSignificant else { return nil }
+            let previous = index > 0 ? characters[index - 1] : nil
+            let next = index + 1 < characters.count ? characters[index + 1] : nil
+            return OverlapUnit(
+                value: String(character).lowercased(),
+                endOffset: index + 1,
+                isCJK: character.isCJK,
+                startsAtBoundary: previous?.isOverlapSignificant != true,
+                endsAtBoundary: next?.isOverlapSignificant != true
+            )
+        }
     }
 
     private static func commonPrefixCount(_ lhs: String, _ rhs: String) -> Int {
@@ -224,6 +247,14 @@ final class StreamingPreviewAccumulator {
 
         return lhs + rhs
     }
+}
+
+private struct OverlapUnit {
+    let value: String
+    let endOffset: Int
+    let isCJK: Bool
+    let startsAtBoundary: Bool
+    let endsAtBoundary: Bool
 }
 
 private extension Character {
