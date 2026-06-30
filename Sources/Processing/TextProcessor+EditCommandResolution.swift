@@ -224,19 +224,19 @@ extension SelectionRewriteIntent {
         case "casual": return .casual
         case "expand": return .expand
         case "title": return .title
-        case "key_points", "keypoints": return .keyPoints
+        case "key_points", "keypoints", "key_point", "keypoint", "main_points", "mainpoints": return .keyPoints
         case "decisions": return .decisions
         case "questions": return .questions
         case "risks": return .risks
         case "deadlines": return .deadlines
         case "owners": return .owners
-        case "meeting_notes", "meetingnotes": return .meetingNotes
+        case "meeting_notes", "meetingnotes", "meeting_note", "meetingnote", "meeting_summary", "meetingsummary": return .meetingNotes
         case "reply": return .reply
         case "reply_brief", "replybrief": return .replyBrief
         case "reply_formal", "replyformal": return .replyFormal
         case "reply_friendly", "replyfriendly": return .replyFriendly
-        case "reply_in_english", "replyinenglish": return .replyInEnglish
-        case "reply_in_chinese", "replyinchinese": return .replyInChinese
+        case "reply_in_english", "replyinenglish", "reply_english", "replyenglish": return .replyInEnglish
+        case "reply_in_chinese", "replyinchinese", "reply_chinese", "replychinese": return .replyInChinese
         case "reply_accept", "replyaccept": return .replyAccept
         case "reply_decline", "replydecline": return .replyDecline
         case "reply_clarify", "replyclarify": return .replyClarify
@@ -244,12 +244,12 @@ extension SelectionRewriteIntent {
         case "concise": return .concise
         case "proofread": return .proofread
         case "table": return .table
-        case "bullet_list", "bulletlist": return .bulletList
-        case "numbered_list", "numberedlist": return .numberedList
-        case "action_items", "actionitems": return .actionItems
+        case "bullet_list", "bulletlist", "bullets", "bullet_points", "bulletpoints": return .bulletList
+        case "numbered_list", "numberedlist", "numbered_points", "numberedpoints": return .numberedList
+        case "action_items", "actionitems", "action_item", "actionitem", "todos", "todo_list", "todolist": return .actionItems
         case "checklist": return .checklist
-        case "translate_to_english", "translatetoenglish": return .translateToEnglish
-        case "translate_to_chinese", "translatetochinese": return .translateToChinese
+        case "translate_to_english", "translatetoenglish", "translate_english", "translateenglish": return .translateToEnglish
+        case "translate_to_chinese", "translatetochinese", "translate_chinese", "translatechinese": return .translateToChinese
         default: return nil
         }
     }

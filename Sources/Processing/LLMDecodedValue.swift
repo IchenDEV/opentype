@@ -27,7 +27,8 @@ struct LLMTextValue: Decodable, Equatable {
 
 private extension LLMTextValue {
     static let singleValueObjectKeys = [
-        "text", "value", "instruction", "intent", "preset", "task", "replacement", "name", "type",
+        "text", "value", "instruction", "intent", "preset", "task", "style",
+        "format", "mode", "category", "label", "name", "replacement", "type",
     ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale", "note", "notes", "kind", "type",
