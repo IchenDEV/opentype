@@ -4,6 +4,10 @@ enum LocalASRTranscriptFinality {
     static func priority(in object: [String: Any]? = nil, structuralPriority: Int) -> Int {
         finality(in: object).priority + structuralPriority
     }
+
+    static func hasMetadata(in object: [String: Any]) -> Bool {
+        finality(in: object) != .unknown
+    }
 }
 
 private enum TranscriptFinality {

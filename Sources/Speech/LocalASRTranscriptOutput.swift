@@ -123,9 +123,31 @@ private extension LocalASRTranscriptOutput {
     }
 
     static func transcriptText(in array: [Any]) -> String? {
+        if let text = finalityPreferredText(in: array) {
+            return text
+        }
         let parts = array.compactMap(transcriptText)
         guard !parts.isEmpty else { return nil }
         return LocalASRTranscriptJoiner.join(parts)
+    }
+
+    static func finalityPreferredText(in array: [Any]) -> String? {
+        var hasFinalityMetadata = false
+        var bestText: String?
+        var bestPriority = 0
+
+        for case let object as [String: Any] in array {
+            guard LocalASRTranscriptFinality.hasMetadata(in: object) else { continue }
+            hasFinalityMetadata = true
+            guard let candidate = transcriptCandidate(in: object),
+                  candidate.priority >= bestPriority else {
+                continue
+            }
+            bestText = candidate.text
+            bestPriority = candidate.priority
+        }
+
+        return hasFinalityMetadata ? bestText : nil
     }
 
     static func bestAlternativeText(in value: Any) -> String? {
