@@ -14,6 +14,11 @@ enum LLMResolutionFieldAlias {
         "preset", "style",
         "format", "category", "targetStyle", "target_style",
     ]
+    static let target = [
+        "target", "scope", "object", "subject",
+        "targetText", "target_text",
+        "editTarget", "edit_target",
+    ]
     static let replacement = [
         "replacement", "replacementText", "replacement_text",
         "text", "value", "content", "body", "message", "response",

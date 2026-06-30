@@ -93,6 +93,7 @@ private extension SpokenEditCommandLLMResolver {
     struct Resolution: Decodable {
         let action: LLMActionValue?
         let intent: LLMTextValue?
+        let target: LLMTextValue?
         let replacement: LLMReplacementValue?
         let confidence: LLMNumericConfidence?
         let hasAction: Bool
@@ -102,13 +103,14 @@ private extension SpokenEditCommandLLMResolver {
             hasAction = container.hasCaseInsensitiveKey(anyOf: LLMResolutionFieldAlias.action)
             action = try container.decodeIfPresentCaseInsensitive(LLMActionValue.self, forAnyKey: LLMResolutionFieldAlias.action)
             intent = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forAnyKey: LLMResolutionFieldAlias.intent)
+            target = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forAnyKey: LLMResolutionFieldAlias.target)
             replacement = try container.decodeIfPresentCaseInsensitive(LLMReplacementValue.self, forAnyKey: LLMResolutionFieldAlias.replacement)
             confidence = try container.decodeIfPresentCaseInsensitive(LLMNumericConfidence.self, forAnyKey: LLMResolutionFieldAlias.confidence)
         }
     }
 
     static func resolvedAction(from resolution: Resolution) -> SpokenEditCommandLLMResolution? {
-        let action = normalizedIdentifier(resolution.action?.text)
+        let action = normalizedAction(resolution.action?.text, target: resolution.target?.text)
         if action == "none" {
             return SpokenEditCommandLLMResolution.none
         }
@@ -161,7 +163,7 @@ private extension SpokenEditCommandLLMResolver {
     }
 
     static func isCompleteRejectionCandidate(_ resolution: Resolution) -> Bool {
-        let action = normalizedIdentifier(resolution.action?.text)
+        let action = normalizedAction(resolution.action?.text, target: resolution.target?.text)
         if action == "none" {
             return true
         }
