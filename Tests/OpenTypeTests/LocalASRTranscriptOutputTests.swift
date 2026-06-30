@@ -260,6 +260,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesTokenizerPieceFieldAliasesFromRunnerOutput() throws {
+        let output = """
+        {"tokens":[{"token_str":"▁Open"},{"piece":"Type"},{"surface":"Ġships"},{"tokenStr":"▁today"},{"piece":"."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "OpenType ships today."
+        )
+    }
+
     func testJoinsTokenLevelPunctuationWithoutAwkwardSpaces() throws {
         let output = """
         {"tokens":[{"token":"He"},{"token":"said"},{"token":"“"},{"token":"ship"},{"token":"it"},{"token":"”"},{"token":"."},{"token":"Cost"},{"token":"$"},{"token":"20"},{"token":"."},{"token":"中文"},{"token":"（"},{"token":"测试"},{"token":"）"}]}

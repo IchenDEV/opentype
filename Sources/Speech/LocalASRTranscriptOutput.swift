@@ -28,6 +28,7 @@ private extension LocalASRTranscriptOutput {
         "word", "punctuated_word", "punctuatedWord", "content",
         "token", "display_token", "displayToken",
         "punctuated_token", "punctuatedToken",
+        "token_str", "tokenStr", "piece", "surface",
         "lexical", "utterance", "hypothesis",
         "normalized", "normalized_text", "normalizedText",
         "generated_text", "generatedText",

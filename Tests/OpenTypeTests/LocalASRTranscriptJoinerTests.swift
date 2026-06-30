@@ -57,6 +57,17 @@ final class LocalASRTranscriptJoinerTests: XCTestCase {
         )
     }
 
+    func testJoinsSentencePieceAndBPEContinuationPieces() throws {
+        let output = """
+        {"tokens":[{"token":"▁Open"},{"token":"Type"},{"token":"Ġships"},{"token":"▁today"},{"token":"."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "OpenType ships today."
+        )
+    }
+
     func testJoinsWordPieceContinuationTokens() throws {
         let output = """
         {"tokens":[{"token":"Open"},{"token":"##Type"},{"token":"trans"},{"token":"##cription"},{"token":"works"},{"token":"."}]}

@@ -36,6 +36,7 @@ private extension LocalASRTranscriptFinality {
     static let finalityStringKeys = [
         "type", "status", "state", "event",
         "result_type", "resultType", "message_type", "messageType",
+        "recognition_status", "recognitionStatus",
     ]
 
     static func finality(in object: [String: Any]?) -> TranscriptFinality {
@@ -93,9 +94,9 @@ private extension LocalASRTranscriptFinality {
     static func finality(from value: Any) -> TranscriptFinality? {
         guard let text = value as? String else { return nil }
         switch normalizedStatus(text) {
-        case "final", "complete", "completed", "done":
+        case "final", "complete", "completed", "done", "success", "succeeded", "finished", "finalized", "recognized":
             return .final
-        case "partial", "interim", "temporary", "streaming", "inprogress":
+        case "partial", "interim", "intermediate", "temporary", "streaming", "inprogress", "recognizing", "processing", "running":
             return .partial
         default:
             return nil

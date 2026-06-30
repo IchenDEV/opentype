@@ -2,8 +2,9 @@ import Foundation
 
 enum LocalASRTranscriptJoiner {
     static func join(_ parts: [String]) -> String {
-        parts.reduce(into: "") { result, part in
-            let piece = normalizedPiece(part)
+        let usesExplicitSpaceMarkers = parts.contains(where: hasExplicitSpaceMarker)
+        return parts.reduce(into: "") { result, part in
+            let piece = normalizedPiece(part, usesExplicitSpaceMarkers: usesExplicitSpaceMarkers)
             guard !piece.text.isEmpty else { return }
             if result.isEmpty || piece.attachesToPrevious || shouldAttachWithoutSpace(previous: result, next: piece.text) {
                 result += piece.text
@@ -20,9 +21,10 @@ private struct LocalASRTranscriptPiece {
 }
 
 private extension LocalASRTranscriptJoiner {
-    static func normalizedPiece(_ rawPart: String) -> LocalASRTranscriptPiece {
+    static func normalizedPiece(_ rawPart: String, usesExplicitSpaceMarkers: Bool) -> LocalASRTranscriptPiece {
         var text = rawPart.trimmingCharacters(in: .whitespacesAndNewlines)
-        var attachesToPrevious = false
+        let startsWithSpaceMarker = hasExplicitSpaceMarker(text)
+        var attachesToPrevious = usesExplicitSpaceMarkers && !startsWithSpaceMarker
 
         if text.hasPrefix("##") {
             attachesToPrevious = true
@@ -37,6 +39,11 @@ private extension LocalASRTranscriptJoiner {
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         return LocalASRTranscriptPiece(text: text, attachesToPrevious: attachesToPrevious)
+    }
+
+    static func hasExplicitSpaceMarker(_ rawPart: String) -> Bool {
+        let text = rawPart.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.hasPrefix("▁") || text.hasPrefix("Ġ")
     }
 }
 

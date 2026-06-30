@@ -27,6 +27,17 @@ final class LocalASRTranscriptFinalityTests: XCTestCase {
         )
     }
 
+    func testRecognizesRecognitionStatusFinalityFields() throws {
+        let output = """
+        {"events":[{"DisplayText":"Ship release","RecognitionStatus":"Intermediate"},{"DisplayText":"Ship release notes today.","RecognitionStatus":"Success"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship release notes today."
+        )
+    }
+
     func testKeepsPartialTextWhenNoFinalTranscriptExists() throws {
         XCTAssertEqual(
             try LocalASREngine.parseRunnerOutput(#"{"text":"Ship release","partial":true}"#),
