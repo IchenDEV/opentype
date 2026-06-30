@@ -69,6 +69,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testPrefersWordLevelOutputOverPlainTextSummary() throws {
+        let output = """
+        {"text":"ship the release notes today","words":[{"word":"Ship"},{"word":"the"},{"word":"release"},{"word":"notes"},{"word":"today"},{"word":"."}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesCJKWordLevelRunnerOutputWithoutExtraSpaces() throws {
         let output = """
         {"words":[{"word":"今天"},{"word":"下午"},{"word":"发布"},{"word":"。"}]}
@@ -116,6 +127,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
     func testSelectsHighestConfidenceAlternativeFromRunnerResults() throws {
         let output = """
         {"alternatives":[{"transcript":"Skip the release notes today.","confidence":0.42},{"transcript":"Ship the release notes today.","confidence":0.91}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today."
+        )
+    }
+
+    func testPrefersHighConfidenceAlternativeOverPlainTextSummary() throws {
+        let output = """
+        {"text":"Skip the release notes today.","alternatives":[{"transcript":"Skip the release notes today.","confidence":0.42},{"transcript":"Ship the release notes today.","confidence":0.91}]}
         """
 
         XCTAssertEqual(

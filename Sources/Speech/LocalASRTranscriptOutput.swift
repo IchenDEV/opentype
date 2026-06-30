@@ -68,6 +68,10 @@ private extension LocalASRTranscriptOutput {
     }
 
     static func transcriptText(in object: [String: Any]) -> String? {
+        structuredTranscriptText(in: object) ?? directTranscriptText(in: object)
+    }
+
+    static func directTranscriptText(in object: [String: Any]) -> String? {
         for key in textKeys {
             guard let value = object.value(forCaseInsensitiveKey: key),
                   let text = transcriptText(in: value) else {
@@ -75,7 +79,10 @@ private extension LocalASRTranscriptOutput {
             }
             return text
         }
+        return nil
+    }
 
+    static func structuredTranscriptText(in object: [String: Any]) -> String? {
         for key in nestedKeys {
             guard let value = object.value(forCaseInsensitiveKey: key),
                   let text = transcriptText(in: value) else {
