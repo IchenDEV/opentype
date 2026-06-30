@@ -262,6 +262,19 @@ final class RemoteLLMParsedPayloadTests: XCTestCase {
         )
     }
 
+    func testPrefersOpenAIResponsesMessageToolCallsOverMessageContent() throws {
+        let response = #"""
+        {"id":"resp_1","output":[{"type":"message","content":[{"type":"output_text","text":"I will update that now."}],"tool_calls":[{"type":"function","function":{"name":"emit_command","arguments":{"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":0.91}}}]}]}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testParsesOpenAIResponsesArgumentsJSONPayload() throws {
         let response = #"""
         {"id":"resp_1","output":[{"type":"function_call","name":"emit_final","arguments_json":"{\"final_text\":\"今天下午同步发布计划。\"}"}]}

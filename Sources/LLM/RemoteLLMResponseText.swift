@@ -125,7 +125,9 @@ private extension RemoteLLMResponseText {
                     ?? contentText(from: object.value(forCaseInsensitiveKey: "value"))
             }
             if matchesBlockType(type, in: wrapperBlockTypes) {
-                return structuredPayloadText(from: object.value(forCaseInsensitiveKey: "parsed"))
+                return toolCallText(from: object.value(forCaseInsensitiveKey: "tool_calls"))
+                    ?? toolCallText(from: object.value(forCaseInsensitiveKey: "function_call"))
+                    ?? structuredPayloadText(from: object.value(forCaseInsensitiveKey: "parsed"))
                     ?? structuredPayloadText(from: object.value(forCaseInsensitiveKey: "output_parsed"))
                     ?? contentText(from: object.value(forCaseInsensitiveKey: "content"))
                     ?? contentText(from: object.value(forCaseInsensitiveKey: "output"))
