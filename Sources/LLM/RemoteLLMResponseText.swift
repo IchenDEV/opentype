@@ -51,12 +51,18 @@ private extension RemoteLLMResponseText {
             if let text = toolCallText(from: message["function_call"]) {
                 return text
             }
+            if let text = structuredPayloadText(from: message["parsed"]) {
+                return text
+            }
         }
 
         if let text = contentText(from: choice["content"]) {
             return text
         }
-        return contentText(from: choice["text"])
+        if let text = contentText(from: choice["text"]) {
+            return text
+        }
+        return structuredPayloadText(from: choice["parsed"])
     }
 
     static func openAIResponsesText(_ json: [String: Any]) -> String? {
@@ -66,7 +72,11 @@ private extension RemoteLLMResponseText {
         if let text = contentText(from: json["output"]) {
             return text
         }
-        return contentText(from: json["content"])
+        if let text = contentText(from: json["content"]) {
+            return text
+        }
+        return structuredPayloadText(from: json["output_parsed"])
+            ?? structuredPayloadText(from: json["parsed"])
     }
 
     static func contentText(from value: Any?) -> String? {
@@ -129,20 +139,20 @@ private extension RemoteLLMResponseText {
             return contentText(from: value)
         }
 
-        if let text = argumentText(from: object["arguments"]) {
+        if let text = structuredPayloadText(from: object["arguments"]) {
             return text
         }
         if let function = object["function"] as? [String: Any],
-           let text = argumentText(from: function["arguments"]) {
+           let text = structuredPayloadText(from: function["arguments"]) {
             return text
         }
-        if let text = argumentText(from: object["input"]) {
+        if let text = structuredPayloadText(from: object["input"]) {
             return text
         }
         return nil
     }
 
-    static func argumentText(from value: Any?) -> String? {
+    static func structuredPayloadText(from value: Any?) -> String? {
         if let text = contentText(from: value) {
             return text
         }
