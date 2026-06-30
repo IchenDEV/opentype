@@ -114,11 +114,14 @@ extension TextProcessor {
 
 enum SpokenEditCommandLLMResolver {
     static func resolution(from text: String) -> SpokenEditCommandLLMResolution? {
-        guard let data = jsonObjectData(from: text),
-              let resolution = try? JSONDecoder().decode(Resolution.self, from: data) else {
-            return nil
+        for data in jsonObjectDataCandidates(from: text) {
+            guard let resolution = try? JSONDecoder().decode(Resolution.self, from: data),
+                  resolution.hasAction else {
+                continue
+            }
+            return resolvedAction(from: resolution)
         }
-        return resolvedAction(from: resolution)
+        return nil
     }
 
     static func command(from text: String) -> SpokenEditCommand? {
@@ -131,14 +134,31 @@ enum SpokenEditCommandLLMResolver {
 
 private extension SpokenEditCommandLLMResolver {
     struct Resolution: Decodable {
-        let action: String?
-        let intent: String?
-        let replacement: String?
-        let confidence: NumericConfidence?
+        let action: LLMTextValue?
+        let intent: LLMTextValue?
+        let replacement: LLMTextValue?
+        let confidence: LLMNumericConfidence?
+        let hasAction: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case action
+            case intent
+            case replacement
+            case confidence
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            hasAction = container.contains(.action)
+            action = try container.decodeIfPresent(LLMTextValue.self, forKey: .action)
+            intent = try container.decodeIfPresent(LLMTextValue.self, forKey: .intent)
+            replacement = try container.decodeIfPresent(LLMTextValue.self, forKey: .replacement)
+            confidence = try container.decodeIfPresent(LLMNumericConfidence.self, forKey: .confidence)
+        }
     }
 
     static func resolvedAction(from resolution: Resolution) -> SpokenEditCommandLLMResolution? {
-        let action = normalizedIdentifier(resolution.action)
+        let action = normalizedIdentifier(resolution.action?.text)
         if action == "none" {
             return SpokenEditCommandLLMResolution.none
         }
@@ -152,36 +172,36 @@ private extension SpokenEditCommandLLMResolver {
 
         switch action {
         case "replace_last", "replacelast":
-            guard emptyPayload(resolution.intent),
-                  let command = replacementCommand(resolution.replacement, command: SpokenEditCommand.replaceLast) else {
+            guard emptyPayload(resolution.intent?.text),
+                  let command = replacementCommand(resolution.replacement?.text, command: SpokenEditCommand.replaceLast) else {
                 return SpokenEditCommandLLMResolution.none
             }
             return .command(command)
         case "replace_selection", "replaceselection":
-            guard emptyPayload(resolution.intent),
-                  let command = replacementCommand(resolution.replacement, command: SpokenEditCommand.replaceSelection) else {
+            guard emptyPayload(resolution.intent?.text),
+                  let command = replacementCommand(resolution.replacement?.text, command: SpokenEditCommand.replaceSelection) else {
                 return SpokenEditCommandLLMResolution.none
             }
             return .command(command)
         case "rewrite_last", "rewritelast":
-            guard emptyPayload(resolution.replacement),
-                  let intent = SelectionRewriteIntent.llmValue(resolution.intent) else {
+            guard emptyPayload(resolution.replacement?.text),
+                  let intent = SelectionRewriteIntent.llmValue(resolution.intent?.text) else {
                 return SpokenEditCommandLLMResolution.none
             }
             return .command(.rewriteLast(intent))
         case "rewrite_selection", "rewriteselection":
-            guard emptyPayload(resolution.replacement),
-                  let intent = SelectionRewriteIntent.llmValue(resolution.intent) else {
+            guard emptyPayload(resolution.replacement?.text),
+                  let intent = SelectionRewriteIntent.llmValue(resolution.intent?.text) else {
                 return SpokenEditCommandLLMResolution.none
             }
             return .command(.rewriteSelection(intent))
         case "delete_selection", "deleteselection":
-            guard emptyPayload(resolution.intent), emptyPayload(resolution.replacement) else {
+            guard emptyPayload(resolution.intent?.text), emptyPayload(resolution.replacement?.text) else {
                 return SpokenEditCommandLLMResolution.none
             }
             return .command(.deleteSelection)
         case "undo_last_insertion", "undolastinsertion":
-            guard emptyPayload(resolution.intent), emptyPayload(resolution.replacement) else {
+            guard emptyPayload(resolution.intent?.text), emptyPayload(resolution.replacement?.text) else {
                 return SpokenEditCommandLLMResolution.none
             }
             return .command(.undoLastInsertion)
@@ -196,26 +216,6 @@ private extension SpokenEditCommandLLMResolver {
         normalizedIdentifier(rawValue).isEmpty || normalizedIdentifier(rawValue) == "null"
     }
 
-    struct NumericConfidence: Decodable {
-        let value: Double
-
-        init(from decoder: Decoder) throws {
-            let container = try decoder.singleValueContainer()
-            if let number = try? container.decode(Double.self) {
-                value = number
-                return
-            }
-            let raw = try container.decode(String.self)
-            let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            if normalized.hasSuffix("%"),
-               let percent = Double(normalized.dropLast().trimmingCharacters(in: .whitespacesAndNewlines)) {
-                value = percent / 100
-                return
-            }
-            value = Double(normalized) ?? -1
-        }
-    }
-
     static func replacementCommand(
         _ rawReplacement: String?,
         command: (String) -> SpokenEditCommand
@@ -224,8 +224,8 @@ private extension SpokenEditCommandLLMResolver {
         return replacement.isEmpty ? nil : command(replacement)
     }
 
-    static func jsonObjectData(from text: String) -> Data? {
-        LLMStructuredOutput.firstJSONObjectData(from: text)
+    static func jsonObjectDataCandidates(from text: String) -> [Data] {
+        LLMStructuredOutput.jsonObjectDataCandidates(from: text)
     }
 }
 

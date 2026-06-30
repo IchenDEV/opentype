@@ -6,16 +6,29 @@ enum LLMStructuredOutput {
         return String(text[range]).data(using: .utf8)
     }
 
+    static func jsonObjectDataCandidates(from text: String) -> [Data] {
+        balancedJSONObjectRanges(in: text).compactMap { range in
+            String(text[range]).data(using: .utf8)
+        }
+    }
+
     static func firstBalancedJSONObjectRange(in text: String) -> ClosedRange<String.Index>? {
+        balancedJSONObjectRanges(in: text).first
+    }
+
+    static func balancedJSONObjectRanges(in text: String) -> [ClosedRange<String.Index>] {
+        var ranges: [ClosedRange<String.Index>] = []
         var index = text.startIndex
         while index < text.endIndex {
             if text[index] == "{",
                let end = balancedJSONObjectEnd(startingAt: index, in: text) {
-                return index...end
+                ranges.append(index...end)
+                index = text.index(after: end)
+                continue
             }
             index = text.index(after: index)
         }
-        return nil
+        return ranges
     }
 }
 
