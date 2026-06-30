@@ -34,4 +34,37 @@ final class StructuredFinalTextDecodingTests: XCTestCase {
             #"{"name":"OpenType","mode":"voice"}"#
         )
     }
+
+    func testExtractsToolCallArgumentsObjectFinalText() {
+        let llmOutput = #"""
+        {"tool_call":{"function":{"name":"emit_final","arguments":{"final_text":"Ship the release notes today."}}}}
+        """#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsToolUseInputFinalText() {
+        let llmOutput = #"""
+        {"type":"tool_use","name":"emit_final","input":{"final_text":"今天下午同步发布计划。"}}
+        """#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "今天下午同步发布计划。"
+        )
+    }
+
+    func testKeepsToolArgumentsJSONWhenItHasNoFinalPayload() {
+        let llmOutput = #"""
+        {"tool_call":{"arguments":"{\"name\":\"OpenType\",\"mode\":\"voice\"}"}}
+        """#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            #"{"tool_call":{"arguments":"{\"name\":\"OpenType\",\"mode\":\"voice\"}"}}"#
+        )
+    }
 }

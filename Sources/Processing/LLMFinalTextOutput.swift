@@ -25,6 +25,8 @@ private extension LLMFinalTextOutput {
     static let wrapperKeys = [
         "data", "payload", "result", "output", "response",
         "choices", "message", "content",
+        "tool_call", "tool_calls", "function_call", "function", "tool_use",
+        "arguments", "input", "parameters", "params", "args",
     ]
     static let responseWrapperKeys = [
         "choices", "output", "message", "content",
@@ -107,6 +109,10 @@ private extension LLMFinalTextOutput {
     }
 
     static func explicitFinalText(in value: Any) -> String? {
+        if let text = value as? String {
+            return nestedStructuredFinalText(in: text)
+        }
+
         if let array = value as? [Any] {
             let parts = array.compactMap { explicitFinalText(in: $0) }
             guard !parts.isEmpty else { return nil }
