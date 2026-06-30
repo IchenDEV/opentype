@@ -3,13 +3,16 @@ import Foundation
 enum RemoteLLMResponseText {
     static func openAI(from data: Data) throws -> String {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let first = choices.first,
-              let message = first["message"] as? [String: Any],
-              let text = contentText(from: message["content"]) else {
+              let choices = json["choices"] as? [[String: Any]] else {
             throw RemoteLLMError.invalidResponse
         }
-        return text
+
+        for choice in choices {
+            if let text = openAIChoiceText(choice) {
+                return text
+            }
+        }
+        throw RemoteLLMError.invalidResponse
     }
 
     static func anthropic(from data: Data) throws -> String {
@@ -28,6 +31,22 @@ enum RemoteLLMResponseText {
 }
 
 private extension RemoteLLMResponseText {
+    static func openAIChoiceText(_ choice: [String: Any]) -> String? {
+        if let message = choice["message"] as? [String: Any] {
+            if let text = contentText(from: message["content"]) {
+                return text
+            }
+            if let text = contentText(from: message["text"]) {
+                return text
+            }
+        }
+
+        if let text = contentText(from: choice["content"]) {
+            return text
+        }
+        return contentText(from: choice["text"])
+    }
+
     static func contentText(from value: Any?) -> String? {
         if let text = value as? String {
             return nonEmpty(text)

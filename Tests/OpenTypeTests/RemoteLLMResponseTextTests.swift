@@ -47,6 +47,33 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testParsesLaterOpenAIChoiceWhenFirstChoiceHasNoText() throws {
+        let response = """
+        {
+          "choices": [
+            {"message":{"content":""}},
+            {"message":{"content":[{"type":"text","text":"Ship the release notes today."}]}}
+          ]
+        }
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes today."
+        )
+    }
+
+    func testParsesOpenAITextChoiceFallback() throws {
+        let response = """
+        {"choices":[{"text":"  Ship the release notes today.  "}]}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesAllAnthropicTextBlocks() throws {
         let response = """
         {
