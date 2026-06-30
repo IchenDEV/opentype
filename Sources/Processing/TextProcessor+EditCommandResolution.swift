@@ -140,20 +140,13 @@ private extension SpokenEditCommandLLMResolver {
         let confidence: LLMNumericConfidence?
         let hasAction: Bool
 
-        enum CodingKeys: String, CodingKey {
-            case action
-            case intent
-            case replacement
-            case confidence
-        }
-
         init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            hasAction = container.contains(.action)
-            action = try container.decodeIfPresent(LLMTextValue.self, forKey: .action)
-            intent = try container.decodeIfPresent(LLMTextValue.self, forKey: .intent)
-            replacement = try container.decodeIfPresent(LLMTextValue.self, forKey: .replacement)
-            confidence = try container.decodeIfPresent(LLMNumericConfidence.self, forKey: .confidence)
+            let container = try decoder.container(keyedBy: LLMResolutionCodingKey.self)
+            hasAction = container.caseInsensitiveKey("action") != nil
+            action = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "action")
+            intent = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "intent")
+            replacement = try container.decodeIfPresentCaseInsensitive(LLMTextValue.self, forKey: "replacement")
+            confidence = try container.decodeIfPresentCaseInsensitive(LLMNumericConfidence.self, forKey: "confidence")
         }
     }
 

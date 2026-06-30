@@ -39,12 +39,9 @@ private extension LLMTextValue {
     }
 
     static func describe(object: [String: LLMTextValue]) -> String {
-        let lowercasedObject = Dictionary(
-            uniqueKeysWithValues: object.map { ($0.key.lowercased(), $0.value) }
-        )
         if object.count == 1,
-           let key = singleValueObjectKeys.first(where: { lowercasedObject[$0] != nil }),
-           let value = lowercasedObject[key]?.text.trimmingCharacters(in: .whitespacesAndNewlines),
+           let key = singleValueObjectKeys.first(where: { object.value(forCaseInsensitiveKey: $0) != nil }),
+           let value = object.value(forCaseInsensitiveKey: key)?.text.trimmingCharacters(in: .whitespacesAndNewlines),
            !value.isEmpty {
             return value
         }
@@ -76,15 +73,25 @@ struct LLMNumericConfidence: Decodable {
     }
 }
 
+struct LLMResolutionCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int? = nil
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    init?(intValue: Int) {
+        return nil
+    }
+}
+
 private extension LLMNumericConfidence {
     static let confidenceKeys = ["value", "score", "confidence", "probability"]
 
     static func nestedConfidence(in object: [String: LLMNumericConfidence]) -> Double? {
-        let lowercasedObject = Dictionary(
-            uniqueKeysWithValues: object.map { ($0.key.lowercased(), $0.value) }
-        )
         for key in confidenceKeys {
-            if let confidence = lowercasedObject[key]?.value {
+            if let confidence = object.value(forCaseInsensitiveKey: key)?.value {
                 return confidence
             }
         }
@@ -98,5 +105,25 @@ private extension LLMNumericConfidence {
             return percent / 100
         }
         return Double(normalized) ?? -1
+    }
+}
+
+private extension Dictionary where Key == String {
+    func value(forCaseInsensitiveKey key: String) -> Value? {
+        if let value = self[key] {
+            return value
+        }
+        return first { $0.key.localizedCaseInsensitiveCompare(key) == .orderedSame }?.value
+    }
+}
+
+extension KeyedDecodingContainer where Key == LLMResolutionCodingKey {
+    func caseInsensitiveKey(_ name: String) -> Key? {
+        allKeys.first { $0.stringValue.localizedCaseInsensitiveCompare(name) == .orderedSame }
+    }
+
+    func decodeIfPresentCaseInsensitive<T: Decodable>(_ type: T.Type, forKey name: String) throws -> T? {
+        guard let key = caseInsensitiveKey(name) else { return nil }
+        return try decodeIfPresent(type, forKey: key)
     }
 }

@@ -26,6 +26,15 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testDecodesCaseInsensitiveTopLevelResolutionFields() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"Action":"Replace_Last","Intent":null,"Replacement":{"Text":"ship tomorrow"},"Confidence":{"Score":0.92}}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testDecodesStructuredIntentDetailsAsCustomInstruction() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.command(
@@ -52,6 +61,15 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
                 from: #"{"action":"replace_last","intent":null,"replacement":{"text":"ship tomorrow at 3 PM"},"confidence":{"confidence":0.9}}"#
             ),
             .replaceLast("ship tomorrow at 3 PM")
+        )
+    }
+
+    func testDuplicateCaseKeysDoNotBreakStructuredConfidenceDecoding() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":{"preset":"summary"},"replacement":null,"confidence":{"Score":0.4,"score":0.93}}"#
+            ),
+            .rewriteSelection(.summary)
         )
     }
 
