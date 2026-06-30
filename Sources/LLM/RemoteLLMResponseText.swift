@@ -138,6 +138,9 @@ private extension RemoteLLMResponseText {
             if argumentBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
                 return toolCallText(from: object)
             }
+            if structuredBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+                return structuredContentBlockText(object)
+            }
             return nil
         }
 
@@ -185,6 +188,20 @@ private extension RemoteLLMResponseText {
         return nil
     }
 
+    static func structuredContentBlockText(_ object: [String: Any]) -> String? {
+        for key in structuredBlockPayloadKeys {
+            if let text = structuredPayloadText(from: object[key]),
+               isActionableOutputPayload(text) {
+                return text
+            }
+        }
+        if let text = jsonString(from: object),
+           isActionableOutputPayload(text) {
+            return text
+        }
+        return nil
+    }
+
     static func isActionableOutputPayload(_ text: String) -> Bool {
         LLMFinalTextOutput.text(from: text) != nil
             || SpokenEditCommandLLMResolver.command(from: text) != nil
@@ -210,6 +227,10 @@ private extension RemoteLLMResponseText {
     static let textBlockTypes = ["text", "output_text"]
     static let wrapperBlockTypes = ["message"]
     static let argumentBlockTypes = ["function", "function_call", "tool_call", "tool_use"]
+    static let structuredBlockTypes = ["json", "output_json", "input_json"]
+    static let structuredBlockPayloadKeys = [
+        "json", "parsed", "output_parsed", "content", "value", "data", "payload",
+    ]
     static let toolPayloadKeys = [
         "parsed_arguments", "parsedArguments", "arguments_json", "argumentsJson",
         "input_json", "inputJson", "parameters_json", "parametersJson",
