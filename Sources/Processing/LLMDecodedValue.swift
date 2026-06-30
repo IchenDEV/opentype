@@ -32,7 +32,11 @@ private extension LLMTextValue {
         "rewriteInstruction", "rewrite_instruction",
         "task", "goal", "objective", "directive",
         "preset", "style", "format", "mode", "category", "targetStyle", "target_style",
-        "label", "name", "replacement", "type",
+        "label", "name", "replacement", "kind", "type",
+    ]
+    static let structuralTypeValues = [
+        "custom", "preset", "intent", "instruction", "task",
+        "style", "format", "category", "metadata", "object",
     ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale", "description",
@@ -54,6 +58,7 @@ private extension LLMTextValue {
         if object.count == 1,
            let key = singleValueObjectKeys.first(where: { object.value(forCaseInsensitiveKey: $0) != nil }),
            let value = object.value(forCaseInsensitiveKey: key)?.text.trimmingCharacters(in: .whitespacesAndNewlines),
+           !isStructuralTypeValue(value, for: key),
            !value.isEmpty {
             return value
         }
@@ -70,10 +75,11 @@ private extension LLMTextValue {
     }
 
     static func singleSemanticValue(in object: [String: LLMTextValue]) -> String? {
-        for key in singleValueObjectKeys where key != "type" {
+        for key in singleValueObjectKeys {
             guard let value = object.value(forCaseInsensitiveKey: key)?.text
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                 !value.isEmpty else { continue }
+            guard !isStructuralTypeValue(value, for: key) else { continue }
 
             let hasOnlyMetadataBesidesValue = object.allSatisfy { objectKey, objectValue in
                 let candidate = objectValue.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -86,6 +92,19 @@ private extension LLMTextValue {
             }
         }
         return nil
+    }
+
+    static func isStructuralTypeValue(_ value: String, for key: String) -> Bool {
+        guard key.localizedCaseInsensitiveCompare("type") == .orderedSame
+            || key.localizedCaseInsensitiveCompare("kind") == .orderedSame else {
+            return false
+        }
+        let normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+        return structuralTypeValues.contains(normalized)
     }
 }
 
