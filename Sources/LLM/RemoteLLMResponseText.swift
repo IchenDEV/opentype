@@ -45,6 +45,12 @@ private extension RemoteLLMResponseText {
             if let text = contentText(from: message["text"]) {
                 return text
             }
+            if let text = toolCallText(from: message["tool_calls"]) {
+                return text
+            }
+            if let text = toolCallText(from: message["function_call"]) {
+                return text
+            }
         }
 
         if let text = contentText(from: choice["content"]) {
@@ -96,6 +102,9 @@ private extension RemoteLLMResponseText {
                     ?? contentText(from: object["output"])
                     ?? contentText(from: object["value"])
             }
+            if argumentBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+                return toolCallText(from: object)
+            }
             return nil
         }
 
@@ -108,8 +117,34 @@ private extension RemoteLLMResponseText {
         return contentText(from: object["value"])
     }
 
+    static func toolCallText(from value: Any?) -> String? {
+        if let blocks = value as? [Any] {
+            let text = blocks
+                .compactMap(toolCallText)
+                .joined(separator: "\n")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : text
+        }
+        guard let object = value as? [String: Any] else {
+            return contentText(from: value)
+        }
+
+        if let text = contentText(from: object["arguments"]) {
+            return text
+        }
+        if let function = object["function"] as? [String: Any],
+           let text = contentText(from: function["arguments"]) {
+            return text
+        }
+        if let text = contentText(from: object["input"]) {
+            return text
+        }
+        return nil
+    }
+
     static let textBlockTypes = ["text", "output_text"]
     static let wrapperBlockTypes = ["message"]
+    static let argumentBlockTypes = ["function", "function_call", "tool_call"]
 
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

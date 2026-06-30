@@ -108,6 +108,54 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIChatToolCallArguments() throws {
+        let response = #"""
+        {
+          "choices": [
+            {
+              "message": {
+                "content": null,
+                "tool_calls": [
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "emit_final",
+                      "arguments": "{\"final_text\":\"Ship the release notes today.\"}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
+    func testParsesOpenAIResponsesFunctionCallArguments() throws {
+        let response = #"""
+        {
+          "id": "resp_1",
+          "output": [
+            {
+              "type": "function_call",
+              "name": "emit_final",
+              "arguments": "{\"final_text\":\"今天下午同步发布计划。\"}"
+            }
+          ]
+        }
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"今天下午同步发布计划。"}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "今天下午同步发布计划。")
+    }
+
     func testParsesAllAnthropicTextBlocks() throws {
         let response = """
         {
