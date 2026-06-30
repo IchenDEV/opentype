@@ -49,6 +49,9 @@ private extension LocalASRTranscriptOutput {
     static let nestedKeys = [
         "result", "data", "output", "response", "payload", "message", "body",
         "best", "best_hypothesis", "bestHypothesis",
+        "asr_result", "asrResult",
+        "transcription_result", "transcriptionResult",
+        "recognition_result", "recognitionResult",
         "channel",
     ]
     static let arrayKeys = [

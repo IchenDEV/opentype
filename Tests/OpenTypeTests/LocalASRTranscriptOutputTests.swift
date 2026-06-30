@@ -36,6 +36,17 @@ final class LocalASRTranscriptOutputTests: XCTestCase {
         )
     }
 
+    func testParsesASRSpecificResultWrappers() throws {
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"asr_result":{"text":"Ship tomorrow."}}"#),
+            "Ship tomorrow."
+        )
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(#"{"recognitionResult":{"transcript":"Confirm QA."}}"#),
+            "Confirm QA."
+        )
+    }
+
     func testParsesSegmentedRunnerOutput() throws {
         let output = """
         {"segments":[{"text":"Ship the release notes."},{"text":"Then confirm QA."}]}
