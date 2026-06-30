@@ -53,6 +53,21 @@ final class InputHistoryTests: XCTestCase {
         XCTAssertEqual(context.screenContext?.count, 1_200)
     }
 
+    func testInputContextTruncatesFocusedTextContext() {
+        let context = InputContext(
+            textBeforeSelection: String(repeating: "a", count: 700),
+            selectedText: String(repeating: "b", count: 700),
+            textAfterSelection: String(repeating: "c", count: 700),
+            outputMode: .processed,
+            inputLanguage: .english,
+            source: .menuBar
+        )
+
+        XCTAssertEqual(context.textBeforeSelection?.count, 500)
+        XCTAssertEqual(context.selectedText?.count, 500)
+        XCTAssertEqual(context.textAfterSelection?.count, 500)
+    }
+
     @MainActor
     func testMemoryStorePrioritizesSameAppContext() {
         let now = Date(timeIntervalSince1970: 10_000)

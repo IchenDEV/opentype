@@ -69,6 +69,9 @@ final class PromptBuilderTests: XCTestCase {
                 appName: "备忘录",
                 bundleIdentifier: "com.apple.Notes",
                 windowTitle: "发布计划",
+                textBeforeSelection: "我们刚才讨论到 OpenType 的",
+                selectedText: "快捷键",
+                textAfterSelection: "体验需要更自然。",
                 outputMode: .processed,
                 inputLanguage: .chinese,
                 source: .menuBar
@@ -103,6 +106,11 @@ final class PromptBuilderTests: XCTestCase {
             XCTAssertTrue(prompt.contains("当前输入目标"))
             XCTAssertTrue(prompt.contains("- 应用: 备忘录"))
             XCTAssertTrue(prompt.contains("- 窗口: 发布计划"))
+            XCTAssertTrue(prompt.contains("光标上下文，仅用于判断"))
+            XCTAssertTrue(prompt.contains("- 光标前文本: 我们刚才讨论到 OpenType 的"))
+            XCTAssertTrue(prompt.contains("- 当前选中文本: 快捷键"))
+            XCTAssertTrue(prompt.contains("- 光标后文本: 体验需要更自然。"))
+            XCTAssertTrue(prompt.contains("不要把这些元信息或未口述的上下文写入输出"))
             XCTAssertTrue(prompt.contains("原文：嗯那个我们周四，不对，周五下午开会"))
         }
     }
@@ -219,6 +227,9 @@ final class PromptBuilderTests: XCTestCase {
             appName: "Mail",
             bundleIdentifier: "com.apple.mail",
             windowTitle: "Release reply",
+            textBeforeSelection: "Hi team,",
+            selectedText: "ship today",
+            textAfterSelection: "Thanks.",
             outputMode: .command,
             inputLanguage: .english,
             source: .menuBar
@@ -250,6 +261,11 @@ final class PromptBuilderTests: XCTestCase {
         XCTAssertTrue(english.contains("Current input target"))
         XCTAssertTrue(english.contains("- App: Mail"))
         XCTAssertTrue(english.contains("- Window: Release reply"))
+        XCTAssertTrue(english.contains("cursor context for tone"))
+        XCTAssertTrue(english.contains("- Text before cursor/selection: Hi team,"))
+        XCTAssertTrue(english.contains("- Selected text: ship today"))
+        XCTAssertTrue(english.contains("- Text after cursor/selection: Thanks."))
+        XCTAssertTrue(english.contains("undictated surrounding text"))
         XCTAssertTrue(english.contains("output labels, preambles, notes, quote wrappers, or code fences"))
         XCTAssertTrue(english.contains("You only generate text; you cannot actually click, send, delete, open apps, press shortcuts, change system settings, or perform external side effects"))
         XCTAssertTrue(english.contains("output an empty string and do not claim it is done"))
