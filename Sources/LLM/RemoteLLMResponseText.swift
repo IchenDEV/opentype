@@ -38,40 +38,24 @@ enum RemoteLLMResponseText {
 
 private extension RemoteLLMResponseText {
     static func openAIChoiceText(_ choice: [String: Any]) -> String? {
-        if let message = choice.value(forCaseInsensitiveKey: "message") as? [String: Any] {
-            if let text = toolCallText(from: message.value(forCaseInsensitiveKey: "tool_calls")) {
-                return text
+        for key in ["message", "delta"] {
+            guard let payload = choice.value(forCaseInsensitiveKey: key) as? [String: Any],
+                  let text = openAITextPayload(payload) else {
+                continue
             }
-            if let text = toolCallText(from: message.value(forCaseInsensitiveKey: "function_call")) {
-                return text
-            }
-            if let text = structuredPayloadText(from: message.value(forCaseInsensitiveKey: "parsed")) {
-                return text
-            }
-            if let text = structuredPayloadText(from: message.value(forCaseInsensitiveKey: "output_parsed")) {
-                return text
-            }
-            if let text = contentText(from: message.value(forCaseInsensitiveKey: "content")) {
-                return text
-            }
-            if let text = contentText(from: message.value(forCaseInsensitiveKey: "text")) {
-                return text
-            }
+            return text
         }
 
-        if let text = structuredPayloadText(from: choice.value(forCaseInsensitiveKey: "parsed")) {
-            return text
-        }
-        if let text = structuredPayloadText(from: choice.value(forCaseInsensitiveKey: "output_parsed")) {
-            return text
-        }
-        if let text = contentText(from: choice.value(forCaseInsensitiveKey: "content")) {
-            return text
-        }
-        if let text = contentText(from: choice.value(forCaseInsensitiveKey: "text")) {
-            return text
-        }
-        return nil
+        return openAITextPayload(choice)
+    }
+
+    static func openAITextPayload(_ payload: [String: Any]) -> String? {
+        toolCallText(from: payload.value(forCaseInsensitiveKey: "tool_calls"))
+            ?? toolCallText(from: payload.value(forCaseInsensitiveKey: "function_call"))
+            ?? structuredPayloadText(from: payload.value(forCaseInsensitiveKey: "parsed"))
+            ?? structuredPayloadText(from: payload.value(forCaseInsensitiveKey: "output_parsed"))
+            ?? contentText(from: payload.value(forCaseInsensitiveKey: "content"))
+            ?? contentText(from: payload.value(forCaseInsensitiveKey: "text"))
     }
 
     static func openAIResponsesText(_ json: [String: Any]) -> String? {

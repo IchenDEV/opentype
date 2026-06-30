@@ -103,6 +103,52 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIStreamingDeltaContent() throws {
+        let response = #"""
+        {"choices":[{"delta":{"content":"{\"final_text\":\"Ship the release notes today.\"}"}}]}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
+    func testParsesOpenAIStreamingDeltaToolCallArguments() throws {
+        let response = #"""
+        {
+          "choices": [
+            {
+              "delta": {
+                "tool_calls": [
+                  {
+                    "index": 0,
+                    "type": "function",
+                    "function": {
+                      "name": "emit_command",
+                      "arguments": {
+                        "action": "replace_last",
+                        "intent": null,
+                        "replacement": "ship tomorrow",
+                        "confidence": 0.91
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testParsesOpenAIResponsesOutputBlocks() throws {
         let response = """
         {

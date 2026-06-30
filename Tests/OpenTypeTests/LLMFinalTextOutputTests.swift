@@ -77,6 +77,26 @@ final class LLMFinalTextOutputTests: XCTestCase {
         )
     }
 
+    func testExtractsOpenAIDeltaFinalTextFromWholeResponse() {
+        let llmOutput = #"""
+        {"choices":[{"delta":{"content":"{\"final_text\":\"Ship the release notes today.\"}"}}]}
+        """#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testKeepsPlainOpenAIDeltaWithoutExplicitFinalText() {
+        let llmOutput = #"{"choices":[{"delta":{"content":"Ship the release notes today."}}]}"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
     func testExtractsResponsesTextBlocksFromWholeResponse() {
         let llmOutput = """
         {"id":"resp_1","output":[{"type":"message","content":[{"type":"text","text":"今天下午同步发布计划。"}]}]}

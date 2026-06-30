@@ -29,7 +29,7 @@ private extension LLMFinalTextOutput {
         "data", "payload", "result", "output", "response",
         "parsed", "output_parsed",
         "json",
-        "choices", "message", "content",
+        "choices", "message", "delta", "content",
         "tool_call", "tool_calls", "function_call", "function", "tool_use",
         "arguments", "input", "parameters", "params", "args",
     ]
