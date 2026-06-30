@@ -26,6 +26,9 @@ private extension LLMFinalTextOutput {
         "data", "payload", "result", "output", "response",
         "choices", "message", "content",
     ]
+    static let responseWrapperKeys = [
+        "choices", "output",
+    ]
     static let ambiguousTextKeys = [
         "text", "output", "result", "content", "body", "message", "response",
     ]
@@ -77,9 +80,24 @@ private extension LLMFinalTextOutput {
 
         guard let object = value as? [String: Any] else { return nil }
 
+        if let text = responseWrapperText(in: object) {
+            return text
+        }
         guard allowsAmbiguousKeys || hasMetadata(in: object) else { return nil }
         for key in ambiguousTextKeys {
             guard let rawValue = object.value(forCaseInsensitiveKey: key),
+                  let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: true) else {
+                continue
+            }
+            return text
+        }
+        return nil
+    }
+
+    static func responseWrapperText(in object: [String: Any]) -> String? {
+        for key in responseWrapperKeys {
+            guard let rawValue = object.value(forCaseInsensitiveKey: key),
+                  isStructuredValue(rawValue),
                   let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: true) else {
                 continue
             }
@@ -123,6 +141,10 @@ private extension LLMFinalTextOutput {
             return nil
         }
         return finalTextValue(from: rawValue, allowsAmbiguousKeys: true)
+    }
+
+    static func isStructuredValue(_ value: Any) -> Bool {
+        value is [String: Any] || value is [Any]
     }
 
     static func finalTextValue(from value: Any, allowsAmbiguousKeys: Bool) -> String? {
