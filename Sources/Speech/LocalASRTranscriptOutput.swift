@@ -29,7 +29,7 @@ private extension LocalASRTranscriptOutput {
         "result", "data", "output", "response",
     ]
     static let arrayKeys = [
-        "segments", "chunks", "results", "utterances",
+        "segments", "chunks", "results", "utterances", "channels",
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
