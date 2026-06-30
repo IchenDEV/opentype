@@ -86,7 +86,7 @@ struct LLMNumericConfidence: Decodable {
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let number = try? container.decode(Double.self) {
-            value = number
+            value = Self.normalized(number)
         } else if let raw = try? container.decode(String.self) {
             value = Self.number(from: raw)
         } else if let object = try? container.decode([String: LLMNumericConfidence].self),
@@ -124,12 +124,24 @@ private extension LLMNumericConfidence {
     }
 
     static func number(from raw: String) -> Double {
-        let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if normalized.hasSuffix("%"),
-           let percent = Double(normalized.dropLast().trimmingCharacters(in: .whitespacesAndNewlines)) {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.hasSuffix("%"),
+           let percent = Double(text.dropLast().trimmingCharacters(in: .whitespacesAndNewlines)),
+           (0...100).contains(percent) {
             return percent / 100
         }
-        return Double(normalized) ?? -1
+        guard let number = Double(text) else { return -1 }
+        return normalized(number)
+    }
+
+    static func normalized(_ number: Double) -> Double {
+        if (0...1).contains(number) {
+            return number
+        }
+        if number > 1, number <= 100 {
+            return number / 100
+        }
+        return -1
     }
 }
 

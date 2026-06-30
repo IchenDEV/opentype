@@ -116,6 +116,33 @@ final class SpokenEditCommandLLMRobustnessTests: XCTestCase {
         )
     }
 
+    func testNormalizesPercentScaleConfidenceValues() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":"concise","replacement":null,"confidence":"91"}"#
+            ),
+            .rewriteSelection(.concise)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.resolution(
+                from: #"{"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":62}"#
+            ),
+            .some(.none)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.resolution(
+                from: #"{"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":{"score":62}}"#
+            ),
+            .some(.none)
+        )
+    }
+
     func testKeepsStructuredLowConfidenceAsNone() {
         XCTAssertEqual(
             SpokenEditCommandLLMResolver.resolution(
