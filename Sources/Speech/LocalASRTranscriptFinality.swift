@@ -33,6 +33,8 @@ private extension LocalASRTranscriptFinality {
         "is_final", "isFinal", "final",
         "final_result", "finalResult", "is_final_result", "isFinalResult",
         "speech_final", "speechFinal",
+        "sentence_end", "sentenceEnd", "utterance_end", "utteranceEnd",
+        "end_of_speech", "endOfSpeech", "is_eos", "isEos",
     ]
     static let partialBooleanKeys = [
         "is_partial", "isPartial", "partial",

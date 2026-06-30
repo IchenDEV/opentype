@@ -100,6 +100,17 @@ final class LocalASRTranscriptFinalityTests: XCTestCase {
         )
     }
 
+    func testRecognizesEndpointFinalityBooleanAliases() throws {
+        let output = """
+        {"events":[{"text":"Ship release","is_eos":false},{"text":"Ship release notes today.","sentence_end":true},{"text":"Ship rel","utterance_end":false}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship release notes today."
+        )
+    }
+
     func testParsesNestedMessageAndBodyWrappers() throws {
         XCTAssertEqual(
             try LocalASREngine.parseRunnerOutput(#"{"message":{"text":"Ship tomorrow.","status":"completed"}}"#),
