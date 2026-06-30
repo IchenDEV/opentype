@@ -36,7 +36,7 @@ private extension LLMTargetValue {
         "lastOutput", "last_output",
     ]
     static let metadataObjectKeys = [
-        "confidence", "score", "probability", "reason", "rationale",
+        "confidence", "score", "probability", "certainty", "reason", "rationale",
         "description", "explanation", "note", "notes",
     ]
 

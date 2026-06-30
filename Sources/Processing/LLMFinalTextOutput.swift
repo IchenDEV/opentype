@@ -44,7 +44,7 @@ private extension LLMFinalTextOutput {
     ]
     static let metadataKeys = [
         "explanation", "reason", "rationale", "note", "notes", "confidence",
-        "score", "probability", "language", "locale", "type", "kind",
+        "score", "probability", "certainty", "language", "locale", "type", "kind",
     ]
 
     static func finalText(from data: Data?, allowsAmbiguousKeys: Bool) -> String? {

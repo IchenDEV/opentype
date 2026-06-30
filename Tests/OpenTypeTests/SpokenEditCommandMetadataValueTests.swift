@@ -58,4 +58,31 @@ final class SpokenEditCommandMetadataValueTests: XCTestCase {
             .replaceLast("ship tomorrow at 3 PM")
         )
     }
+
+    func testDecodesCertaintyAsSemanticObjectMetadata() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":{"name":"rewrite_selection","certainty":0.91},"intent":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite","target":{"kind":"selection","certainty":0.91},"intent":"summary","replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_last","intent":{"preset":"meeting_notes","certainty":0.91},"replacement":null,"confidence":0.91}"#
+            ),
+            .rewriteLast(.meetingNotes)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"replacement":{"text":"ship tomorrow at 3 PM","certainty":0.91},"confidence":0.91}"#
+            ),
+            .replaceLast("ship tomorrow at 3 PM")
+        )
+    }
 }

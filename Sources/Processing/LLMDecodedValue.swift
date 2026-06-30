@@ -39,7 +39,7 @@ private extension LLMTextValue {
         "style", "format", "category", "metadata", "object",
     ]
     static let metadataObjectKeys = [
-        "confidence", "score", "probability", "reason", "rationale", "description",
+        "confidence", "score", "probability", "certainty", "reason", "rationale", "description",
         "explanation", "note", "notes", "kind", "type",
         "percent", "percentage", "pct",
         "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
@@ -146,7 +146,7 @@ private extension LLMReplacementValue {
     static let metadataObjectKeys = [
         "old", "oldText", "old_text", "from", "fromText", "from_text", "before",
         "source", "original", "previous", "language", "locale", "format",
-        "confidence", "score", "probability", "reason", "rationale", "description",
+        "confidence", "score", "probability", "certainty", "reason", "rationale", "description",
         "explanation", "note", "notes", "kind", "type",
         "percent", "percentage", "pct",
         "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
