@@ -65,6 +65,20 @@ final class LLMFinalTextOutputTests: XCTestCase {
         )
     }
 
+    func testExtractsAnthropicTextBlocksFromWholeResponse() {
+        let llmOutput = """
+        {"content":[{"type":"thinking","thinking":"internal reasoning"},{"type":"text","text":"Ship the release notes."},{"type":"text","text":"Then confirm QA."}]}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            Ship the release notes.
+            Then confirm QA.
+            """
+        )
+    }
+
     func testKeepsOrdinaryTopLevelArrayWithoutResponseMetadata() {
         let llmOutput = #"[{"text":"Ship the release notes today.","mode":"voice"}]"#
 
@@ -76,6 +90,15 @@ final class LLMFinalTextOutputTests: XCTestCase {
 
     func testKeepsOrdinaryOutputStringJSON() {
         let llmOutput = #"{"output":"Ship the release notes today.","mode":"voice"}"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
+    func testKeepsOrdinaryContentArrayJSON() {
+        let llmOutput = #"{"content":[{"text":"Ship the release notes today.","mode":"voice"}],"mode":"voice"}"#
 
         XCTAssertEqual(
             FormattedOutputCleaner.clean(llmOutput),

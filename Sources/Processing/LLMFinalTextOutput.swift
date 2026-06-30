@@ -27,7 +27,7 @@ private extension LLMFinalTextOutput {
         "choices", "message", "content",
     ]
     static let responseWrapperKeys = [
-        "choices", "output",
+        "choices", "output", "message", "content",
     ]
     static let ambiguousTextKeys = [
         "text", "output", "result", "content", "body", "message", "response",
@@ -98,7 +98,7 @@ private extension LLMFinalTextOutput {
         for key in responseWrapperKeys {
             guard let rawValue = object.value(forCaseInsensitiveKey: key),
                   isStructuredValue(rawValue),
-                  let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: true) else {
+                  let text = finalTextValue(from: rawValue, allowsAmbiguousKeys: false) else {
                 continue
             }
             return text
