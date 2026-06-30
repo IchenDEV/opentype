@@ -68,13 +68,13 @@ private extension LocalASRTranscriptJoiner {
         if isCurrencySymbol(last), CharacterSet.decimalDigits.contains(first) {
             return true
         }
-        if isCJKSentencePunctuation(last), isCJK(first) {
+        if isCJKSentencePunctuation(last), isNoSpaceScript(first) {
             return true
         }
-        if isCJK(last), isOpeningPunctuation(first, in: previous) {
+        if isNoSpaceScript(last), isOpeningPunctuation(first, in: previous) {
             return true
         }
-        return isCJK(last) && isCJK(first)
+        return isNoSpaceScript(last) && isNoSpaceScript(first)
     }
 
     static func isApostropheJoin(previous: String, next: String) -> Bool {
@@ -232,9 +232,17 @@ private extension LocalASRTranscriptJoiner {
         CharacterSet(charactersIn: "$€£¥₹₩₽₺₪₫₴₦₱฿₡₲₵₸₼₿").contains(scalar)
     }
 
-    static func isCJK(_ scalar: Unicode.Scalar) -> Bool {
+    static func isNoSpaceScript(_ scalar: Unicode.Scalar) -> Bool {
         switch scalar.value {
-        case 0x3400...0x9FFF, 0xF900...0xFAFF, 0x20000...0x2EBEF:
+        case 0x3005,
+             0x303B,
+             0x3040...0x309F,
+             0x30A0...0x30FF,
+             0x31F0...0x31FF,
+             0x3400...0x9FFF,
+             0xF900...0xFAFF,
+             0xFF66...0xFF9F,
+             0x20000...0x2EBEF:
             return true
         default:
             return false

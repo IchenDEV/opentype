@@ -100,4 +100,15 @@ final class LocalASRTranscriptJoinerTests: XCTestCase {
             "今天发布。然后确认。"
         )
     }
+
+    func testJoinsJapaneseKanaTokensWithoutArtificialSpaces() throws {
+        let output = """
+        {"tokens":[{"token":"金曜"},{"token":"の"},{"token":"午後"},{"token":"に"},{"token":"会議"},{"token":"します"},{"token":"。"},{"token":"よろしく"},{"token":"お願い"},{"token":"します"},{"token":"。"}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "金曜の午後に会議します。よろしくお願いします。"
+        )
+    }
 }
