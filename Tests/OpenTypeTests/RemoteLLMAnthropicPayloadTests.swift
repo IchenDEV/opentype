@@ -2,6 +2,20 @@ import XCTest
 @testable import OpenType
 
 final class RemoteLLMAnthropicPayloadTests: XCTestCase {
+    func testParsesAnthropicNonArrayContent() throws {
+        let stringResponse = #"{"content":"  Ship the release notes today.  "}"#
+        let objectResponse = #"{"content":{"type":"text","text":"今天下午同步发布计划。"}}"#
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.anthropic(from: data(stringResponse)),
+            "Ship the release notes today."
+        )
+        XCTAssertEqual(
+            try RemoteLLMResponseText.anthropic(from: data(objectResponse)),
+            "今天下午同步发布计划。"
+        )
+    }
+
     func testParsesAnthropicToolPayloadObject() throws {
         let response = """
         {

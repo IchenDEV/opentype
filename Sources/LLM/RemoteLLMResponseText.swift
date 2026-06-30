@@ -23,7 +23,7 @@ enum RemoteLLMResponseText {
 
     static func anthropic(from data: Data) throws -> String {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let content = json.value(forCaseInsensitiveKey: "content") as? [Any] else {
+              let content = json.value(forCaseInsensitiveKey: "content") else {
             throw RemoteLLMError.invalidResponse
         }
 
@@ -31,11 +31,7 @@ enum RemoteLLMResponseText {
             return text
         }
 
-        let text = content
-            .compactMap(contentBlockText)
-            .joined(separator: "\n")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { throw RemoteLLMError.invalidResponse }
+        guard let text = contentText(from: content) else { throw RemoteLLMError.invalidResponse }
         return text
     }
 }
