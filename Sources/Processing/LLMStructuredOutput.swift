@@ -20,9 +20,8 @@ enum LLMStructuredOutput {
             candidates.append(data)
         }
 
-        for range in balancedJSONObjectRanges(in: text) {
-            guard let data = String(text[range]).data(using: .utf8) else { continue }
-            appendCandidate(data)
+        for candidate in indexedJSONObjectDataCandidates(in: text) {
+            appendCandidate(candidate.data)
         }
 
         var index = 0
@@ -50,9 +49,8 @@ enum LLMStructuredOutput {
             candidates.append(data)
         }
 
-        for range in balancedJSONValueRanges(in: text) {
-            guard let data = String(text[range]).data(using: .utf8) else { continue }
-            appendCandidate(data)
+        for candidate in indexedJSONValueDataCandidates(in: text) {
+            appendCandidate(candidate.data)
         }
 
         var index = 0
@@ -168,10 +166,7 @@ private extension LLMStructuredOutput {
 
         func collect(_ value: Any) {
             if let string = value as? String {
-                for range in balancedJSONObjectRanges(in: string) {
-                    guard let data = String(string[range]).data(using: .utf8) else { continue }
-                    candidates.append(data)
-                }
+                candidates.append(contentsOf: validJSONObjectDataCandidates(in: string))
             } else if let dictionary = value as? [String: Any] {
                 for value in dictionary.values {
                     collect(value)
@@ -199,10 +194,7 @@ private extension LLMStructuredOutput {
 
         func collect(_ value: Any) {
             if let string = value as? String {
-                for range in balancedJSONValueRanges(in: string) {
-                    guard let data = String(string[range]).data(using: .utf8) else { continue }
-                    candidates.append(data)
-                }
+                candidates.append(contentsOf: validJSONValueDataCandidates(in: string))
             } else if let dictionary = value as? [String: Any] {
                 for value in dictionary.values {
                     collect(value)

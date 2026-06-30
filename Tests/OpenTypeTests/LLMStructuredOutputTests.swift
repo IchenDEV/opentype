@@ -60,6 +60,17 @@ final class LLMStructuredOutputTests: XCTestCase {
         XCTAssertEqual(embedded["replacement"] as? String, "ship tomorrow")
     }
 
+    func testJSONObjectDataCandidatesDecodeQuotedJSONStringLiteral() throws {
+        let output = #""{\"action\":\"replace_last\",\"intent\":null,\"replacement\":\"ship tomorrow\",\"confidence\":0.91}""#
+
+        let candidates = LLMStructuredOutput.jsonObjectDataCandidates(from: output)
+
+        XCTAssertEqual(candidates.count, 1)
+        let embedded = try XCTUnwrap(JSONSerialization.jsonObject(with: candidates[0]) as? [String: Any])
+        XCTAssertEqual(embedded["action"] as? String, "replace_last")
+        XCTAssertEqual(embedded["replacement"] as? String, "ship tomorrow")
+    }
+
     func testJSONValueDataCandidatesKeepOutputTextArrayTogether() throws {
         let output = """
         Final response:
