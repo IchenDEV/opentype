@@ -31,6 +31,9 @@ private extension LocalASRTranscriptOutput {
     static let arrayKeys = [
         "segments", "chunks", "results", "utterances",
     ]
+    static let alternativeKeys = [
+        "alternatives",
+    ]
 
     static func transcriptCandidate(in value: Any) -> (text: String, priority: Int)? {
         guard let text = transcriptText(in: value) else { return nil }
@@ -77,6 +80,14 @@ private extension LocalASRTranscriptOutput {
             return text
         }
 
+        for key in alternativeKeys {
+            guard let value = object.value(forCaseInsensitiveKey: key),
+                  let text = firstAlternativeText(in: value) else {
+                continue
+            }
+            return text
+        }
+
         return nil
     }
 
@@ -88,6 +99,13 @@ private extension LocalASRTranscriptOutput {
         let parts = array.compactMap(transcriptText)
         guard !parts.isEmpty else { return nil }
         return parts.joined(separator: " ")
+    }
+
+    static func firstAlternativeText(in value: Any) -> String? {
+        if let array = value as? [Any] {
+            return array.lazy.compactMap(transcriptText).first
+        }
+        return transcriptText(in: value)
     }
 
     static func nonEmpty(_ text: String) -> String? {
