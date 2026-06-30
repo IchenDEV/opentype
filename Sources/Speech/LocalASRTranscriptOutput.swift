@@ -23,13 +23,16 @@ enum LocalASRTranscriptOutput {
 
 private extension LocalASRTranscriptOutput {
     static let textKeys = [
-        "text", "transcript", "transcription",
+        "text", "transcript", "transcription", "sentence", "prediction",
+        "display", "display_text", "displayText",
+        "recognized_text", "recognizedText", "recognised_text", "recognisedText",
     ]
     static let nestedKeys = [
         "result", "data", "output", "response",
     ]
     static let arrayKeys = [
         "segments", "chunks", "results", "utterances", "channels",
+        "sentences", "transcripts", "predictions",
     ]
     static let alternativeKeys = [
         "alternatives", "hypotheses", "nbest", "n_best",
