@@ -32,7 +32,8 @@ private extension LocalASRTranscriptSignal {
         "asr_result", "asrResult",
         "transcription_result", "transcriptionResult",
         "recognition_result", "recognitionResult",
-        "channel",
+        "channel", "stable", "final", "final_result", "finalResult",
+        "unstable", "partial", "partial_result", "partialResult",
     ]
     static let arrayKeys = [
         "events", "messages", "outputs",
