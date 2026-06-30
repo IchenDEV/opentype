@@ -196,7 +196,10 @@ struct LLMResolutionCodingKey: CodingKey {
 }
 
 private extension LLMNumericConfidence {
-    static let confidenceKeys = ["value", "score", "confidence", "probability"]
+    static let confidenceKeys = [
+        "value", "score", "confidence", "probability",
+        "certainty", "confidenceScore", "confidence_score",
+    ]
 
     static func nestedConfidence(in object: [String: LLMNumericConfidence]) -> Double? {
         for key in confidenceKeys {

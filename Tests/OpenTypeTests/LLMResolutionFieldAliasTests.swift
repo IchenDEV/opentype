@@ -28,4 +28,19 @@ final class LLMResolutionFieldAliasTests: XCTestCase {
             .replaceSelection("new customer note")
         )
     }
+
+    func testDecodesNestedConfidenceAliases() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"rewrite_selection","intent":"summary","replacement":null,"confidence":{"confidence_score":91}}"#
+            ),
+            .rewriteSelection(.summary)
+        )
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: #"{"action":"replace_last","intent":null,"replacement":"ship tomorrow","confidence":{"certainty":0.91}}"#
+            ),
+            .replaceLast("ship tomorrow")
+        )
+    }
 }
