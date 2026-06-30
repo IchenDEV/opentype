@@ -34,6 +34,9 @@ private extension LLMTextValue {
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "reason", "rationale", "description",
         "explanation", "note", "notes", "kind", "type",
+        "percent", "percentage", "pct",
+        "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
+        "confidencePercentage", "confidence_percentage",
     ]
 
     static func describe(array: [LLMTextValue]) -> String {
@@ -123,6 +126,9 @@ private extension LLMReplacementValue {
         "source", "original", "previous", "language", "locale", "format",
         "confidence", "score", "probability", "reason", "rationale", "description",
         "explanation", "note", "notes", "kind", "type",
+        "percent", "percentage", "pct",
+        "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
+        "confidencePercentage", "confidence_percentage",
     ]
 
     static func describe(array: [LLMReplacementValue]) -> String {
@@ -201,6 +207,9 @@ private extension LLMNumericConfidence {
     static let confidenceKeys = [
         "value", "score", "confidence", "probability",
         "certainty", "confidenceScore", "confidence_score",
+        "percent", "percentage", "pct",
+        "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
+        "confidencePercentage", "confidence_percentage",
     ]
 
     static func nestedConfidence(in object: [String: LLMNumericConfidence]) -> Double? {

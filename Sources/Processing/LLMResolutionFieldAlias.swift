@@ -10,7 +10,13 @@ enum LLMResolutionFieldAlias {
         "replacement", "replacementText", "replacement_text", "text", "value", "new", "newText", "new_text", "output",
         "content", "body", "message", "response", "finalText", "final_text",
     ]
-    static let confidence = ["confidence", "score", "probability", "certainty", "confidenceScore", "confidence_score"]
+    static let confidence = [
+        "confidence", "score", "probability", "certainty",
+        "confidenceScore", "confidence_score",
+        "percent", "percentage", "pct",
+        "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
+        "confidencePercentage", "confidence_percentage",
+    ]
 }
 
 extension KeyedDecodingContainer where Key == LLMResolutionCodingKey {
