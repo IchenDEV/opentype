@@ -57,6 +57,17 @@ final class StructuredFinalTextDecodingTests: XCTestCase {
         )
     }
 
+    func testExtractsParsedWrapperFinalText() {
+        let llmOutput = #"""
+        {"parsed":{"final_text":"Ship the release notes today."}}
+        """#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
     func testKeepsToolArgumentsJSONWhenItHasNoFinalPayload() {
         let llmOutput = #"""
         {"tool_call":{"arguments":"{\"name\":\"OpenType\",\"mode\":\"voice\"}"}}

@@ -111,6 +111,8 @@ private extension RemoteLLMResponseText {
                 return contentText(from: object["content"])
                     ?? contentText(from: object["output"])
                     ?? contentText(from: object["value"])
+                    ?? structuredPayloadText(from: object["parsed"])
+                    ?? structuredPayloadText(from: object["output_parsed"])
             }
             if argumentBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
                 return toolCallText(from: object)
