@@ -79,6 +79,15 @@ private extension RemoteLLMResponseText {
     }
 
     static func openAIResponsesText(_ json: [String: Any]) -> String? {
+        if let text = structuredPayloadText(from: json["output_parsed"]) {
+            return text
+        }
+        if let text = structuredPayloadText(from: json["parsed"]) {
+            return text
+        }
+        if let text = toolCallText(from: json["output"]) {
+            return text
+        }
         if let text = contentText(from: json["output_text"]) {
             return text
         }
@@ -88,8 +97,7 @@ private extension RemoteLLMResponseText {
         if let text = contentText(from: json["content"]) {
             return text
         }
-        return structuredPayloadText(from: json["output_parsed"])
-            ?? structuredPayloadText(from: json["parsed"])
+        return nil
     }
 
     static func contentText(from value: Any?) -> String? {
