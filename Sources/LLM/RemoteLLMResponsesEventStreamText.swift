@@ -6,7 +6,7 @@ enum RemoteLLMResponsesEventStreamText {
         var functionArguments: [String: String] = [:]
         var sawResponsesEvent = false
 
-        for payload in eventPayloads(in: eventStream) {
+        for payload in RemoteLLMEventPayloads.values(in: eventStream) {
             guard payload != "[DONE]",
                   let data = payload.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -61,32 +61,6 @@ enum RemoteLLMResponsesEventStreamText {
 }
 
 private extension RemoteLLMResponsesEventStreamText {
-    static func eventPayloads(in text: String) -> [String] {
-        let normalized = text
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-        var payloads: [String] = []
-        var dataLines: [String] = []
-
-        func flush() {
-            guard !dataLines.isEmpty else { return }
-            payloads.append(dataLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines))
-            dataLines.removeAll()
-        }
-
-        for line in normalized.split(separator: "\n", omittingEmptySubsequences: false) {
-            if line.isEmpty {
-                flush()
-                continue
-            }
-            let rawLine = String(line)
-            guard rawLine.localizedCaseInsensitiveComparePrefix("data:") else { continue }
-            dataLines.append(String(rawLine.dropFirst(5)).trimmingCharacters(in: .whitespaces))
-        }
-        flush()
-        return payloads.filter { !$0.isEmpty }
-    }
-
     static func functionArgumentsText(_ functionArguments: [String: String]) -> String? {
         for key in functionArguments.keys.sorted() {
             let arguments = functionArguments[key] ?? ""
@@ -140,12 +114,6 @@ private extension RemoteLLMResponsesEventStreamText {
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-}
-
-private extension String {
-    func localizedCaseInsensitiveComparePrefix(_ prefix: String) -> Bool {
-        range(of: prefix, options: [.anchored, .caseInsensitive]) != nil
     }
 }
 

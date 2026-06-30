@@ -67,6 +67,19 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAINDJSONContentDeltas() throws {
+        let response = #"""
+        {"choices":[{"delta":{"content":"{\"final_text\":\"Ship "}}]}
+        {"choices":[{"delta":{"content":"the release notes today.\"}"}}]}
+        {"done":true}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
     func testParsesOpenAIEventStreamContentBlockDeltas() throws {
         let response = #"""
         data: {"choices":[{"delta":{"content":[{"type":"output_text","text":"{\"final_text\":\"Ship "}]}}]}
@@ -157,6 +170,19 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIResponsesNDJSONTextDeltas() throws {
+        let response = #"""
+        {"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"content_index":0,"delta":"{\"final_text\":\"Ship "}
+        {"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"content_index":0,"delta":"the release notes today.\"}"}
+        {"type":"response.completed","response":{"id":"resp_1"}}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
     func testParsesAnthropicEventStreamTextDeltas() throws {
         let response = #"""
         event: message_start
@@ -215,6 +241,19 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
             try RemoteLLMResponseText.anthropic(from: data(response)),
             "Ship the release notes today."
         )
+    }
+
+    func testParsesAnthropicNDJSONTextDeltas() throws {
+        let response = #"""
+        {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"{\"final_text\":\"Ship "}}
+        {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"the release notes today.\"}"}}
+        {"type":"message_stop"}
+        """#
+
+        let rawText = try RemoteLLMResponseText.anthropic(from: data(response))
+
+        XCTAssertEqual(rawText, #"{"final_text":"Ship the release notes today."}"#)
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
     }
 
     private func data(_ text: String) -> Data {

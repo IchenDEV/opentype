@@ -2,19 +2,21 @@ import Foundation
 
 enum RemoteLLMEventStreamText {
     static func openAI(from data: Data) -> String? {
-        guard let text = String(data: data, encoding: .utf8),
-              text.localizedCaseInsensitiveContains("data:") else {
+        guard let text = String(data: data, encoding: .utf8) else {
             return nil
         }
         if let text = RemoteLLMResponsesEventStreamText.text(from: text) {
             return text
         }
 
+        let payloads = RemoteLLMEventPayloads.values(in: text)
+        guard !payloads.isEmpty else { return nil }
+
         var contentParts: [String] = []
         var toolArguments: [Int: String] = [:]
         var functionArguments = ""
 
-        for payload in eventPayloads(in: text) {
+        for payload in payloads {
             guard payload != "[DONE]",
                   let data = payload.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -42,15 +44,17 @@ enum RemoteLLMEventStreamText {
     }
 
     static func anthropic(from data: Data) -> String? {
-        guard let text = String(data: data, encoding: .utf8),
-              text.localizedCaseInsensitiveContains("data:") else {
+        guard let text = String(data: data, encoding: .utf8) else {
             return nil
         }
+
+        let payloads = RemoteLLMEventPayloads.values(in: text)
+        guard !payloads.isEmpty else { return nil }
 
         var textParts: [Int: String] = [:]
         var toolInputs: [Int: String] = [:]
 
-        for payload in eventPayloads(in: text) {
+        for payload in payloads {
             guard payload != "[DONE]",
                   let data = payload.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -70,32 +74,6 @@ enum RemoteLLMEventStreamText {
 }
 
 private extension RemoteLLMEventStreamText {
-    static func eventPayloads(in text: String) -> [String] {
-        let normalized = text
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-        var payloads: [String] = []
-        var dataLines: [String] = []
-
-        func flush() {
-            guard !dataLines.isEmpty else { return }
-            payloads.append(dataLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines))
-            dataLines.removeAll()
-        }
-
-        for line in normalized.split(separator: "\n", omittingEmptySubsequences: false) {
-            if line.isEmpty {
-                flush()
-                continue
-            }
-            let rawLine = String(line)
-            guard rawLine.localizedCaseInsensitiveComparePrefix("data:") else { continue }
-            dataLines.append(String(rawLine.dropFirst(5)).trimmingCharacters(in: .whitespaces))
-        }
-        flush()
-        return payloads.filter { !$0.isEmpty }
-    }
-
     static func hasDelta(in json: [String: Any]) -> Bool {
         guard let choices = json.value(forCaseInsensitiveKey: "choices") as? [Any] else { return false }
         return choices.contains { choice in
@@ -264,12 +242,6 @@ private extension RemoteLLMEventStreamText {
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
-    }
-}
-
-private extension String {
-    func localizedCaseInsensitiveComparePrefix(_ prefix: String) -> Bool {
-        range(of: prefix, options: [.anchored, .caseInsensitive]) != nil
     }
 }
 
