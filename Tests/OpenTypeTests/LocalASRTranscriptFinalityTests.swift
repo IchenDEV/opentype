@@ -89,6 +89,17 @@ final class LocalASRTranscriptFinalityTests: XCTestCase {
         )
     }
 
+    func testPrefersDeepgramStyleSpeechFinalChannelAlternative() throws {
+        let output = """
+        {"results":[{"speech_final":false,"channel":{"alternatives":[{"transcript":"Ship release","confidence":0.81}]}},{"speech_final":true,"channel":{"alternatives":[{"transcript":"Ship release notes today.","confidence":0.94}]}}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship release notes today."
+        )
+    }
+
     func testParsesNestedMessageAndBodyWrappers() throws {
         XCTAssertEqual(
             try LocalASREngine.parseRunnerOutput(#"{"message":{"text":"Ship tomorrow.","status":"completed"}}"#),
