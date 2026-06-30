@@ -27,6 +27,10 @@ enum RemoteLLMResponsesEventStreamText {
                    let text = json.value(forCaseInsensitiveKey: "text") as? String {
                     textParts.append(text)
                 }
+            case "responsecontentpartdone":
+                if let text = contentPartText(in: json) {
+                    return text
+                }
             case "responsefunctioncallargumentsdelta":
                 if let delta = json.value(forCaseInsensitiveKey: "delta") as? String {
                     functionArguments[eventKey(in: json), default: ""] += delta
@@ -82,6 +86,29 @@ private extension RemoteLLMResponsesEventStreamText {
             return nil
         }
         return text
+    }
+
+    static func contentPartText(in json: [String: Any]) -> String? {
+        for key in ["part", "content_part", "contentPart", "content"] {
+            guard let value = json.value(forCaseInsensitiveKey: key),
+                  let text = messageContentText(from: value) else {
+                continue
+            }
+            return text
+        }
+        return nil
+    }
+
+    static func messageContentText(from value: Any) -> String? {
+        let content: [Any]
+        if let array = value as? [Any] {
+            content = array
+        } else {
+            content = [value]
+        }
+        return RemoteLLMResponseText.openAIText(in: [
+            "output": [["type": "message", "content": content]]
+        ])
     }
 
     static func eventKey(in json: [String: Any]) -> String {

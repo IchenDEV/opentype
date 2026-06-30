@@ -170,6 +170,17 @@ final class RemoteLLMEventStreamTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIResponsesContentPartDone() throws {
+        let response = """
+        data: {"type":"response.content_part.done","item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"Ship the release notes today."}}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes today."
+        )
+    }
+
     func testParsesOpenAIResponsesNDJSONTextDeltas() throws {
         let response = #"""
         {"type":"response.output_text.delta","item_id":"msg_1","output_index":0,"content_index":0,"delta":"{\"final_text\":\"Ship "}
