@@ -111,7 +111,7 @@ private extension LocalASRTranscriptOutput {
     static func structuredTranscriptText(in object: [String: Any]) -> String? {
         for key in nestedKeys {
             guard let value = object.value(forCaseInsensitiveKey: key),
-                  let text = transcriptText(in: value) else {
+                  let text = nestedTranscriptText(in: value) else {
                 continue
             }
             return text
@@ -137,6 +137,24 @@ private extension LocalASRTranscriptOutput {
         }
 
         return nil
+    }
+
+    static func nestedTranscriptText(in value: Any) -> String? {
+        guard let text = value as? String else {
+            return transcriptText(in: value)
+        }
+        return serializedPayloadTranscriptText(in: text)
+            ?? LocalASRTokenControl.textIfNotControl(text)
+    }
+
+    static func serializedPayloadTranscriptText(in text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("{") || trimmed.hasPrefix("["),
+              let data = trimmed.data(using: .utf8),
+              let value = try? JSONSerialization.jsonObject(with: data) else {
+            return nil
+        }
+        return transcriptText(in: value)
     }
 
     static func containsAny(_ keys: [String], in object: [String: Any]) -> Bool {
