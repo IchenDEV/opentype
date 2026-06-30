@@ -6,7 +6,7 @@ enum RemoteLLMResponseText {
             throw RemoteLLMError.invalidResponse
         }
 
-        if let choices = json["choices"] as? [[String: Any]] {
+        if let choices = json.value(forCaseInsensitiveKey: "choices") as? [[String: Any]] {
             for choice in choices {
                 if let text = openAIChoiceText(choice) {
                     return text
@@ -23,7 +23,7 @@ enum RemoteLLMResponseText {
 
     static func anthropic(from data: Data) throws -> String {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let content = json["content"] as? [Any] else {
+              let content = json.value(forCaseInsensitiveKey: "content") as? [Any] else {
             throw RemoteLLMError.invalidResponse
         }
 
@@ -42,59 +42,59 @@ enum RemoteLLMResponseText {
 
 private extension RemoteLLMResponseText {
     static func openAIChoiceText(_ choice: [String: Any]) -> String? {
-        if let message = choice["message"] as? [String: Any] {
-            if let text = toolCallText(from: message["tool_calls"]) {
+        if let message = choice.value(forCaseInsensitiveKey: "message") as? [String: Any] {
+            if let text = toolCallText(from: message.value(forCaseInsensitiveKey: "tool_calls")) {
                 return text
             }
-            if let text = toolCallText(from: message["function_call"]) {
+            if let text = toolCallText(from: message.value(forCaseInsensitiveKey: "function_call")) {
                 return text
             }
-            if let text = structuredPayloadText(from: message["parsed"]) {
+            if let text = structuredPayloadText(from: message.value(forCaseInsensitiveKey: "parsed")) {
                 return text
             }
-            if let text = structuredPayloadText(from: message["output_parsed"]) {
+            if let text = structuredPayloadText(from: message.value(forCaseInsensitiveKey: "output_parsed")) {
                 return text
             }
-            if let text = contentText(from: message["content"]) {
+            if let text = contentText(from: message.value(forCaseInsensitiveKey: "content")) {
                 return text
             }
-            if let text = contentText(from: message["text"]) {
+            if let text = contentText(from: message.value(forCaseInsensitiveKey: "text")) {
                 return text
             }
         }
 
-        if let text = structuredPayloadText(from: choice["parsed"]) {
+        if let text = structuredPayloadText(from: choice.value(forCaseInsensitiveKey: "parsed")) {
             return text
         }
-        if let text = structuredPayloadText(from: choice["output_parsed"]) {
+        if let text = structuredPayloadText(from: choice.value(forCaseInsensitiveKey: "output_parsed")) {
             return text
         }
-        if let text = contentText(from: choice["content"]) {
+        if let text = contentText(from: choice.value(forCaseInsensitiveKey: "content")) {
             return text
         }
-        if let text = contentText(from: choice["text"]) {
+        if let text = contentText(from: choice.value(forCaseInsensitiveKey: "text")) {
             return text
         }
         return nil
     }
 
     static func openAIResponsesText(_ json: [String: Any]) -> String? {
-        if let text = structuredPayloadText(from: json["output_parsed"]) {
+        if let text = structuredPayloadText(from: json.value(forCaseInsensitiveKey: "output_parsed")) {
             return text
         }
-        if let text = structuredPayloadText(from: json["parsed"]) {
+        if let text = structuredPayloadText(from: json.value(forCaseInsensitiveKey: "parsed")) {
             return text
         }
-        if let text = toolCallText(from: json["output"]) {
+        if let text = toolCallText(from: json.value(forCaseInsensitiveKey: "output")) {
             return text
         }
-        if let text = contentText(from: json["output_text"]) {
+        if let text = contentText(from: json.value(forCaseInsensitiveKey: "output_text")) {
             return text
         }
-        if let text = contentText(from: json["output"]) {
+        if let text = contentText(from: json.value(forCaseInsensitiveKey: "output")) {
             return text
         }
-        if let text = contentText(from: json["content"]) {
+        if let text = contentText(from: json.value(forCaseInsensitiveKey: "content")) {
             return text
         }
         return nil

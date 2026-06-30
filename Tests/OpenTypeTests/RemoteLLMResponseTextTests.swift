@@ -36,6 +36,24 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testParsesCaseInsensitiveEnvelopeKeys() throws {
+        let openAIResponse = """
+        {"Choices":[{"Message":{"Content":[{"Type":"output_text","Text":"Ship the release notes today."}]}}]}
+        """
+        let anthropicResponse = """
+        {"Content":[{"Type":"text","Text":"今天下午同步发布计划。"}]}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(openAIResponse)),
+            "Ship the release notes today."
+        )
+        XCTAssertEqual(
+            try RemoteLLMResponseText.anthropic(from: data(anthropicResponse)),
+            "今天下午同步发布计划。"
+        )
+    }
+
     func testParsesNestedOpenAITextBlock() throws {
         let response = """
         {"choices":[{"message":{"content":[{"type":"text","text":{"value":"今天下午同步发布计划。"}}]}}]}
