@@ -74,6 +74,40 @@ final class RemoteLLMResponseTextTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIResponsesOutputBlocks() throws {
+        let response = """
+        {
+          "id": "resp_1",
+          "output": [
+            {
+              "type": "message",
+              "content": [
+                {"type":"output_text","text":"Ship the release notes."},
+                {"type":"image_url","image_url":{"url":"ignored"}},
+                {"type":"output_text","text":"Then confirm QA."}
+              ]
+            }
+          ]
+        }
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "Ship the release notes.\nThen confirm QA."
+        )
+    }
+
+    func testParsesOpenAIResponsesOutputTextShortcut() throws {
+        let response = """
+        {"id":"resp_1","output_text":"  今天下午同步发布计划。  "}
+        """
+
+        XCTAssertEqual(
+            try RemoteLLMResponseText.openAI(from: data(response)),
+            "今天下午同步发布计划。"
+        )
+    }
+
     func testParsesAllAnthropicTextBlocks() throws {
         let response = """
         {

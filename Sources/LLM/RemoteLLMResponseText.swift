@@ -2,16 +2,22 @@ import Foundation
 
 enum RemoteLLMResponseText {
     static func openAI(from data: Data) throws -> String {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]] else {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw RemoteLLMError.invalidResponse
         }
 
-        for choice in choices {
-            if let text = openAIChoiceText(choice) {
-                return text
+        if let choices = json["choices"] as? [[String: Any]] {
+            for choice in choices {
+                if let text = openAIChoiceText(choice) {
+                    return text
+                }
             }
         }
+
+        if let text = openAIResponsesText(json) {
+            return text
+        }
+
         throw RemoteLLMError.invalidResponse
     }
 
@@ -47,6 +53,16 @@ private extension RemoteLLMResponseText {
         return contentText(from: choice["text"])
     }
 
+    static func openAIResponsesText(_ json: [String: Any]) -> String? {
+        if let text = contentText(from: json["output_text"]) {
+            return text
+        }
+        if let text = contentText(from: json["output"]) {
+            return text
+        }
+        return contentText(from: json["content"])
+    }
+
     static func contentText(from value: Any?) -> String? {
         if let text = value as? String {
             return nonEmpty(text)
@@ -69,8 +85,17 @@ private extension RemoteLLMResponseText {
             return contentText(from: value)
         }
 
-        if let type = object["type"] as? String,
-           !textBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+        if let type = object["type"] as? String {
+            if textBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+                return contentText(from: object["text"])
+                    ?? contentText(from: object["content"])
+                    ?? contentText(from: object["value"])
+            }
+            if wrapperBlockTypes.contains(where: { $0.caseInsensitiveCompare(type) == .orderedSame }) {
+                return contentText(from: object["content"])
+                    ?? contentText(from: object["output"])
+                    ?? contentText(from: object["value"])
+            }
             return nil
         }
 
@@ -84,6 +109,7 @@ private extension RemoteLLMResponseText {
     }
 
     static let textBlockTypes = ["text", "output_text"]
+    static let wrapperBlockTypes = ["message"]
 
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
