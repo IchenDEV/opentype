@@ -124,7 +124,10 @@ private extension RemoteLLMResponseText {
         if let text = contentText(from: object["content"]) {
             return text
         }
-        return contentText(from: object["value"])
+        if let text = contentText(from: object["value"]) {
+            return text
+        }
+        return jsonString(from: object)
     }
 
     static func toolCallText(from value: Any?) -> String? {
