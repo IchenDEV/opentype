@@ -32,12 +32,18 @@ enum FormattedOutputCleaner {
 private extension FormattedOutputCleaner {
     static func removeScaffolding(from text: String) -> String {
         let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let structuredText = LLMFinalTextOutput.text(from: result) {
+            return structuredText
+        }
+
         if let markedSection = finalTextSection(in: result) {
-            return stripWrappingCodeFence(from: markedSection)
+            let section = stripWrappingCodeFence(from: markedSection)
+            return LLMFinalTextOutput.text(from: section) ?? section
         }
 
         let section = removeLeadingLabel(from: explanationStrippedSection(result))
-        return stripWrappingCodeFence(from: section)
+        let unwrapped = stripWrappingCodeFence(from: section)
+        return LLMFinalTextOutput.text(from: unwrapped) ?? unwrapped
     }
 
     static func finalTextSection(in text: String) -> String? {

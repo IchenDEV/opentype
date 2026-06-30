@@ -144,6 +144,48 @@ final class FormattedOutputCleanerTests: XCTestCase {
         )
     }
 
+    func testExtractsStructuredFinalTextJSON() {
+        let llmOutput = """
+        {"final_text":"Ship the release notes today.","explanation":"Removed filler words."}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsStructuredFinalTextFromFencedJSON() {
+        let llmOutput = """
+        ```json
+        {"result":{"text":"今天下午同步发布计划。"},"reason":"final answer"}
+        ```
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "今天下午同步发布计划。"
+        )
+    }
+
+    func testKeepsOrdinaryJSONWithoutFinalTextField() {
+        let llmOutput = #"{"name":"OpenType","mode":"voice"}"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
+    func testKeepsOrdinaryJSONWithAmbiguousTextField() {
+        let llmOutput = #"{"text":"Ship the release notes today.","mode":"voice"}"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
     func testKeepsContentStartingWithJapaneseOrKoreanExplanationHeading() {
         XCTAssertEqual(
             FormattedOutputCleaner.clean("説明：\nこれは本文の見出しです。"),
