@@ -1,0 +1,61 @@
+import XCTest
+@testable import OpenType
+
+final class SpokenEditCommandMetadataValueTests: XCTestCase {
+    func testDecodesActionObjectWithDescriptionMetadata() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: """
+                {
+                  "action": {
+                    "name": "rewrite_selection",
+                    "description": "safe edit action chosen by the model"
+                  },
+                  "intent": "summary",
+                  "replacement": null,
+                  "confidence": 0.91
+                }
+                """
+            ),
+            .rewriteSelection(.summary)
+        )
+    }
+
+    func testDecodesIntentObjectWithExplanationMetadata() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: """
+                {
+                  "action": "rewrite_last",
+                  "intent": {
+                    "preset": "meeting_notes",
+                    "explanation": "the user asked to turn the text into notes"
+                  },
+                  "replacement": null,
+                  "confidence": 0.91
+                }
+                """
+            ),
+            .rewriteLast(.meetingNotes)
+        )
+    }
+
+    func testDecodesReplacementObjectWithDescriptionMetadata() {
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(
+                from: """
+                {
+                  "action": "replace_last",
+                  "intent": null,
+                  "replacement": {
+                    "text": "ship tomorrow at 3 PM",
+                    "description": "replacement text only"
+                  },
+                  "confidence": 0.91
+                }
+                """
+            ),
+            .replaceLast("ship tomorrow at 3 PM")
+        )
+    }
+}

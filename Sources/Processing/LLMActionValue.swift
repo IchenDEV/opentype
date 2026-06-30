@@ -30,7 +30,8 @@ private extension LLMActionValue {
         "action", "value", "name", "type", "command", "operation",
     ]
     static let metadataObjectKeys = [
-        "confidence", "score", "probability", "reason", "rationale", "note", "notes", "kind",
+        "confidence", "score", "probability", "reason", "rationale", "description",
+        "explanation", "note", "notes", "kind",
     ]
 
     static func describe(array: [LLMActionValue]) -> String {

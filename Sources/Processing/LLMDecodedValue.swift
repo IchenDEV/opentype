@@ -32,7 +32,8 @@ private extension LLMTextValue {
         "label", "name", "replacement", "type",
     ]
     static let metadataObjectKeys = [
-        "confidence", "score", "probability", "reason", "rationale", "note", "notes", "kind", "type",
+        "confidence", "score", "probability", "reason", "rationale", "description",
+        "explanation", "note", "notes", "kind", "type",
     ]
 
     static func describe(array: [LLMTextValue]) -> String {
@@ -119,8 +120,8 @@ private extension LLMReplacementValue {
     static let metadataObjectKeys = [
         "old", "oldText", "old_text", "from", "fromText", "from_text", "before",
         "source", "original", "previous", "language", "locale", "format",
-        "confidence", "score", "probability", "reason", "rationale", "note", "notes",
-        "kind", "type",
+        "confidence", "score", "probability", "reason", "rationale", "description",
+        "explanation", "note", "notes", "kind", "type",
     ]
 
     static func describe(array: [LLMReplacementValue]) -> String {
