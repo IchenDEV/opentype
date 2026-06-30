@@ -203,6 +203,31 @@ final class FormattedOutputCleanerTests: XCTestCase {
         )
     }
 
+    func testExtractsResponsesOutputTextArray() {
+        let llmOutput = """
+        {"id":"resp_1","output":[{"type":"message","content":[{"type":"output_text","text":"Ship the release notes today."}]}]}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsMultipleResponsesOutputTextBlocks() {
+        let llmOutput = """
+        {"output":[{"type":"message","content":[{"type":"output_text","text":"Ship the release notes."},{"type":"output_text","text":"Then confirm QA."}]}]}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            Ship the release notes.
+            Then confirm QA.
+            """
+        )
+    }
+
     func testKeepsOrdinaryEmbeddedJSONWithoutExplicitFinalText() {
         let llmOutput = #"The payload is {"text":"Ship the release notes today.","mode":"voice"}."#
 

@@ -24,6 +24,7 @@ private extension LLMFinalTextOutput {
     ]
     static let wrapperKeys = [
         "data", "payload", "result", "output", "response",
+        "choices", "message", "content",
     ]
     static let ambiguousTextKeys = [
         "text", "output", "result", "content", "body", "message", "response",
@@ -81,6 +82,12 @@ private extension LLMFinalTextOutput {
     }
 
     static func explicitFinalText(in value: Any) -> String? {
+        if let array = value as? [Any] {
+            let parts = array.compactMap { explicitFinalText(in: $0) }
+            guard !parts.isEmpty else { return nil }
+            return parts.joined(separator: "\n")
+        }
+
         guard let object = value as? [String: Any] else { return nil }
         for key in explicitTextKeys {
             guard let rawValue = object.value(forCaseInsensitiveKey: key),
