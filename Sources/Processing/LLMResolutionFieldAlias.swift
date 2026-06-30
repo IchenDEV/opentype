@@ -1,12 +1,13 @@
 import Foundation
 
 enum LLMResolutionFieldAlias {
-    static let action = ["action", "command", "operation"]
+    static let action = ["action", "command", "operation", "type", "name", "actionType", "action_type"]
     static let intent = ["intent", "instruction", "task", "preset", "style"]
     static let replacement = [
         "replacement", "replacementText", "replacement_text", "text", "value", "new", "newText", "new_text", "output",
+        "content", "body", "message", "response", "finalText", "final_text",
     ]
-    static let confidence = ["confidence", "score", "probability"]
+    static let confidence = ["confidence", "score", "probability", "certainty", "confidenceScore", "confidence_score"]
 }
 
 extension KeyedDecodingContainer where Key == LLMResolutionCodingKey {
