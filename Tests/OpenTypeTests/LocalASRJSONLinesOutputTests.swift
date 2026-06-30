@@ -76,4 +76,17 @@ final class LocalASRJSONLinesOutputTests: XCTestCase {
             "OpenType ships today."
         )
     }
+
+    func testKeepsTranscriptSegmentsBeforeTerminalDoneEvent() throws {
+        let output = """
+        data: {"text":"OpenType ships"}
+        data: {"text":"today."}
+        data: {"type":"done"}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "OpenType ships today."
+        )
+    }
 }

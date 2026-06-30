@@ -9,11 +9,10 @@ enum LocalASRJSONLinesOutput {
 
         if events.contains(where: \.hasFinalityMetadata) {
             return finalEventsText(in: events)
+                ?? eventTexts(in: events, joinsCumulativeUpdates: true)
         }
 
-        let parts = events.compactMap(\.text)
-        guard parts.count > 1 else { return nil }
-        return LocalASRTranscriptJoiner.join(parts)
+        return eventTexts(in: events, joinsCumulativeUpdates: false)
     }
 }
 
@@ -53,6 +52,19 @@ private extension LocalASRJSONLinesOutput {
         guard !finalTexts.isEmpty else { return nil }
         if finalTexts.count == 1 { return finalTexts[0] }
         return LocalASRFinalSegmentJoiner.join(finalTexts)
+    }
+
+    static func eventTexts(
+        in events: [LocalASRJSONLineEvent],
+        joinsCumulativeUpdates: Bool
+    ) -> String? {
+        let parts = events.compactMap(\.text)
+        guard !parts.isEmpty else { return nil }
+        if parts.count == 1 { return joinsCumulativeUpdates ? parts[0] : nil }
+        if joinsCumulativeUpdates {
+            return LocalASRFinalSegmentJoiner.join(parts)
+        }
+        return LocalASRTranscriptJoiner.join(parts)
     }
 
     static func jsonPayload(in line: String) -> String {
