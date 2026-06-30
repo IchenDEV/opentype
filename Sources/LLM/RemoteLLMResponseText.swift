@@ -183,7 +183,11 @@ private extension RemoteLLMResponseText {
     static let textBlockTypes = ["text", "output_text"]
     static let wrapperBlockTypes = ["message"]
     static let argumentBlockTypes = ["function", "function_call", "tool_call", "tool_use"]
-    static let toolPayloadKeys = ["arguments", "input", "parameters", "params", "args", "payload", "data"]
+    static let toolPayloadKeys = [
+        "parsed_arguments", "parsedArguments", "arguments_json", "argumentsJson",
+        "input_json", "inputJson", "parameters_json", "parametersJson",
+        "arguments", "input", "parameters", "params", "args", "payload", "data",
+    ]
 
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

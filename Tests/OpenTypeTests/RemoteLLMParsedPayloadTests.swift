@@ -60,6 +60,41 @@ final class RemoteLLMParsedPayloadTests: XCTestCase {
         )
     }
 
+    func testParsesOpenAIToolCallParsedArgumentsPayload() throws {
+        let response = """
+        {
+          "choices": [
+            {
+              "message": {
+                "content": null,
+                "tool_calls": [
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "emit_command",
+                      "parsed_arguments": {
+                        "action": "replace_last",
+                        "intent": null,
+                        "replacement": "ship tomorrow",
+                        "confidence": 0.91
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+        """
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(
+            SpokenEditCommandLLMResolver.command(from: rawText),
+            .replaceLast("ship tomorrow")
+        )
+    }
+
     func testParsesOpenAIParsedMessageObject() throws {
         let response = """
         {"choices":[{"message":{"content":null,"parsed":{"final_text":"Ship the release notes today."}}}]}
@@ -159,6 +194,16 @@ final class RemoteLLMParsedPayloadTests: XCTestCase {
         let rawText = try RemoteLLMResponseText.openAI(from: data(response))
 
         XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "Ship the release notes today.")
+    }
+
+    func testParsesOpenAIResponsesArgumentsJSONPayload() throws {
+        let response = #"""
+        {"id":"resp_1","output":[{"type":"function_call","name":"emit_final","arguments_json":"{\"final_text\":\"今天下午同步发布计划。\"}"}]}
+        """#
+
+        let rawText = try RemoteLLMResponseText.openAI(from: data(response))
+
+        XCTAssertEqual(FormattedOutputCleaner.clean(rawText), "今天下午同步发布计划。")
     }
 
     func testParsesAnthropicToolPayloadObject() throws {
