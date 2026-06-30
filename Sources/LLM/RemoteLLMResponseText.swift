@@ -122,18 +122,18 @@ private extension RemoteLLMResponseText {
             return contentText(from: value)
         }
 
-        if let type = object["type"] as? String {
+        if let type = object.value(forCaseInsensitiveKey: "type") as? String {
             if matchesBlockType(type, in: textBlockTypes) {
-                return contentText(from: object["text"])
-                    ?? contentText(from: object["content"])
-                    ?? contentText(from: object["value"])
+                return contentText(from: object.value(forCaseInsensitiveKey: "text"))
+                    ?? contentText(from: object.value(forCaseInsensitiveKey: "content"))
+                    ?? contentText(from: object.value(forCaseInsensitiveKey: "value"))
             }
             if matchesBlockType(type, in: wrapperBlockTypes) {
-                return structuredPayloadText(from: object["parsed"])
-                    ?? structuredPayloadText(from: object["output_parsed"])
-                    ?? contentText(from: object["content"])
-                    ?? contentText(from: object["output"])
-                    ?? contentText(from: object["value"])
+                return structuredPayloadText(from: object.value(forCaseInsensitiveKey: "parsed"))
+                    ?? structuredPayloadText(from: object.value(forCaseInsensitiveKey: "output_parsed"))
+                    ?? contentText(from: object.value(forCaseInsensitiveKey: "content"))
+                    ?? contentText(from: object.value(forCaseInsensitiveKey: "output"))
+                    ?? contentText(from: object.value(forCaseInsensitiveKey: "value"))
             }
             if matchesBlockType(type, in: argumentBlockTypes) {
                 return toolCallText(from: object)
@@ -144,13 +144,13 @@ private extension RemoteLLMResponseText {
             return nil
         }
 
-        if let text = contentText(from: object["text"]) {
+        if let text = contentText(from: object.value(forCaseInsensitiveKey: "text")) {
             return text
         }
-        if let text = contentText(from: object["content"]) {
+        if let text = contentText(from: object.value(forCaseInsensitiveKey: "content")) {
             return text
         }
-        if let text = contentText(from: object["value"]) {
+        if let text = contentText(from: object.value(forCaseInsensitiveKey: "value")) {
             return text
         }
         return jsonString(from: object)
@@ -171,7 +171,7 @@ private extension RemoteLLMResponseText {
         if let text = toolPayloadText(in: object) {
             return text
         }
-        if let function = object["function"] as? [String: Any],
+        if let function = object.value(forCaseInsensitiveKey: "function") as? [String: Any],
            let text = toolPayloadText(in: function) {
             return text
         }
@@ -180,7 +180,7 @@ private extension RemoteLLMResponseText {
 
     static func toolPayloadText(in object: [String: Any]) -> String? {
         for key in toolPayloadKeys {
-            if let text = structuredPayloadText(from: object[key]),
+            if let text = structuredPayloadText(from: object.value(forCaseInsensitiveKey: key)),
                isActionableOutputPayload(text) {
                 return text
             }
@@ -190,7 +190,7 @@ private extension RemoteLLMResponseText {
 
     static func structuredContentBlockText(_ object: [String: Any]) -> String? {
         for key in structuredBlockPayloadKeys {
-            if let text = structuredPayloadText(from: object[key]),
+            if let text = structuredPayloadText(from: object.value(forCaseInsensitiveKey: key)),
                isActionableOutputPayload(text) {
                 return text
             }
@@ -257,5 +257,14 @@ private extension RemoteLLMResponseText {
     static func nonEmpty(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+private extension Dictionary where Key == String {
+    func value(forCaseInsensitiveKey key: String) -> Value? {
+        if let value = self[key] {
+            return value
+        }
+        return first { $0.key.localizedCaseInsensitiveCompare(key) == .orderedSame }?.value
     }
 }
