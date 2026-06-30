@@ -52,6 +52,36 @@ final class TextProcessorFallbackTests: XCTestCase {
         )
     }
 
+    func testGeneratedOutputUsesCaseInsensitiveTaggedFinalScaffold() {
+        let processor = TextProcessor()
+        let output = """
+        <ANALYSIS stage="draft">Plan the rewrite.</ANALYSIS>
+        <FINAL_ANSWER source="model">Ship the release notes today.</FINAL_ANSWER>
+        """
+
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput(output, inputLanguage: .english),
+            "Ship the release notes today."
+        )
+    }
+
+    func testGeneratedOutputStripsCaseInsensitiveThinkingOnlyScaffold() {
+        let processor = TextProcessor()
+
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput("<THINK stage=\"draft\">reasoning</THINK>", inputLanguage: .english),
+            ""
+        )
+        XCTAssertEqual(
+            processor.cleanGeneratedOutput(
+                "<THINK stage=\"draft\">reasoning</THINK>",
+                inputLanguage: .english,
+                fallback: "raw transcript"
+            ),
+            "raw transcript"
+        )
+    }
+
     func testGeneratedOutputUsesLocalizedFinalSectionAfterThinkingScaffold() {
         let processor = TextProcessor()
         let chinese = """

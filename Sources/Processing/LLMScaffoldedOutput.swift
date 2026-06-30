@@ -25,8 +25,8 @@ private extension LLMScaffoldedOutput {
         "最終", "最終回答", "最終テキスト", "回答", "出力",
         "최종", "최종 답변", "최종 텍스트", "답변", "출력",
     ]
-    static let finalTagPattern = #"<(?:final|final_answer|answer)>([\s\S]*?)</(?:final|final_answer|answer)>"#
-    static let thinkingTagPattern = #"<(?:analysis|think|thinking|thought|reason|reasoning|reflect|reflection|inner_monologue|scratchpad)>"#
+    static let finalTagPattern = #"<(?:final|final_answer|answer)(?:\s+[^>]*)?>([\s\S]*?)</(?:final|final_answer|answer)>"#
+    static let thinkingTagPattern = #"<(?:analysis|think|thinking|thought|reason|reasoning|reflect|reflection|inner_monologue|scratchpad)(?:\s+[^>]*)?>"#
 
     static func finalTaggedText(in text: String) -> String? {
         guard hasThinkingTag(text) || isWrappedInFinalTag(text) else { return nil }
