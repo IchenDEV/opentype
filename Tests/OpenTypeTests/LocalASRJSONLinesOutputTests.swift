@@ -39,6 +39,18 @@ final class LocalASRJSONLinesOutputTests: XCTestCase {
         )
     }
 
+    func testKeepsLogShapedTranscriptAliases() throws {
+        let output = """
+        {"severity":"info","normalized_text":"Ship the release notes today."}
+        {"severity":"info","recognizedPhrases":[{"nBest":[{"display":"Then confirm QA."}]}]}
+        """
+
+        XCTAssertEqual(
+            try LocalASREngine.parseRunnerOutput(output),
+            "Ship the release notes today. Then confirm QA."
+        )
+    }
+
     func testKeepsFinalityMetadataOnExistingBestCandidatePath() throws {
         let output = """
         {"type":"partial","text":"Ship the"}

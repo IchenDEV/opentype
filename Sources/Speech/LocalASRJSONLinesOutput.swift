@@ -84,18 +84,7 @@ private extension LocalASRJSONLinesOutput {
               ["level", "logger", "severity"].contains(where: { object.value(forCaseInsensitiveKey: $0) != nil }) else {
             return false
         }
-        return hasDirectTranscriptSignal(in: object) == false
-    }
-
-    static func hasDirectTranscriptSignal(in object: [String: Any]) -> Bool {
-        let transcriptKeys = [
-            "text", "transcript", "transcription", "sentence", "prediction",
-            "display", "display_text", "displayText", "word", "content",
-            "token", "token_str", "tokenStr", "piece", "surface",
-            "segments", "chunks", "results", "utterances", "sentences",
-            "transcripts", "words", "tokens", "alternatives", "hypotheses",
-        ]
-        return transcriptKeys.contains { object.value(forCaseInsensitiveKey: $0) != nil }
+        return LocalASRTranscriptSignal.hasDirectSignal(in: object) == false
     }
 
     static func hasFinalityMetadata(in value: Any) -> Bool {
