@@ -55,9 +55,11 @@ private extension LocalASRTranscriptOutput {
 
     static func transcriptCandidate(in value: Any) -> (text: String, priority: Int)? {
         guard let text = transcriptText(in: value) else { return nil }
-        guard let object = value as? [String: Any] else { return (text, 1) }
-        let priority = (containsAny(arrayKeys, in: object) || containsAny(nestedKeys, in: object)) ? 2 : 1
-        return (text, priority)
+        guard let object = value as? [String: Any] else {
+            return (text, LocalASRTranscriptFinality.priority(structuralPriority: 1))
+        }
+        let structuralPriority = (containsAny(arrayKeys, in: object) || containsAny(nestedKeys, in: object)) ? 2 : 1
+        return (text, LocalASRTranscriptFinality.priority(in: object, structuralPriority: structuralPriority))
     }
 
     static func transcriptText(in value: Any) -> String? {
