@@ -174,13 +174,13 @@ private extension PromptCatalog {
         let screenLabel: String
         switch inputLanguage {
         case .auto, .chinese, .cantonese:
-            screenLabel = "以下是用户当前屏幕上的文字内容："
+            screenLabel = "以下是用户当前屏幕上的文字内容。默认仅用于纠错、专有名词和理解上下文；只有本次语音指令明确要求回复、总结、翻译、解释或使用可见屏幕内容时，才把它作为事实来源："
         case .english:
-            screenLabel = "Screen content below:"
+            screenLabel = "On-screen text below. By default, use it only for corrections, proper nouns, and context; treat it as a source of facts only when the current voice command explicitly asks to reply, summarize, translate, explain, or otherwise use visible screen content:"
         case .japanese:
-            screenLabel = "ユーザーの現在画面にある文字内容："
+            screenLabel = "ユーザーの現在画面にある文字内容。既定では誤認識補正、固有名詞、文脈理解だけに使い、現在の音声指令が返信、要約、翻訳、説明、または表示内容の利用を明示した場合だけ事実の根拠にしてください："
         case .korean:
-            screenLabel = "사용자의 현재 화면 텍스트:"
+            screenLabel = "사용자의 현재 화면 텍스트입니다. 기본적으로 오인식 보정, 고유명사, 맥락 이해에만 사용하고 현재 음성 명령이 답장, 요약, 번역, 설명 또는 보이는 화면 내용 사용을 명시할 때만 사실 근거로 삼으세요:"
         }
         return """
         \(screenLabel)
@@ -192,13 +192,13 @@ private extension PromptCatalog {
         guard isAvailable else { return nil }
         switch inputLanguage {
         case .auto, .chinese, .cantonese:
-            return "用户当前屏幕截图已随本次请求提供。需要回复、总结、翻译或解释屏幕内容时，请直接依据截图。"
+            return "用户当前屏幕截图已随本次请求提供。默认仅用于纠错、专有名词和理解上下文；只有本次语音指令明确要求回复、总结、翻译、解释或使用可见屏幕内容时，才直接依据截图。"
         case .english:
-            return "The user's current screen image is attached. Use it directly when the command asks you to reply, summarize, translate, or explain visible screen content."
+            return "The user's current screen image is attached. By default, use it only for corrections, proper nouns, and context; use it as a source of facts only when the command asks you to reply, summarize, translate, explain, or otherwise use visible screen content."
         case .japanese:
-            return "ユーザーの現在画面のスクリーンショットが添付されています。返信、要約、翻訳、説明を求められた場合は、その画像を直接参照してください。"
+            return "ユーザーの現在画面のスクリーンショットが添付されています。既定では誤認識補正、固有名詞、文脈理解だけに使い、現在の音声指令が返信、要約、翻訳、説明、または表示内容の利用を求める場合だけ事実の根拠にしてください。"
         case .korean:
-            return "사용자의 현재 화면 스크린샷이 첨부되어 있습니다. 답장, 요약, 번역, 설명을 요청받으면 이미지를 직접 참고하세요."
+            return "사용자의 현재 화면 스크린샷이 첨부되어 있습니다. 기본적으로 오인식 보정, 고유명사, 맥락 이해에만 사용하고 현재 음성 명령이 답장, 요약, 번역, 설명 또는 보이는 화면 내용 사용을 요청할 때만 사실 근거로 삼으세요."
         }
     }
 

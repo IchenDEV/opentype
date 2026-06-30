@@ -256,7 +256,8 @@ final class PromptBuilderTests: XCTestCase {
             inputLanguage: .english
         )
         XCTAssertTrue(english.contains("You are a voice assistant"))
-        XCTAssertTrue(english.contains("Screen content below"))
+        XCTAssertTrue(english.contains("On-screen text below"))
+        XCTAssertTrue(english.contains("use it only for corrections, proper nouns, and context"))
         XCTAssertTrue(english.contains("email body"))
         XCTAssertTrue(english.contains("Current input target"))
         XCTAssertTrue(english.contains("- App: Mail"))

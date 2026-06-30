@@ -38,6 +38,26 @@ final class MemoryContextFactBoundaryTests: XCTestCase {
         XCTAssertTrue(english.contains("Do not add facts from it"))
     }
 
+    func testCommandScreenContextRequiresCurrentVoiceCommandToUseFacts() {
+        let chinese = PromptBuilder.buildCommandSystemPrompt(
+            screenContext: "屏幕上写着周五发版",
+            memoryContext: "",
+            inputLanguage: .chinese
+        )
+        let english = PromptBuilder.buildCommandSystemPrompt(
+            screenContext: "screen says Friday release",
+            screenImageAvailable: true,
+            memoryContext: "",
+            inputLanguage: .english
+        )
+
+        XCTAssertTrue(chinese.contains("默认仅用于纠错、专有名词和理解上下文"))
+        XCTAssertTrue(chinese.contains("只有本次语音指令明确要求回复、总结、翻译、解释或使用可见屏幕内容"))
+        XCTAssertTrue(english.contains("By default, use it only for corrections, proper nouns, and context"))
+        XCTAssertTrue(english.contains("only when the current voice command explicitly asks"))
+        XCTAssertTrue(english.contains("use it as a source of facts only when the command asks"))
+    }
+
     @MainActor
     func testCustomSystemPromptDoesNotPromoteContextToFactSource() {
         let savedUseCustomSystemPrompt = AppSettings.shared.useCustomSystemPrompt
