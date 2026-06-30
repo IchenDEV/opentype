@@ -52,6 +52,13 @@ final class StreamingSpeechSupportTests: XCTestCase {
         XCTAssertEqual(accumulator.merge("today"), "go to today")
     }
 
+    func testPreviewAccumulatorContinuesTrailingLatinWordFragments() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("hello wor"), "hello wor")
+        XCTAssertEqual(accumulator.merge("world today"), "hello world today")
+    }
+
     func testPreviewAccumulatorMergesShortLatinWholeWordOverlap() {
         let accumulator = StreamingPreviewAccumulator()
 

@@ -101,7 +101,7 @@ enum StreamingTranscriptResolver {
 
 final class StreamingPreviewAccumulator {
     private static let minimumMeaningfulOverlap = 2
-    private static let minimumLatinFuzzyOverlap = 4
+    private static let minimumLatinFuzzyOverlap = 4, minimumLatinContinuationOverlap = 3
 
     private(set) var previewText = ""
     private var latestWindow = ""
@@ -191,6 +191,13 @@ final class StreamingPreviewAccumulator {
             return true
         }
         if existingSuffix.contains(where: \.isCJK) {
+            return true
+        }
+        if existingSuffix.count >= minimumLatinContinuationOverlap,
+           existingSuffix.first?.startsAtBoundary == true,
+           existingSuffix.last?.endsAtBoundary == true,
+           incomingPrefix.first?.startsAtBoundary == true,
+           incomingPrefix.last?.endsAtBoundary == false {
             return true
         }
         return existingSuffix.first?.startsAtBoundary == true
