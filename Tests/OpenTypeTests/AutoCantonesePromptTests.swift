@@ -51,6 +51,7 @@ final class AutoCantonesePromptTests: XCTestCase {
         XCTAssertTrue(cantonese.contains("保留自然粤语表达"))
         XCTAssertTrue(cantonese.contains("不要默认改成普通话书面中文"))
         XCTAssertTrue(cantonese.contains("粤语专业整理"))
+        XCTAssertTrue(cantonese.contains("final_text"))
         XCTAssertTrue(cantonese.contains("啱啱講錯咗"))
         XCTAssertTrue(cantonese.contains("屏幕文字，仅供纠错和专有名词参考"))
         XCTAssertFalse(cantonese.contains("On-screen text for correction"))
@@ -59,6 +60,7 @@ final class AutoCantonesePromptTests: XCTestCase {
         XCTAssertTrue(automatic.contains("自动识别中文、英文、日文、韩文、粤语"))
         XCTAssertTrue(automatic.contains("不要无故翻译成中文或英文"))
         XCTAssertTrue(automatic.contains("自动语言专业整理"))
+        XCTAssertTrue(automatic.contains("final_text"))
         XCTAssertTrue(automatic.contains("um we're meeting Thursday"))
         XCTAssertTrue(automatic.contains("最近输入，仅供语境、术语、专有名词和语气参考"))
         XCTAssertFalse(automatic.contains("On-screen text for correction"))
@@ -84,11 +86,13 @@ final class AutoCantonesePromptTests: XCTestCase {
 
             XCTAssertTrue(automatic.contains("输入法输出契约"))
             XCTAssertTrue(automatic.contains("自动判断原文主要语言"))
+            XCTAssertTrue(automatic.contains("final_text"))
             XCTAssertTrue(automatic.contains("不要无故翻译"))
             XCTAssertFalse(automatic.contains("Input method output contract"))
 
             XCTAssertTrue(cantonese.contains("输入法输出契约"))
             XCTAssertTrue(cantonese.contains("只输出最终可插入文本"))
+            XCTAssertTrue(cantonese.contains("final_text"))
             XCTAssertTrue(cantonese.contains("保留自然粤语书面表达"))
             XCTAssertFalse(cantonese.contains("Input method output contract"))
         }

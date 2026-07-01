@@ -48,6 +48,8 @@ enum TranscriptionSanitizer {
             guard isRepeatCandidate(first) else { continue }
             if canonicalText(first) == canonicalText(second) {
                 bestMatch = first
+            } else if repeatsCoverWholeTranscript(unit: first, fullText: normalized) {
+                bestMatch = first
             }
         }
 
@@ -77,6 +79,19 @@ enum TranscriptionSanitizer {
             CharacterSet.alphanumerics.contains(scalar) || isCJKScalar(scalar)
         }))
         .lowercased()
+    }
+
+    private static func repeatsCoverWholeTranscript(unit: String, fullText: String) -> Bool {
+        let unitCanonical = canonicalText(unit)
+        guard unitCanonical.count >= 6 else { return false }
+
+        var remainder = canonicalText(fullText)
+        var repeatCount = 0
+        while remainder.hasPrefix(unitCanonical) {
+            remainder.removeFirst(unitCanonical.count)
+            repeatCount += 1
+        }
+        return repeatCount >= 2 && remainder.isEmpty
     }
 
     private static func containsCJK(_ text: String) -> Bool {

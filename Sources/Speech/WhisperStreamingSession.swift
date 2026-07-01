@@ -147,7 +147,7 @@ final class WhisperStreamingSession: @unchecked Sendable {
         await withCheckedContinuation { continuation in
             queue.async {
                 self.activeTask = nil
-                self.applyPartial(text, emitUpdate: !self.closed)
+                self.applyPartial(text, submittedSampleCount: submittedSampleCount, emitUpdate: !self.closed)
                 if !self.closed, self.samples.count > submittedSampleCount {
                     self.schedulePartialUpdate()
                 }
@@ -156,14 +156,15 @@ final class WhisperStreamingSession: @unchecked Sendable {
         }
     }
 
-    private func applyPartial(_ text: String, emitUpdate: Bool) {
+    private func applyPartial(_ text: String, submittedSampleCount: Int, emitUpdate: Bool) {
         guard !text.isEmpty else { return }
 
         let merged = previewAccumulator.merge(text)
-        guard !merged.isEmpty, merged != latestPreview else { return }
+        guard !merged.isEmpty else { return }
+        metrics.markPartial(unitCount: submittedSampleCount)
+        guard merged != latestPreview else { return }
 
         latestPreview = merged
-        metrics.markPartial()
         if emitUpdate {
             partialHandler(merged)
         }

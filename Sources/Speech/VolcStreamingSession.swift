@@ -141,7 +141,7 @@ final class VolcStreamingSession: @unchecked Sendable {
         await withCheckedContinuation { continuation in
             queue.async {
                 self.activeTask = nil
-                self.applyPartial(text, emitUpdate: !self.closed)
+                self.applyPartial(text, submittedByteCount: submittedByteCount, emitUpdate: !self.closed)
                 if !self.closed, self.pcmData.count > submittedByteCount {
                     self.schedulePartialUpdate()
                 }
@@ -150,14 +150,15 @@ final class VolcStreamingSession: @unchecked Sendable {
         }
     }
 
-    private func applyPartial(_ text: String, emitUpdate: Bool) {
+    private func applyPartial(_ text: String, submittedByteCount: Int, emitUpdate: Bool) {
         guard !text.isEmpty else { return }
 
         let merged = previewAccumulator.merge(text)
-        guard !merged.isEmpty, merged != latestPreview else { return }
+        guard !merged.isEmpty else { return }
+        metrics.markPartial(unitCount: submittedByteCount)
+        guard merged != latestPreview else { return }
 
         latestPreview = merged
-        metrics.markPartial()
         if emitUpdate {
             partialHandler(merged)
         }

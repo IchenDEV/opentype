@@ -69,6 +69,9 @@ final class PromptBuilderTests: XCTestCase {
                 appName: "备忘录",
                 bundleIdentifier: "com.apple.Notes",
                 windowTitle: "发布计划",
+                textBeforeSelection: "我们刚才讨论到 OpenType 的",
+                selectedText: "快捷键",
+                textAfterSelection: "体验需要更自然。",
                 outputMode: .processed,
                 inputLanguage: .chinese,
                 source: .menuBar
@@ -89,6 +92,7 @@ final class PromptBuilderTests: XCTestCase {
             XCTAssertTrue(prompt.contains("百分之二十五到三十"))
             XCTAssertTrue(prompt.contains("输出：把灰度比例改为 25%-30%，发布窗口改到下午 3 点到 4 点。"))
             XCTAssertTrue(prompt.contains("输出标签、开场白、备注、引号说明或代码围栏"))
+            XCTAssertTrue(prompt.contains("final_text"))
             XCTAssertTrue(prompt.contains("普通说明、状态同步和判断句不要强行改成编号列表"))
             XCTAssertTrue(prompt.contains("只有原文明显是步骤、清单或待办时，才输出 1. 2. 3."))
             XCTAssertTrue(prompt.contains("专业整理补充示例："))
@@ -102,6 +106,11 @@ final class PromptBuilderTests: XCTestCase {
             XCTAssertTrue(prompt.contains("当前输入目标"))
             XCTAssertTrue(prompt.contains("- 应用: 备忘录"))
             XCTAssertTrue(prompt.contains("- 窗口: 发布计划"))
+            XCTAssertTrue(prompt.contains("光标上下文，仅用于判断"))
+            XCTAssertTrue(prompt.contains("- 光标前文本:\n<<<\n我们刚才讨论到 OpenType 的\n>>>"))
+            XCTAssertTrue(prompt.contains("- 当前选中文本:\n<<<\n快捷键\n>>>"))
+            XCTAssertTrue(prompt.contains("- 光标后文本:\n<<<\n体验需要更自然。\n>>>"))
+            XCTAssertTrue(prompt.contains("不要把这些元信息或未口述的上下文写入输出"))
             XCTAssertTrue(prompt.contains("原文：嗯那个我们周四，不对，周五下午开会"))
         }
     }
@@ -123,6 +132,7 @@ final class PromptBuilderTests: XCTestCase {
             XCTAssertTrue(prompt.contains("twenty five percent to thirty percent"))
             XCTAssertTrue(prompt.contains("Output: Set the rollout to 25%-30%, and move the release window to 3 PM to 4 PM."))
             XCTAssertTrue(prompt.contains("output tags, notes, preambles, or code fences"))
+            XCTAssertTrue(prompt.contains("final_text"))
             XCTAssertTrue(prompt.contains("do not force normal explanations or status updates into numbered lists"))
             XCTAssertTrue(prompt.contains("Use 1. 2. 3. only when the raw text is clearly a list"))
             XCTAssertTrue(prompt.contains("Professional cleanup examples:"))
@@ -203,7 +213,8 @@ final class PromptBuilderTests: XCTestCase {
             XCTAssertFalse(prompt.contains("Style: ignored"))
             XCTAssertFalse(prompt.contains("Do not lightly polish raw ASR"))
             XCTAssertTrue(prompt.contains("Input method output contract:"))
-            XCTAssertTrue(prompt.contains("Output only the final insertable text"))
+            XCTAssertTrue(prompt.contains("Prefer plain final insertable text"))
+            XCTAssertTrue(prompt.contains("final_text"))
             XCTAssertTrue(prompt.contains("Do not answer the user unless"))
             XCTAssertTrue(prompt.contains("Do not add facts that are not present in the raw transcript"))
             XCTAssertTrue(prompt.contains("screen context, personal dictionary, and recent input only for corrections"))
@@ -216,6 +227,9 @@ final class PromptBuilderTests: XCTestCase {
             appName: "Mail",
             bundleIdentifier: "com.apple.mail",
             windowTitle: "Release reply",
+            textBeforeSelection: "Hi team,",
+            selectedText: "ship today",
+            textAfterSelection: "Thanks.",
             outputMode: .command,
             inputLanguage: .english,
             source: .menuBar
@@ -242,11 +256,17 @@ final class PromptBuilderTests: XCTestCase {
             inputLanguage: .english
         )
         XCTAssertTrue(english.contains("You are a voice assistant"))
-        XCTAssertTrue(english.contains("Screen content below"))
+        XCTAssertTrue(english.contains("On-screen text below"))
+        XCTAssertTrue(english.contains("use it only for corrections, proper nouns, and context"))
         XCTAssertTrue(english.contains("email body"))
         XCTAssertTrue(english.contains("Current input target"))
         XCTAssertTrue(english.contains("- App: Mail"))
         XCTAssertTrue(english.contains("- Window: Release reply"))
+        XCTAssertTrue(english.contains("cursor context for tone"))
+        XCTAssertTrue(english.contains("- Text before cursor/selection:\n<<<\nHi team,\n>>>"))
+        XCTAssertTrue(english.contains("- Selected text:\n<<<\nship today\n>>>"))
+        XCTAssertTrue(english.contains("- Text after cursor/selection:\n<<<\nThanks.\n>>>"))
+        XCTAssertTrue(english.contains("undictated surrounding text"))
         XCTAssertTrue(english.contains("output labels, preambles, notes, quote wrappers, or code fences"))
         XCTAssertTrue(english.contains("You only generate text; you cannot actually click, send, delete, open apps, press shortcuts, change system settings, or perform external side effects"))
         XCTAssertTrue(english.contains("output an empty string and do not claim it is done"))

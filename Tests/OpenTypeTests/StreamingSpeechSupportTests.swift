@@ -38,13 +38,64 @@ final class StreamingSpeechSupportTests: XCTestCase {
         XCTAssertEqual(accumulator.merge("streaming"), "open type streaming")
     }
 
+    func testPreviewAccumulatorMergesAcrossTentativePunctuation() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("Ship the release notes."), "Ship the release notes.")
+        XCTAssertEqual(accumulator.merge("release notes today."), "Ship the release notes today.")
+    }
+
+    func testPreviewAccumulatorDoesNotMergeShortLatinPrefixInsideWord() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("go to"), "go to")
+        XCTAssertEqual(accumulator.merge("today"), "go to today")
+    }
+
+    func testPreviewAccumulatorContinuesTrailingLatinWordFragments() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("hello wor"), "hello wor")
+        XCTAssertEqual(accumulator.merge("world today"), "hello world today")
+    }
+
+    func testPreviewAccumulatorMergesShortLatinWholeWordOverlap() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("go to."), "go to.")
+        XCTAssertEqual(accumulator.merge("to start"), "go to start")
+    }
+
+    func testPreviewAccumulatorAddsSpaceAfterSentencePunctuationWithoutOverlap() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("Ship today."), "Ship today.")
+        XCTAssertEqual(accumulator.merge("Confirm QA."), "Ship today. Confirm QA.")
+    }
+
+    func testPreviewAccumulatorConcatenatesCJKWithoutArtificialSpace() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("今天下午"), "今天下午")
+        XCTAssertEqual(accumulator.merge("同步发布"), "今天下午同步发布")
+    }
+
+    func testPreviewAccumulatorConcatenatesJapaneseKanaWithoutArtificialSpace() {
+        let accumulator = StreamingPreviewAccumulator()
+
+        XCTAssertEqual(accumulator.merge("金曜の午後"), "金曜の午後")
+        XCTAssertEqual(accumulator.merge("よろしく"), "金曜の午後よろしく")
+        XCTAssertEqual(accumulator.merge("お願いします"), "金曜の午後よろしくお願いします")
+    }
+
     func testTranscriptResolverUsesRecordedAudioWhenAvailable() async throws {
         let metrics = StreamingSessionMetrics(
             receivedBufferCount: 4,
             capturedUnitCount: 64_000,
             partialUpdateCount: 2,
             startedAt: Date(),
-            lastPartialAt: Date()
+            lastPartialAt: Date(),
+            lastPartialUnitCount: 64_000
         )
 
         var transcribeCalls = 0
@@ -69,7 +120,8 @@ final class StreamingSpeechSupportTests: XCTestCase {
             capturedUnitCount: 64_000,
             partialUpdateCount: 2,
             startedAt: Date(),
-            lastPartialAt: Date()
+            lastPartialAt: Date(),
+            lastPartialUnitCount: 64_000
         )
 
         var transcribeCalls = 0
@@ -87,6 +139,33 @@ final class StreamingSpeechSupportTests: XCTestCase {
 
         XCTAssertEqual(text, "preview text")
         XCTAssertEqual(transcribeCalls, 0)
+    }
+
+    func testTranscriptResolverFallsBackWhenLivePreviewMissesLatestAudio() async throws {
+        let metrics = StreamingSessionMetrics(
+            receivedBufferCount: 6,
+            capturedUnitCount: 96_000,
+            partialUpdateCount: 2,
+            startedAt: Date(),
+            lastPartialAt: Date(),
+            lastPartialUnitCount: 64_000
+        )
+
+        var transcribeCalls = 0
+        let text = try await StreamingTranscriptResolver.resolveFinalTranscript(
+            engineName: "WhisperEngine",
+            audioURL: URL(fileURLWithPath: "/tmp/opentype-test.wav"),
+            livePreviewText: "stale preview",
+            metrics: metrics,
+            unitLabel: "samples",
+            preferLivePreview: true
+        ) {
+            transcribeCalls += 1
+            return "final recorded text"
+        }
+
+        XCTAssertEqual(text, "final recorded text")
+        XCTAssertEqual(transcribeCalls, 1)
     }
 
     func testTranscriptResolverFallsBackToLivePreviewWithoutRecordedAudio() async throws {

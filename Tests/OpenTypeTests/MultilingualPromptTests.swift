@@ -31,6 +31,7 @@ final class MultilingualPromptTests: XCTestCase {
             XCTAssertTrue(user.contains("日本語の音声認識原文"))
             XCTAssertTrue(system.contains("日本語の音声入力後処理"))
             XCTAssertTrue(system.contains("スタイル：専門的に整理"))
+            XCTAssertTrue(system.contains("final_text"))
             XCTAssertTrue(system.contains("専門整理の補足例"))
             XCTAssertFalse(system.contains("Professional cleanup examples"))
         }
@@ -48,6 +49,7 @@ final class MultilingualPromptTests: XCTestCase {
             XCTAssertTrue(user.contains("한국어 음성 인식 원문"))
             XCTAssertTrue(system.contains("한국어 음성 입력 후처리기"))
             XCTAssertTrue(system.contains("스타일: 전문적으로 정리"))
+            XCTAssertTrue(system.contains("final_text"))
             XCTAssertTrue(system.contains("전문 정리 보충 예시"))
             XCTAssertFalse(system.contains("Professional cleanup examples"))
         }
@@ -232,10 +234,12 @@ final class MultilingualPromptTests: XCTestCase {
             )
             XCTAssertTrue(japanese.contains("入力メソッド出力契約"))
             XCTAssertTrue(japanese.contains("挿入可能な最終テキストだけ"))
+            XCTAssertTrue(japanese.contains("final_text"))
             XCTAssertFalse(japanese.contains("Input method output contract"))
 
             XCTAssertTrue(korean.contains("입력기 출력 계약"))
             XCTAssertTrue(korean.contains("삽입 가능한 최종 텍스트만"))
+            XCTAssertTrue(korean.contains("final_text"))
             XCTAssertFalse(korean.contains("Input method output contract"))
         }
     }

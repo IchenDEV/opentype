@@ -9,22 +9,22 @@ extension PromptCatalog {
         case .auto, .chinese, .cantonese:
             return """
             个人词库：
-            \(entries)
+            \(PromptTextBlock.block(entries))
             """
         case .english:
             return """
             Personal dictionary:
-            \(entries)
+            \(PromptTextBlock.block(entries))
             """
         case .japanese:
             return """
             個人辞書：
-            \(entries)
+            \(PromptTextBlock.block(entries))
             """
         case .korean:
             return """
             개인 사전:
-            \(entries)
+            \(PromptTextBlock.block(entries))
             """
         }
     }
@@ -37,22 +37,22 @@ extension PromptCatalog {
         case .auto, .chinese, .cantonese:
             return """
             额外编辑规则：
-            \(rules)
+            \(PromptTextBlock.block(rules))
             """
         case .english:
             return """
             Extra edit rules:
-            \(rules)
+            \(PromptTextBlock.block(rules))
             """
         case .japanese:
             return """
             追加編集ルール：
-            \(rules)
+            \(PromptTextBlock.block(rules))
             """
         case .korean:
             return """
             추가 편집 규칙:
-            \(rules)
+            \(PromptTextBlock.block(rules))
             """
         }
     }

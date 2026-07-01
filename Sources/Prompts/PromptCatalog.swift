@@ -39,7 +39,7 @@ enum PromptCatalog {
             return """
             输入法输出契约：
             - 用户自定义提示词可以决定风格、长度和转换方式，但任务仍是处理自动语言语音识别原文
-            - 只输出最终可插入文本，不要解释、不要输出标签、不要写“最终文本：”、不要代码围栏
+            - 首选只输出最终可插入文本；如果模型接口必须返回 JSON，只能用 final_text 承载最终文本，不要解释、不要输出标签、不要代码围栏
             - 自动判断原文主要语言；保持原语言或自然的中英日韩/粤语混排，不要无故翻译
             - 不要回答用户问题，除非自定义提示词明确要求起草回复
             - 不要添加语音原文里没有的新事实；屏幕上下文、个人词库和最近输入只用于纠错、术语、专有名词和语气参考
@@ -48,7 +48,7 @@ enum PromptCatalog {
             return """
             输入法输出契约：
             - 用户自定义提示词可以决定风格、长度和转换方式，但任务仍是处理语音识别原文
-            - 只输出最终可插入文本，不要解释、不要输出标签、不要写“最终文本：”、不要代码围栏
+            - 首选只输出最终可插入文本；如果模型接口必须返回 JSON，只能用 final_text 承载最终文本，不要解释、不要输出标签、不要代码围栏
             - 不要回答用户问题，除非自定义提示词明确要求起草回复
             - 不要添加语音原文里没有的新事实；屏幕上下文、个人词库和最近输入只用于纠错、术语、专有名词和语气参考
             """
@@ -56,7 +56,7 @@ enum PromptCatalog {
             return """
             输入法输出契约：
             - 用户自定义提示词可以决定风格、长度和转换方式，但任务仍是处理粤语语音识别原文
-            - 只输出最终可插入文本，不要解释、不要输出标签、不要写“最终文本：”、不要代码围栏
+            - 首选只输出最终可插入文本；如果模型接口必须返回 JSON，只能用 final_text 承载最终文本，不要解释、不要输出标签、不要代码围栏
             - 保留自然粤语书面表达、粤语语气词和必要的中英混排；不要默认改成普通话书面中文
             - 不要回答用户问题，除非自定义提示词明确要求起草回复
             - 不要添加语音原文里没有的新事实；屏幕上下文、个人词库和最近输入只用于纠错、术语、专有名词和语气参考
@@ -65,7 +65,7 @@ enum PromptCatalog {
             return """
             Input method output contract:
             - The custom prompt may control style, length, and transformation, but the task is still to process the raw ASR transcript
-            - Output only the final insertable text; do not explain, add labels, write "Final text:", or use code fences
+            - Prefer plain final insertable text; if the model adapter must return JSON, use final_text for the insertable text and do not include explanations, labels, or code fences
             - Do not answer the user unless the custom prompt explicitly asks you to draft a reply
             - Do not add facts that are not present in the raw transcript; use screen context, personal dictionary, and recent input only for corrections, terminology, proper nouns, and tone
             """
@@ -73,7 +73,7 @@ enum PromptCatalog {
             return """
             入力メソッド出力契約：
             - カスタム提示は文体、長さ、変換方法を決めてよいが、タスクはあくまで音声認識原文の処理です
-            - 挿入可能な最終テキストだけを出力し、説明、ラベル、「最終テキスト：」、コードフェンスは出力しないでください
+            - 挿入可能な最終テキストだけを優先して出力してください。モデルアダプターが JSON を返す必要がある場合は final_text に挿入可能なテキストだけを入れ、説明、ラベル、コードフェンスは出力しないでください
             - カスタム提示が返信作成を明示しない限り、ユーザーに回答しないでください
             - 音声認識原文にない新しい事実を追加しないでください。画面文脈、個人辞書、最近の入力は補正、用語、固有名詞、語調の参考だけに使ってください
             """
@@ -81,7 +81,7 @@ enum PromptCatalog {
             return """
             입력기 출력 계약:
             - 사용자 지정 프롬프트는 스타일, 길이, 변환 방식을 정할 수 있지만 작업은 여전히 음성 인식 원문 처리입니다
-            - 삽입 가능한 최종 텍스트만 출력하고 설명, 라벨, “최종 텍스트:”, 코드 펜스는 출력하지 마세요
+            - 삽입 가능한 최종 텍스트만 우선 출력하세요. 모델 어댑터가 JSON을 반환해야 한다면 final_text에 삽입 가능한 텍스트만 넣고 설명, 라벨, 코드 펜스는 출력하지 마세요
             - 사용자 지정 프롬프트가 답장 작성을 명시적으로 요구하지 않는 한 사용자에게 답하지 마세요
             - 음성 인식 원문에 없는 새로운 사실을 추가하지 마세요. 화면 맥락, 개인 사전, 최근 입력은 보정, 용어, 고유명사, 어조 참고용으로만 사용하세요
             """
@@ -122,6 +122,7 @@ private extension PromptCatalog {
     - 数字尽量转阿拉伯数字
     - 保持原语言
     - 如果原文不是逐项列点，不要改成 1. 2. 3.
+    - 首选只输出最终文本；如果模型接口必须返回 JSON，只能用 final_text 承载最终文本，不要包含解释字段
     - 即使你发现很多错字，也不要展示分析过程
     - 只输出最终文本
 
@@ -176,6 +177,7 @@ private extension PromptCatalog {
     - when the user dictates ranges such as "from three to five", "three to five days", "twenty five percent to thirty percent", "three PM to four PM", or "step one to step three", infer the intended written form from context
     - keep the original language
     - if the raw text is not explicitly list-like, do not turn it into 1. 2. 3.
+    - prefer plain final text; if the model adapter must return JSON, use final_text for the insertable text and do not include reasoning fields
     - even when there are many ASR mistakes, do not show analysis
     - output only final text
 
@@ -226,6 +228,7 @@ private extension PromptCatalog {
     - 不確かな場合は元の語を残す
     - 数字は自然な範囲で算用数字にする
     - 原文の言語を保つ
+    - 最終テキストだけを優先して出力する。モデルアダプターが JSON を返す必要がある場合は final_text に挿入可能なテキストだけを入れ、説明フィールドは含めない
     - 最終テキストだけを出力する
 
     例：
@@ -260,6 +263,7 @@ private extension PromptCatalog {
     - 확실하지 않으면 원래 표현을 유지한다
     - 숫자는 자연스러운 범위에서 아라비아 숫자로 쓴다
     - 원문의 언어를 유지한다
+    - 최종 텍스트만 우선 출력한다. 모델 어댑터가 JSON을 반환해야 한다면 final_text에 삽입 가능한 텍스트만 넣고 설명 필드는 포함하지 않는다
     - 최종 텍스트만 출력한다
 
     예:

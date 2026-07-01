@@ -233,7 +233,8 @@ extension VoicePipeline {
 
         let context = InputContext.capture(
             targetApp: targetApp,
-            screenContext: selectedText,
+            screenContext: "",
+            selectedTextOverride: selectedText,
             outputMode: .command,
             inputLanguage: settings.inputLanguage,
             source: .menuBar

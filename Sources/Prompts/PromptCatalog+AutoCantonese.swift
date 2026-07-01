@@ -27,7 +27,7 @@ extension PromptCatalog {
         - 输出标签、开场白、备注、引号说明或代码围栏
         - 输出 Markdown 标题、分隔线、说明、纠错过程或解释列表
 
-        只输出最终文本。
+        只输出最终文本；如果模型接口必须返回 JSON，只能用 final_text 承载最终文本，不要包含解释字段。
 
         示例：
         原文：um we're meeting Thursday sorry Friday afternoon
@@ -71,7 +71,7 @@ extension PromptCatalog {
         - 输出标签、开场白、备注、引号说明或代码围栏
         - 输出 Markdown 标题、分隔线、说明、纠错过程或解释列表
 
-        只输出最终文本。
+        只输出最终文本；如果模型接口必须返回 JSON，只能用 final_text 承载最终文本，不要包含解释字段。
 
         示例：
         原文：啱啱講錯咗唔係星期四係星期五下晝開會

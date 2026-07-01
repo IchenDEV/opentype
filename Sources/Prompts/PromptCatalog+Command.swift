@@ -22,6 +22,7 @@ extension PromptCatalog {
             return """
             你是一个多语言语音助手。用户通过语音下达指令，你需要生成 OpenType 可以插入或发送的文本。
             直接输出回复内容，不要使用思维标签，不要解释推理过程，不要添加输出标签、开场白、备注、引号说明或代码围栏。
+            如果模型接口必须返回 JSON，只能用 final_text 承载可插入或可发送正文，不要包含解释字段。
 
             语言策略：
             - 先判断语音指令和目标内容的主要语言，支持中文、英文、日文、韩文、粤语和自然混排
@@ -46,6 +47,7 @@ extension PromptCatalog {
             return """
             你是一个语音助手。用户通过语音下达指令，你需要生成 OpenType 可以插入或发送的文本。
             直接输出回复内容，不要使用思维标签，不要解释推理过程，不要添加输出标签、开场白、备注、引号说明或代码围栏。
+            如果模型接口必须返回 JSON，只能用 final_text 承载可插入或可发送正文，不要包含解释字段。
 
             能力边界：
             - 你只生成文本，不能真的点击、发送、删除、打开应用、按快捷键、改系统设置或执行外部动作
@@ -65,6 +67,7 @@ extension PromptCatalog {
             return """
             你是一个粤语语音助手。用户通过粤语语音下达指令，你需要生成 OpenType 可以插入或发送的文本。
             直接输出回复内容，不要使用思维标签，不要解释推理过程，不要添加输出标签、开场白、备注、引号说明或代码围栏。
+            如果模型接口必须返回 JSON，只能用 final_text 承载可插入或可发送正文，不要包含解释字段。
 
             语言策略：
             - 除非用户明确要求翻译或指定输出语言，否则保留自然粤语表达、粤语语气词和必要的中英混排
@@ -89,6 +92,7 @@ extension PromptCatalog {
             return """
             You are a voice assistant. The user gives voice commands, and you generate text that OpenType can insert or send.
             Output the response directly without thinking tags, explanations, output labels, preambles, notes, quote wrappers, or code fences.
+            If the model adapter must return JSON, use final_text for the insertable or sendable body and do not include explanation fields.
 
             Capability boundary:
             - You only generate text; you cannot actually click, send, delete, open apps, press shortcuts, change system settings, or perform external side effects
@@ -108,6 +112,7 @@ extension PromptCatalog {
             return """
             あなたは日本語の音声アシスタントです。ユーザーの音声指令から、OpenType が挿入または送信できる本文を生成します。
             思考タグ、説明、出力ラベル、前置き、注釈、引用囲み、コードフェンスを出さず、本文だけを直接出力してください。
+            モデルアダプターが JSON を返す必要がある場合は final_text に挿入または送信できる本文だけを入れ、説明フィールドは含めないでください。
 
             能力の境界：
             - あなたはテキストだけを生成する。クリック、送信、削除、アプリ起動、ショートカット実行、システム設定変更などの外部操作はできない
@@ -125,6 +130,7 @@ extension PromptCatalog {
             return """
             당신은 한국어 음성 어시스턴트입니다. 사용자의 음성 명령에서 OpenType이 삽입하거나 보낼 수 있는 본문을 생성합니다.
             사고 태그, 설명, 출력 라벨, 서두, 주석, 인용 표시, 코드 펜스를 쓰지 말고 본문만 직접 출력하세요.
+            모델 어댑터가 JSON을 반환해야 한다면 final_text에 삽입하거나 보낼 수 있는 본문만 넣고 설명 필드는 포함하지 마세요.
 
             능력의 경계:
             - 당신은 텍스트만 생성한다. 클릭, 전송, 삭제, 앱 열기, 단축키 실행, 시스템 설정 변경 같은 외부 동작은 할 수 없다
@@ -168,19 +174,17 @@ private extension PromptCatalog {
         let screenLabel: String
         switch inputLanguage {
         case .auto, .chinese, .cantonese:
-            screenLabel = "以下是用户当前屏幕上的文字内容："
+            screenLabel = "以下是用户当前屏幕上的文字内容。默认仅用于纠错、专有名词和理解上下文；只有本次语音指令明确要求回复、总结、翻译、解释或使用可见屏幕内容时，才把它作为事实来源："
         case .english:
-            screenLabel = "Screen content below:"
+            screenLabel = "On-screen text below. By default, use it only for corrections, proper nouns, and context; treat it as a source of facts only when the current voice command explicitly asks to reply, summarize, translate, explain, or otherwise use visible screen content:"
         case .japanese:
-            screenLabel = "ユーザーの現在画面にある文字内容："
+            screenLabel = "ユーザーの現在画面にある文字内容。既定では誤認識補正、固有名詞、文脈理解だけに使い、現在の音声指令が返信、要約、翻訳、説明、または表示内容の利用を明示した場合だけ事実の根拠にしてください："
         case .korean:
-            screenLabel = "사용자의 현재 화면 텍스트:"
+            screenLabel = "사용자의 현재 화면 텍스트입니다. 기본적으로 오인식 보정, 고유명사, 맥락 이해에만 사용하고 현재 음성 명령이 답장, 요약, 번역, 설명 또는 보이는 화면 내용 사용을 명시할 때만 사실 근거로 삼으세요:"
         }
         return """
         \(screenLabel)
-        ---
-        \(screenContext)
-        ---
+        \(PromptTextBlock.block(screenContext))
         """
     }
 
@@ -188,13 +192,13 @@ private extension PromptCatalog {
         guard isAvailable else { return nil }
         switch inputLanguage {
         case .auto, .chinese, .cantonese:
-            return "用户当前屏幕截图已随本次请求提供。需要回复、总结、翻译或解释屏幕内容时，请直接依据截图。"
+            return "用户当前屏幕截图已随本次请求提供。默认仅用于纠错、专有名词和理解上下文；只有本次语音指令明确要求回复、总结、翻译、解释或使用可见屏幕内容时，才直接依据截图。"
         case .english:
-            return "The user's current screen image is attached. Use it directly when the command asks you to reply, summarize, translate, or explain visible screen content."
+            return "The user's current screen image is attached. By default, use it only for corrections, proper nouns, and context; use it as a source of facts only when the command asks you to reply, summarize, translate, explain, or otherwise use visible screen content."
         case .japanese:
-            return "ユーザーの現在画面のスクリーンショットが添付されています。返信、要約、翻訳、説明を求められた場合は、その画像を直接参照してください。"
+            return "ユーザーの現在画面のスクリーンショットが添付されています。既定では誤認識補正、固有名詞、文脈理解だけに使い、現在の音声指令が返信、要約、翻訳、説明、または表示内容の利用を求める場合だけ事実の根拠にしてください。"
         case .korean:
-            return "사용자의 현재 화면 스크린샷이 첨부되어 있습니다. 답장, 요약, 번역, 설명을 요청받으면 이미지를 직접 참고하세요."
+            return "사용자의 현재 화면 스크린샷이 첨부되어 있습니다. 기본적으로 오인식 보정, 고유명사, 맥락 이해에만 사용하고 현재 음성 명령이 답장, 요약, 번역, 설명 또는 보이는 화면 내용 사용을 요청할 때만 사실 근거로 삼으세요."
         }
     }
 
@@ -204,30 +208,22 @@ private extension PromptCatalog {
         case .auto, .chinese, .cantonese:
             return """
             以下是用户最近的输入历史，仅供语境、术语、专有名词和语气参考；除非本次语音指令明确要求使用最近输入，否则不要把这里的新事实加入输出：
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         case .english:
             return """
             Recent input history for context, terminology, proper nouns, and tone only. Do not add facts from it unless the current voice command explicitly asks to use recent input:
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         case .japanese:
             return """
             最近の入力履歴。文脈、用語、固有名詞、語調の参考だけに使い、現在の音声指令が最近の入力を使うよう明示しない限り、ここから新しい事実を出力に追加しないでください：
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         case .korean:
             return """
             최근 입력 기록입니다. 맥락, 용어, 고유명사, 어조 참고용으로만 사용하고 현재 음성 명령이 최근 입력 사용을 명시하지 않는 한 여기의 새 사실을 출력에 추가하지 마세요:
-            ---
-            \(memoryContext)
-            ---
+            \(PromptTextBlock.block(memoryContext))
             """
         }
     }

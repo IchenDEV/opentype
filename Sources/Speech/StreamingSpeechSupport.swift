@@ -6,9 +6,14 @@ struct StreamingSessionMetrics: Equatable {
     var partialUpdateCount = 0
     var startedAt = Date()
     var lastPartialAt: Date?
+    var lastPartialUnitCount = 0
 
     var hasCapturedAudio: Bool {
         capturedUnitCount > 0
+    }
+
+    var livePreviewCoversCapturedAudio: Bool {
+        partialUpdateCount > 0 && lastPartialUnitCount >= capturedUnitCount
     }
 
     mutating func recordBuffer(unitCount: Int) {
@@ -17,9 +22,10 @@ struct StreamingSessionMetrics: Equatable {
         capturedUnitCount += unitCount
     }
 
-    mutating func markPartial(at date: Date = Date()) {
+    mutating func markPartial(unitCount: Int, at date: Date = Date()) {
         partialUpdateCount += 1
         lastPartialAt = date
+        lastPartialUnitCount = max(lastPartialUnitCount, unitCount)
     }
 }
 
@@ -75,7 +81,7 @@ enum StreamingTranscriptResolver {
         }
 
         let trimmedPreview = livePreviewText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if preferLivePreview, !trimmedPreview.isEmpty, metrics.partialUpdateCount > 0 {
+        if preferLivePreview, !trimmedPreview.isEmpty, metrics.livePreviewCoversCapturedAudio {
             Log.info("[\(engineName)] using streaming preview as final transcript")
             return trimmedPreview
         }
@@ -95,6 +101,7 @@ enum StreamingTranscriptResolver {
 
 final class StreamingPreviewAccumulator {
     private static let minimumMeaningfulOverlap = 2
+    private static let minimumLatinFuzzyOverlap = 4, minimumLatinContinuationOverlap = 3
 
     private(set) var previewText = ""
     private var latestWindow = ""
@@ -142,9 +149,10 @@ final class StreamingPreviewAccumulator {
             return next
         }
 
-        let overlap = largestOverlapCount(existing: current, incoming: next)
-        if overlap > 0 {
-            return current + next.dropFirst(overlap)
+        if let fuzzyOverlap = punctuationTolerantOverlap(existing: current, incoming: next) {
+            let remainder = String(next.dropFirst(fuzzyOverlap))
+            let prefix = removeTentativeTrailingPunctuation(from: current, before: remainder)
+            return prefix + remainder
         }
 
         return join(current, next)
@@ -157,21 +165,82 @@ final class StreamingPreviewAccumulator {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func largestOverlapCount(existing: String, incoming: String) -> Int {
-        let maxOverlap = min(existing.count, incoming.count)
-        guard maxOverlap >= minimumMeaningfulOverlap else { return 0 }
+    private static func punctuationTolerantOverlap(existing: String, incoming: String) -> Int? {
+        let existingUnits = canonicalOverlapUnits(existing)
+        let incomingUnits = canonicalOverlapUnits(incoming)
+        let maxOverlap = min(existingUnits.count, incomingUnits.count)
+        guard maxOverlap >= minimumMeaningfulOverlap else { return nil }
 
         for count in stride(from: maxOverlap, through: minimumMeaningfulOverlap, by: -1) {
-            if existing.suffix(count) == incoming.prefix(count) {
-                return count
+            let existingSuffix = Array(existingUnits.suffix(count))
+            let incomingPrefix = Array(incomingUnits.prefix(count))
+            if existingSuffix.map(\.value) == incomingPrefix.map(\.value),
+               isAcceptableFuzzyOverlap(existingSuffix: existingSuffix, incomingPrefix: incomingPrefix) {
+                return incomingPrefix[count - 1].endOffset
             }
         }
 
-        return 0
+        return nil
+    }
+
+    private static func isAcceptableFuzzyOverlap(
+        existingSuffix: [OverlapUnit],
+        incomingPrefix: [OverlapUnit]
+    ) -> Bool {
+        if existingSuffix.count >= minimumLatinFuzzyOverlap {
+            return true
+        }
+        if existingSuffix.contains(where: \.isNoSpaceScript) {
+            return true
+        }
+        if existingSuffix.count >= minimumLatinContinuationOverlap,
+           existingSuffix.first?.startsAtBoundary == true,
+           existingSuffix.last?.endsAtBoundary == true,
+           incomingPrefix.first?.startsAtBoundary == true,
+           incomingPrefix.last?.endsAtBoundary == false {
+            return true
+        }
+        return existingSuffix.first?.startsAtBoundary == true
+            && existingSuffix.last?.endsAtBoundary == true
+            && incomingPrefix.first?.startsAtBoundary == true
+            && incomingPrefix.last?.endsAtBoundary == true
+    }
+
+    private static func canonicalOverlapUnits(_ text: String) -> [OverlapUnit] {
+        let characters = Array(text)
+        return characters.enumerated().compactMap { index, character in
+            guard character.isOverlapSignificant else { return nil }
+            let previous = index > 0 ? characters[index - 1] : nil
+            let next = index + 1 < characters.count ? characters[index + 1] : nil
+            return OverlapUnit(
+                value: String(character).lowercased(),
+                endOffset: index + 1,
+                isNoSpaceScript: character.isNoSpaceScript,
+                startsAtBoundary: previous?.isOverlapSignificant != true,
+                endsAtBoundary: next?.isOverlapSignificant != true
+            )
+        }
     }
 
     private static func commonPrefixCount(_ lhs: String, _ rhs: String) -> Int {
         zip(lhs, rhs).prefix { $0 == $1 }.count
+    }
+
+    private static func removeTentativeTrailingPunctuation(from current: String, before remainder: String) -> String {
+        guard let nextMeaningful = remainder.first(where: { !$0.isWhitespace }),
+              nextMeaningful.isOverlapSignificant else {
+            return current
+        }
+
+        var result = current
+        while result.last?.isWhitespace == true {
+            result.removeLast()
+        }
+        if result.last?.isTentativeContinuationPunctuation == true {
+            result.removeLast()
+            return result
+        }
+        return current
     }
 
     private static func join(_ lhs: String, _ rhs: String) -> String {
@@ -179,7 +248,7 @@ final class StreamingPreviewAccumulator {
             return lhs + rhs
         }
 
-        if lhsLast.isLetterOrNumberLike && rhsFirst.isLetterOrNumberLike {
+        if lhsLast.needsSpace(before: rhsFirst) {
             return lhs + " " + rhs
         }
 
@@ -187,8 +256,38 @@ final class StreamingPreviewAccumulator {
     }
 }
 
+private struct OverlapUnit {
+    let value: String
+    let endOffset: Int
+    let isNoSpaceScript: Bool
+    let startsAtBoundary: Bool
+    let endsAtBoundary: Bool
+}
+
 private extension Character {
+    var isOverlapSignificant: Bool {
+        !isWhitespace && !unicodeScalars.allSatisfy(CharacterSet.punctuationCharacters.contains)
+    }
+
     var isLetterOrNumberLike: Bool {
         unicodeScalars.allSatisfy(CharacterSet.alphanumerics.contains)
+    }
+
+    var isNoSpaceScript: Bool {
+        unicodeScalars.contains(where: NoSpaceScript.contains)
+    }
+
+    var isTentativeContinuationPunctuation: Bool {
+        ".。!！?？,，、;；:：".contains(self)
+    }
+
+    func needsSpace(before next: Character) -> Bool {
+        if isNoSpaceScript || next.isNoSpaceScript {
+            return false
+        }
+        if isLetterOrNumberLike && next.isLetterOrNumberLike {
+            return true
+        }
+        return isTentativeContinuationPunctuation && next.isLetterOrNumberLike
     }
 }

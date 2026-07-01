@@ -85,14 +85,7 @@ actor RemoteLLMClient {
         let (data, response) = try await URLSession.shared.data(for: request)
         try validateHTTP(response, data: data)
 
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let choices = json["choices"] as? [[String: Any]],
-              let first = choices.first,
-              let message = first["message"] as? [String: Any],
-              let content = message["content"] as? String else {
-            throw RemoteLLMError.invalidResponse
-        }
-        return content.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try RemoteLLMResponseText.openAI(from: data)
     }
 
     // MARK: - Anthropic Messages format
@@ -133,13 +126,7 @@ actor RemoteLLMClient {
         let (data, response) = try await URLSession.shared.data(for: request)
         try validateHTTP(response, data: data)
 
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let contentArray = json["content"] as? [[String: Any]],
-              let first = contentArray.first(where: { ($0["type"] as? String) == "text" }),
-              let text = first["text"] as? String else {
-            throw RemoteLLMError.invalidResponse
-        }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try RemoteLLMResponseText.anthropic(from: data)
     }
 
     // MARK: - Shared

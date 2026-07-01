@@ -144,6 +144,147 @@ final class FormattedOutputCleanerTests: XCTestCase {
         )
     }
 
+    func testExtractsStructuredFinalTextJSON() {
+        let llmOutput = """
+        {"final_text":"Ship the release notes today.","explanation":"Removed filler words."}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsStructuredFinalTextFromFencedJSON() {
+        let llmOutput = """
+        ```json
+        {"result":{"text":"今天下午同步发布计划。"},"reason":"final answer"}
+        ```
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "今天下午同步发布计划。"
+        )
+    }
+
+    func testExtractsExplicitFinalTextJSONAfterPreamble() {
+        let llmOutput = """
+        Sure, here is the cleaned result:
+        {"final_text":"Ship the release notes today.","reason":"Removed filler words."}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsTypedOutputTextJSONAfterPreamble() {
+        let llmOutput = """
+        Final response:
+        {"type":"output_text","text":"Ship the release notes today."}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsNestedOutputTextWrapper() {
+        let llmOutput = """
+        {"payload":{"output_text":"今天下午同步发布计划。"}}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "今天下午同步发布计划。"
+        )
+    }
+
+    func testExtractsResponsesOutputTextArray() {
+        let llmOutput = """
+        {"id":"resp_1","output":[{"type":"message","content":[{"type":"output_text","text":"Ship the release notes today."}]}]}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
+
+    func testExtractsMultipleResponsesOutputTextBlocks() {
+        let llmOutput = """
+        {"output":[{"type":"message","content":[{"type":"output_text","text":"Ship the release notes."},{"type":"output_text","text":"Then confirm QA."}]}]}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            Ship the release notes.
+            Then confirm QA.
+            """
+        )
+    }
+
+    func testExtractsTopLevelOutputTextArray() {
+        let llmOutput = """
+        [{"type":"output_text","text":"Ship the release notes."},{"type":"output_text","text":"Then confirm QA."}]
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            Ship the release notes.
+            Then confirm QA.
+            """
+        )
+    }
+
+    func testExtractsFencedTopLevelOutputTextArray() {
+        let llmOutput = """
+        ```json
+        [{"type":"output_text","text":"今天发发布说明。"},{"type":"output_text","text":"然后确认 QA。"}]
+        ```
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            """
+            今天发发布说明。
+            然后确认 QA。
+            """
+        )
+    }
+
+    func testKeepsOrdinaryEmbeddedJSONWithoutExplicitFinalText() {
+        let llmOutput = #"The payload is {"text":"Ship the release notes today.","mode":"voice"}."#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
+    func testKeepsOrdinaryJSONWithoutFinalTextField() {
+        let llmOutput = #"{"name":"OpenType","mode":"voice"}"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
+    func testKeepsOrdinaryJSONWithAmbiguousTextField() {
+        let llmOutput = #"{"text":"Ship the release notes today.","mode":"voice"}"#
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            llmOutput
+        )
+    }
+
     func testKeepsContentStartingWithJapaneseOrKoreanExplanationHeading() {
         XCTAssertEqual(
             FormattedOutputCleaner.clean("説明：\nこれは本文の見出しです。"),

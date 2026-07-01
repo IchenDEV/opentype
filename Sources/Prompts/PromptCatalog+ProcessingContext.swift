@@ -36,9 +36,7 @@ private func processingScreenContext(_ screenContext: String, inputLanguage: Inp
 
     return """
     \(label)
-    ---
-    \(screenContext)
-    ---
+    \(PromptTextBlock.block(screenContext))
     """
 }
 
@@ -72,8 +70,6 @@ private func processingMemoryContext(_ memoryContext: String, inputLanguage: Inp
 
     return """
     \(label)
-    ---
-    \(memoryContext)
-    ---
+    \(PromptTextBlock.block(memoryContext))
     """
 }

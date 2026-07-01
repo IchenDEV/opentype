@@ -61,13 +61,6 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(LocalASRConfiguration.mimoTokenizerModel, "XiaomiMiMo/MiMo-Audio-Tokenizer")
     }
 
-    func testLocalASRRunnerOutputParsing() throws {
-        let jsonText = try LocalASREngine.parseRunnerOutput(#"{"text":" 你好，OpenType。 "}"#)
-        XCTAssertEqual(jsonText, "你好，OpenType。")
-        let plainText = try LocalASREngine.parseRunnerOutput("Good morning.")
-        XCTAssertEqual(plainText, "Good morning.")
-    }
-
     @MainActor
     func testASRCompletenessRequiresWeightFiles() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -92,11 +85,6 @@ final class ConfigurationTests: XCTestCase {
         try FileManager.default.createDirectory(at: runner.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("x".utf8).write(to: runner)
         XCTAssertTrue(ModelCatalog.mimoRepositoryIsReady(at: dir))
-    }
-
-    func testLocalASRRunnerOutputParsingTreatsNoSpeechPlaceholderAsEmpty() throws {
-        XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":"（无）"}"#), "")
-        XCTAssertEqual(try LocalASREngine.parseRunnerOutput(#"{"text":" ( 无 ) "}"#), "")
     }
 
     func testAudioCaptureActivityDetectsSilence() {
