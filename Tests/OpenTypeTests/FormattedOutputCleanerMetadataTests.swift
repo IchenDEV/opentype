@@ -12,4 +12,15 @@ final class FormattedOutputCleanerMetadataTests: XCTestCase {
             "Ship the release notes today."
         )
     }
+
+    func testExtractsAmbiguousTextWhenJustificationMetadataIsPresent() {
+        let llmOutput = """
+        {"text":"Ship the release notes today.","justification":"best final text"}
+        """
+
+        XCTAssertEqual(
+            FormattedOutputCleaner.clean(llmOutput),
+            "Ship the release notes today."
+        )
+    }
 }

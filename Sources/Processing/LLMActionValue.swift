@@ -57,8 +57,8 @@ private extension LLMActionValue {
         "lastOutput", "last_output",
     ]
     static let metadataObjectKeys = [
-        "confidence", "score", "probability", "certainty", "reason", "rationale", "description",
-        "explanation", "note", "notes", "kind",
+        "confidence", "score", "probability", "certainty", "reason", "rationale",
+        "justification", "description", "explanation", "note", "notes", "kind",
         "percent", "percentage", "pct",
         "confidencePercent", "confidence_percent", "confidencePct", "confidence_pct",
         "confidencePercentage", "confidence_percentage",

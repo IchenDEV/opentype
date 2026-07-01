@@ -37,7 +37,7 @@ private extension LLMTargetValue {
     ]
     static let metadataObjectKeys = [
         "confidence", "score", "probability", "certainty", "reason", "rationale",
-        "description", "explanation", "note", "notes",
+        "justification", "description", "explanation", "note", "notes",
     ]
 
     static func describe(array: [LLMTargetValue]) -> String {
